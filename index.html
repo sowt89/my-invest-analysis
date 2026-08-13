@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f7f7f5">
+<title>나만의 투자분석</title>
+<style>
+:root{
+  --bg:#f7f7f5; --ink:#1c1c1a; --ink2:#6b6b66; --ink3:#9a9a94;
+  --orange:#dd5a22; --orange-deep:#c74e1c; --orange-soft:#f6dccb;
+  --card:#ffffff; --line:#e8e7e2;
+  --dk:#131416; --dk2:#1c1d20; --dk-line:#2a2b2f; --dk-ink:#f0efeb; --dk-ink2:#8f9096; --dk-ink3:#6a6b70;
+  --buy-strong:#4c8f3a; --buy:#6ea24e; --buy-bg:#e6efdc; --buy-ink:#3f6f2b;
+  --sell:#d3a92f; --sell-ink:#b58612; --sell-bg:#f5ecd2; --hold-ink:#8a8a84; --hold-bg:#ececea;
+  --neg:#c4472e; --pos:#4c8f3a;
+  --c1:#E86A38; --c2:#4E90C9; --c3:#5FA84E;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{font-size:15px}
+body{font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR",sans-serif;background:var(--bg);color:var(--ink);padding-bottom:76px}
+.wrap{max-width:520px;margin:0 auto}
+/* header */
+.top{position:sticky;top:0;z-index:30;background:rgba(247,247,245,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:10px;padding:12px 16px}
+.logo{width:30px;height:30px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#f0844d,#c74e1c);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:8px;letter-spacing:-.5px;border:2px solid #a63f14;flex-shrink:0}
+.top h1{font-size:1.06rem;font-weight:800;letter-spacing:-.02em}
+/* hero */
+.hero{background:linear-gradient(160deg,#e2601f,#cf4f1a);color:#fff;padding:22px 16px 24px}
+.hero .kicker{font-size:.72rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#ffd9c2;margin-bottom:6px}
+.hero h2{font-size:1.55rem;font-weight:800;letter-spacing:-.02em;margin-bottom:8px}
+.hero p{font-size:.83rem;line-height:1.55;color:#ffe3d3}
+/* cards */
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;margin:12px 16px;overflow:hidden}
+.card-h{padding:14px 16px 0;font-size:.78rem;font-weight:700;color:var(--ink2);letter-spacing:.02em}
+.card-b{padding:12px 16px 16px}
+.dark-card{background:var(--dk);border-color:#0c0d0e;color:var(--dk-ink)}
+.dark-card .card-h{color:var(--dk-ink2)}
+/* chips */
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:5px;background:var(--buy-bg);color:var(--buy-ink);border-radius:999px;padding:7px 13px;font-weight:800;font-size:.86rem}
+.chip small{font-weight:800;color:#5b8f3d}
+/* market rows */
+.mrow{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:.86rem}
+.mrow:last-child{border-bottom:none}
+.mrow .k{color:var(--ink2);font-weight:600}
+.mrow .v{font-weight:800;display:flex;align-items:center;gap:8px}
+.pt{font-weight:800;font-size:.8rem;min-width:22px;text-align:right}
+.pt.up{color:var(--pos)}.pt.dn{color:var(--neg)}.pt.zr{color:var(--ink3)}
+.badge{border-radius:8px;padding:3px 10px;font-size:.8rem;font-weight:800}
+.badge.neutral{background:var(--hold-bg);color:var(--ink2)}
+/* filter row */
+.filters{display:flex;gap:8px;padding:12px 16px 0}
+select{appearance:none;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b6b66'/%3E%3C/svg%3E") no-repeat right 12px center;border:1px solid var(--line);border-radius:10px;padding:8px 30px 8px 12px;font-size:.85rem;font-weight:700;color:var(--ink);font-family:inherit}
+.dark-sel select{background-color:var(--dk2);border-color:var(--dk-line);color:var(--dk-ink)}
+/* signal table */
+table{width:100%;border-collapse:collapse}
+.sig-table th{font-size:.75rem;font-weight:700;color:var(--dk-ink2);text-align:left;padding:10px 8px;border-bottom:1px solid var(--dk-line);position:sticky;top:0;background:var(--dk)}
+.sig-table td{padding:11px 8px;border-bottom:1px solid var(--dk-line);font-size:.85rem;vertical-align:middle}
+.sig-table tr:last-child td{border-bottom:none}
+.tk{font-weight:800;color:var(--dk-ink);letter-spacing:-.01em}
+.tk small{display:block;font-weight:500;color:var(--dk-ink3);font-size:.68rem;margin-top:2px;max-width:86px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.theme-cell{color:var(--dk-ink3);font-size:.78rem}
+.sig{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 11px;font-size:.79rem;font-weight:800;white-space:nowrap}
+.sig .dot{width:7px;height:7px;border-radius:50%}
+.sig.s-strong{background:#20301b;color:#9fd07f}.sig.s-strong .dot{background:#7fbf5b}
+.sig.s-buy{background:#26301f;color:#c6d9a3}.sig.s-buy .dot{background:#a9c76f}
+.sig.s-hold{background:#26272b;color:#9d9ea5}.sig.s-hold .dot{background:#6c6d74}
+.sig.s-sell{background:#332a14;color:#e3c05a}.sig.s-sell .dot{background:#d3a92f}
+.foot-note{font-size:.72rem;color:var(--ink3);line-height:1.6;padding:4px 20px 18px}
+/* bottom nav */
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(250,250,248,.95);backdrop-filter:blur(12px);border-top:1px solid var(--line)}
+.nav .wrap{display:flex}
+.nav button{flex:1;background:none;border:none;font-family:inherit;padding:10px 0 max(10px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:3px;font-size:.72rem;font-weight:700;color:#9a9a94;cursor:pointer}
+.nav button.on{color:var(--orange)}
+.nav svg{width:22px;height:22px}
+/* detail tab (dark) */
+#tab-detail{background:#0f1012;min-height:100vh;margin:0;padding:4px 0 20px;color:var(--dk-ink)}
+.d-card{background:var(--dk);border:1px solid #232428;border-radius:16px;margin:12px 16px;padding:16px}
+.sec-label{display:flex;align-items:baseline;gap:8px;margin:22px 18px 2px}
+.sec-label .no{color:var(--orange);font-weight:800;font-size:.8rem}
+.sec-label .t{font-size:.78rem;font-weight:700;color:var(--dk-ink2);letter-spacing:.08em}
+.sec-title{margin:2px 18px 0;font-size:1.25rem;font-weight:800;letter-spacing:-.02em}
+.sec-sub{margin:4px 18px 0;font-size:.8rem;color:var(--dk-ink2)}
+.picker{margin:14px 16px 0}
+.picker select{width:100%;font-size:1.15rem;font-weight:800;padding:12px 36px 12px 14px;border:2px solid var(--orange);border-radius:14px;background-color:var(--dk2);color:var(--dk-ink)}
+.price-line{display:flex;align-items:center;gap:10px;margin:10px 18px 0;flex-wrap:wrap}
+.price-line .nm{color:var(--dk-ink2);font-size:.82rem}
+.big-price{font-size:1.5rem;font-weight:800}
+.ytd{font-weight:800;font-size:.9rem}
+.score-hero{font-size:2.6rem;font-weight:800;letter-spacing:-.03em}
+.gauge{height:10px;border-radius:99px;background:linear-gradient(90deg,#b8452c 0%,#8a5a37 30%,#4c4d52 50%,#5c7a44 70%,#5fa84e 100%);position:relative;margin:16px 2px 6px}
+.gauge .mk{position:absolute;top:-4px;width:4px;height:18px;border-radius:2px;background:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.35)}
+.gauge-lb{display:flex;justify-content:space-between;font-size:.68rem;color:var(--dk-ink3);margin-bottom:4px}
+.comment{background:#1d1a16;border:1px solid #35291d;border-radius:12px;padding:13px 14px;margin-top:14px}
+.comment b{color:#f0a06f;font-size:.78rem;display:block;margin-bottom:6px}
+.comment p{font-size:.83rem;line-height:1.65;color:#d9d2c8}
+.krow{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--dk-line);font-size:.84rem}
+.krow:last-child{border-bottom:none}
+.krow .k{color:var(--dk-ink2)}
+.krow .v{font-weight:800;display:flex;gap:10px;align-items:center}
+.d-h{font-size:.8rem;font-weight:800;color:var(--dk-ink2);margin-bottom:8px;letter-spacing:.02em}
+.gap-tag{display:inline-block;background:#20301b;color:#9fd07f;font-size:.72rem;font-weight:800;border-radius:7px;padding:3px 8px;margin-left:6px}
+.gap-tag.over{background:#332119;color:#e58f6a}
+.chart-box{margin-top:6px}
+.legend{display:flex;gap:14px;margin:8px 0 2px;font-size:.72rem;color:var(--dk-ink2);font-weight:700}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.scroll-x{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.fin-table th,.fin-table td{font-size:.8rem;padding:8px 10px;border-bottom:1px solid var(--dk-line);text-align:right;white-space:nowrap}
+.fin-table th{color:var(--dk-ink2);font-weight:700}
+.fin-table td:first-child,.fin-table th:first-child{text-align:left;position:sticky;left:0;background:var(--dk);color:var(--dk-ink2);font-weight:700}
+.fin-table td{font-weight:700;color:var(--dk-ink)}
+.grw{color:#9fd07f}.grw.dn{color:#e58f6a}
+/* compare tab */
+.cmp-table th{font-size:.74rem;font-weight:700;color:var(--dk-ink2);text-align:right;padding:10px 10px;border-bottom:1px solid var(--dk-line);white-space:nowrap;background:var(--dk)}
+.cmp-table td{padding:11px 10px;border-bottom:1px solid var(--dk-line);font-size:.84rem;font-weight:700;text-align:right;white-space:nowrap;color:var(--dk-ink)}
+.cmp-table th:first-child,.cmp-table td:first-child{text-align:left;position:sticky;left:0;background:var(--dk);z-index:2}
+.cmp-table tr:last-child td{border-bottom:none}
+.hp{color:#9fd07f}.hn{color:#e58f6a}.hz{color:var(--dk-ink2)}
+/* tooltip */
+#tip{position:fixed;z-index:99;pointer-events:none;background:#0b0b0cee;color:#f2f1ed;border:1px solid #333;border-radius:9px;padding:7px 10px;font-size:.74rem;line-height:1.5;display:none;max-width:220px}
+.hidden{display:none!important}
+svg text{font-family:inherit}
+</style>
+</head>
+<body>
+<div id="tip"></div>
+<header class="top"><div class="wrap"><div class="logo">나만의<br>분석</div><h1>나만의 투자분석</h1></div></header>
+
+<!-- ============ TAB 1 : 시그널 보드 ============ -->
+<main id="tab-board" class="wrap">
+  <section class="hero">
+    <div class="kicker">관심종목 39개 · 테마 13개</div>
+    <h2>매수 / 매도 시그널</h2>
+    <p>워치리스트 전 종목의 룰 기반 종합 점수 — 시장 타이밍 3지표가 모든 종목에 공통 가산됩니다.</p>
+  </section>
+
+  <div class="card dark-card">
+    <div class="card-h">오늘 판단</div>
+    <div class="card-b"><p id="today-summary" style="font-size:.85rem;line-height:1.7;color:#d6d5cf"></p></div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">추천 종목</div>
+    <div class="card-b"><div class="chips" id="reco-chips"></div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">시장 타이밍 · 전 종목 공통</div>
+    <div class="card-b" id="market-rows"></div>
+  </div>
+
+  <div class="card dark-card" style="padding-bottom:4px">
+    <div class="card-h" style="padding-top:16px">관심종목 시그널 · 종목·판단·현재가 우선</div>
+    <div class="filters dark-sel" style="padding-left:16px">
+      <select id="f-theme"><option value="">테마 ▾</option></select>
+      <select id="f-band"><option value="">판단 ▾</option><option>강한 매수</option><option>매수 대기</option><option>관망</option><option>매도 대기</option></select>
+    </div>
+    <div class="card-b" style="padding:8px 8px 10px">
+      <table class="sig-table"><thead><tr><th>종목</th><th>테마</th><th style="text-align:right">판단</th></tr></thead><tbody id="sig-body"></tbody></table>
+    </div>
+  </div>
+  <p class="foot-note">※ 샘플 데이터 기준(실데이터 연동 전). 적자 종목의 FWD PER "—"는 결측 → 0점 처리. 종합 점수 셀 색상 signal_band 기준.</p>
+</main>
+
+<!-- ============ TAB 2 : 종목 상세 ============ -->
+<main id="tab-detail" class="hidden"><div class="wrap" id="detail-root"></div></main>
+
+<!-- ============ TAB 3 : 밸류 비교 ============ -->
+<main id="tab-compare" class="wrap hidden">
+  <section class="hero">
+    <div class="kicker">COMPARISON · 밸류 멀티 비교</div>
+    <h2>밸류 비교</h2>
+    <p>섹터별 밸류에이션 비교. 마진·괴리 셀은 건전성 색상 (Gross≥40% · Op≥20% · Profit≥10% · 괴리 음수=저평가).</p>
+  </section>
+  <div class="card dark-card" style="padding-bottom:4px">
+    <div class="card-h" style="padding-top:16px;display:flex;justify-content:space-between;align-items:center">밸류 비교 · 섹터별 밸류에이션
+      <span class="dark-sel"><select id="c-theme"><option value="">테마 ▾</option></select></span>
+    </div>
+    <div class="card-b scroll-x" style="padding:8px 0 10px">
+      <table class="cmp-table"><thead><tr>
+        <th>종목</th><th>테마</th><th>현재가</th><th>시총</th><th>FWD PER</th><th>PSR</th><th>EV/EBITDA</th><th>Gross</th><th>Op</th><th>Profit</th><th>괴리</th>
+      </tr></thead><tbody id="cmp-body"></tbody></table>
+    </div>
+  </div>
+  <p class="foot-note">※ 괴리 = FWD PER의 3년 평균 대비 이격. 음수(초록)는 역사적 평균 대비 저평가를 뜻합니다. 샘플 데이터 기준.</p>
+</main>
+
+<nav class="nav"><div class="wrap">
+  <button id="nb-board" class="on" onclick="go('board')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 12 6 12 9 5 14 19 17 12 22 12"/></svg>시그널 보드</button>
+  <button id="nb-detail" onclick="go('detail')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg>종목 상세</button>
+  <button id="nb-compare" onclick="go('compare')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="20" x2="6" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="18" y1="20" x2="18" y2="14"/></svg>밸류 비교</button>
+</div></nav>
+
+<script>
+/* ================= DATA ================= */
+const STOCKS=[
+ {t:'NVDA',n:'NVIDIA',th:'매그니피센트7',p:190.01,mc:4602,sc:7,ytd:1.9},
+ {t:'AAPL',n:'Apple',th:'매그니피센트7',p:338.19,mc:4967,sc:-3,ytd:12.4},
+ {t:'MSFT',n:'Microsoft',th:'매그니피센트7',p:390.54,mc:2901,sc:6,ytd:-7.2},
+ {t:'GOOGL',n:'Alphabet',th:'매그니피센트7',p:336.71,mc:4075,sc:-1,ytd:18.3},
+ {t:'AMZN',n:'Amazon',th:'매그니피센트7',p:226.65,mc:2438,sc:6,ytd:-3.1},
+ {t:'META',n:'Meta Platforms',th:'매그니피센트7',p:585.61,mc:1487,sc:4,ytd:-11.6},
+ {t:'TSLA',n:'Tesla',th:'매그니피센트7',p:298.32,mc:1178,sc:9,ytd:-26.4},
+ {t:'AVGO',n:'Broadcom',th:'반도체',p:370.32,mc:1762,sc:5,ytd:6.8},
+ {t:'AMD',n:'AMD',th:'반도체',p:429.56,mc:700,sc:3,ytd:32.1},
+ {t:'ARM',n:'Arm Holdings',th:'반도체',p:224.89,mc:239,sc:4,ytd:9.5},
+ {t:'QCOM',n:'Qualcomm',th:'반도체',p:155.68,mc:164,sc:4,ytd:-8.4},
+ {t:'ORCL',n:'Oracle',th:'SW 주식',p:117.77,mc:339,sc:9,ytd:-38.2},
+ {t:'PLTR',n:'Palantir',th:'SW 주식',p:123.00,mc:282,sc:9,ytd:-34.9},
+ {t:'NEE',n:'NextEra Energy',th:'전력',p:88.46,mc:184,sc:2,ytd:4.2},
+ {t:'CEG',n:'Constellation Energy',th:'전력',p:257.95,mc:93,sc:7,ytd:-14.7},
+ {t:'SMR',n:'NuScale Power',th:'전력',p:7.59,mc:2.3,sc:8,ytd:-52.1},
+ {t:'NXT',n:'Nextracker',th:'전력',p:92.67,mc:14,sc:8,ytd:21.3},
+ {t:'CVX',n:'Chevron',th:'전력',p:191.89,mc:382,sc:1,ytd:8.9},
+ {t:'RKLB',n:'Rocket Lab',th:'우주',p:58.60,mc:34,sc:4,ytd:14.2},
+ {t:'LUNR',n:'Intuitive Machines',th:'우주',p:11.39,mc:1.8,sc:2,ytd:-27.5},
+ {t:'RDW',n:'Redwire',th:'우주',p:7.78,mc:1.9,sc:4,ytd:-49.3},
+ {t:'IONQ',n:'IonQ',th:'양자',p:31.99,mc:12,sc:8,ytd:-24.6},
+ {t:'INFQ',n:'Infleqtion',th:'양자',p:8.83,mc:1.9,sc:5,ytd:0},
+ {t:'JOBY',n:'Joby Aviation',th:'드론',p:6.65,mc:6.5,sc:5,ytd:-19.8},
+ {t:'PL',n:'Planet Labs',th:'우주',p:19.47,mc:6.5,sc:3,ytd:41.2},
+ {t:'MU',n:'Micron Technology',th:'반도체',p:739.00,mc:835,sc:6,ytd:64.7},
+ {t:'INTC',n:'Intel',th:'반도체',p:81.88,mc:412,sc:5,ytd:39.4},
+ {t:'SNPS',n:'Synopsys',th:'반도체',p:373.69,mc:72,sc:8,ytd:-23.1},
+ {t:'CDNS',n:'Cadence Design',th:'반도체',p:332.76,mc:92,sc:4,ytd:5.6},
+ {t:'CRM',n:'Salesforce',th:'SW 주식',p:188.38,mc:154,sc:6,ytd:-28.9},
+ {t:'SPCX',n:'SpaceX',th:'우주',p:112.55,mc:1472,sc:5,ytd:0},
+ {t:'NFLX',n:'Netflix',th:'커뮤니케이션',p:73.63,mc:307,sc:8,ytd:-31.2},
+ {t:'NKE',n:'Nike',th:'소비재',p:43.22,mc:64,sc:9,ytd:-41.5},
+ {t:'DIS',n:'Walt Disney',th:'커뮤니케이션',p:98.46,mc:171,sc:6,ytd:-9.7},
+ {t:'UBER',n:'Uber',th:'기술',p:71.20,mc:145,sc:6,ytd:-13.4},
+ {t:'ISRG',n:'Intuitive Surgical',th:'헬스케어',p:353.10,mc:125,sc:9,ytd:-33.8},
+ {t:'LMT',n:'Lockheed Martin',th:'산업재',p:569.40,mc:131,sc:4,ytd:11.9},
+ {t:'COIN',n:'Coinbase',th:'금융',p:160.09,mc:42,sc:4,ytd:-36.1},
+ {t:'BRK-B',n:'Berkshire Hathaway',th:'금융',p:509.47,mc:1099,sc:-1,ytd:7.3},
+];
+const THEMES=[...new Set(STOCKS.map(s=>s.th))];
+const MARKET={spy52:-4.1,spyPt:-1,vix:20.66,vixPt:1,fg:32,fgPt:0,mood:'중립',moodPt:0,nasdaq:24443,sp500:6728};
+function band(sc){return sc>=8?'강한 매수':sc>=4?'매수 대기':sc>=-2?'관망':'매도 대기'}
+function bandCls(sc){return sc>=8?'s-strong':sc>=4?'s-buy':sc>=-2?'s-hold':'s-sell'}
+const fmt=(x,d=1)=>x.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const sign=x=>(x>0?'+':'')+x;
+const pct=(x,d=1)=>(x>0?'+':'')+fmt(x,d)+'%';
+const mc=v=>v>=1000?fmt(v,0).replace(/\.0$/,'')+'B':v+'B';
+
+/* seeded rng per ticker */
+function rng(seed){let h=0;for(const c of seed)h=(h*31+c.charCodeAt(0))>>>0;return()=>{h^=h<<13;h>>>=0;h^=h>>17;h^=h<<5;h>>>=0;return h/4294967295}}
+
+/* per-ticker detail model (NVDA hand-set from 원본, others generated) */
+function detail(s){
+  const r=rng(s.t);
+  if(s.t==='NVDA')return{
+    ret12:-19.7,ret12pt:2,dd:-22.4,ddpt:2,rsi:38.0,rsipt:2,shortR:0.37,shortpt:1,volCh:41.7,volpt:2,
+    fwdPer:14.9,avgFwdPer:19.2,psr:18.16,fwdPsr:14.2,avgPsr:28.96,evEbitda:23.65,peg:0.85,fcfY:19.20,
+    roa:53.1,roe:111.3,gross:74.1,op:62.4,profit:55.7,fcfM:43.0,curR:3.44,quickR:2.93,ltDE:0.07,
+    qRev:[26.0,28.4,30.0,32.5,35.1,39.3,44.1,46.7],qOp:[16.9,18.6,19.7,21.9,23.3,25.6,29.8,31.5],
+    yrs:['FY22','FY23','FY24','FY25','FY26E'],yRev:[26.9,27.0,60.9,130.5,216.0],yOcf:[9.1,5.6,28.1,64.1,102.8],yCapex:[-0.98,-1.8,-1.1,-3.2,-6.1],
+    revG:[85.5,114.2,126.9],est:[{y:'FY26E',rev:216,g:43.1,eps:4.61,epsG:41.7},{y:'FY27E',rev:301,g:39.4,eps:6.99,epsG:51.6},{y:'FY28E',rev:372,g:23.6,eps:9.02,epsG:29.0}],
+    cmt:'엔비디아는 FWD PER이 3년 평균 대비 저평가 구간에 진입했습니다. 낮은 부채비율과 높은 이익률, 견고한 성장 전망이 긍정적이지만, 시장 공포 심리와 지수 하락 국면이 점수를 일부 깎았습니다. 분할 매수 관점의 접근이 유효한 구간입니다.'};
+  const g=x=>Math.round(x*10)/10;
+  const fwdPer=g(10+r()*35),avg=g(fwdPer*(0.85+r()*0.5));
+  const gross=g(25+r()*55),op=g(gross*(0.3+r()*0.5)),profit=g(op*(0.5+r()*0.5));
+  const base=Math.max(0.5,s.mc*0.012);
+  const qRev=Array.from({length:8},(_,i)=>g(base*(1+0.09*i)*(0.9+r()*0.2)));
+  const qOp=qRev.map(v=>g(v*op/100));
+  const yRev=[0.55,0.7,0.85,1,1.3].map(k=>g(base*4*k*(0.95+r()*0.1)));
+  const yOcf=yRev.map(v=>g(v*(op/100)*1.1)),yCapex=yRev.map(v=>g(-v*(0.04+r()*0.1)));
+  return{
+    ret12:g(-40+r()*80),ret12pt:s.sc>3?2:1,dd:g(-(5+r()*45)),ddpt:2,rsi:g(25+r()*50),rsipt:1,shortR:g(r()*4)/1,shortpt:1,volCh:g(-20+r()*80),volpt:1,
+    fwdPer,avgFwdPer:avg,psr:g(1+r()*20),fwdPsr:g(1+r()*15),avgPsr:g(2+r()*25),evEbitda:g(8+r()*30),peg:g(0.4+r()*2.5),fcfY:g(r()*20),
+    roa:g(r()*30),roe:g(r()*60),gross,op,profit,fcfM:g(profit*(0.6+r()*0.8)),curR:g(0.8+r()*3),quickR:g(0.6+r()*2.5),ltDE:g(r()*1.5),
+    qRev,qOp,yrs:['FY22','FY23','FY24','FY25','FY26E'],yRev,yOcf,yCapex,
+    revG:[g(-10+r()*60),g(-5+r()*70),g(r()*80)],
+    est:[0,1,2].map(i=>({y:'FY2'+(6+i)+'E',rev:g(yRev[4]*(1+0.25*(i+1))),g:g(10+r()*40),eps:g(1+r()*8),epsG:g(5+r()*45)})),
+    cmt:`${s.n}은(는) 종합 점수 ${sign(s.sc)}점으로 '${band(s.sc)}' 구간입니다. 밸류에이션 이격과 수급, 시장 타이밍 지표를 함께 반영한 룰 기반 판단이며, 개별 이벤트(실적 발표·가이던스)는 별도 확인이 필요합니다.`};
+}
+
+/* price series 1Y */
+function priceSeries(s){const r=rng(s.t+'px');const n=252;const out=[];let v=1;
+  for(let i=0;i<n;i++){v*=1+(r()-0.485)*0.03;out.push(v)}
+  const last=out[n-1];const k=s.p/last;return out.map(x=>x*k)}
+
+/* ================= TOOLTIP ================= */
+const tip=document.getElementById('tip');
+function showTip(html,x,y){tip.innerHTML=html;tip.style.display='block';
+  const w=tip.offsetWidth,vw=innerWidth;let L=x+12;if(L+w>vw-8)L=x-w-12;if(L<8)L=8;
+  tip.style.left=L+'px';tip.style.top=Math.max(8,y-40)+'px'}
+function hideTip(){tip.style.display='none'}
+
+/* ================= SVG CHART HELPERS ================= */
+const NS='http://www.w3.org/2000/svg';
+function svgEl(w,h){const s=document.createElementNS(NS,'svg');s.setAttribute('viewBox',`0 0 ${w} ${h}`);s.style.width='100%';s.style.display='block';return s}
+function areaChart(el,data,color,labelFn){
+  const W=480,H=190,P={l:6,r:6,t:10,b:8};const s=svgEl(W,H);
+  const min=Math.min(...data),max=Math.max(...data),rg=max-min||1;
+  const X=i=>P.l+i*(W-P.l-P.r)/(data.length-1),Y=v=>H-P.b-(v-min)/rg*(H-P.t-P.b);
+  let dPath=`M${X(0)} ${Y(data[0])}`;data.forEach((v,i)=>{if(i)dPath+=`L${X(i)} ${Y(v)}`});
+  const area=document.createElementNS(NS,'path');
+  area.setAttribute('d',dPath+`L${X(data.length-1)} ${H-P.b}L${X(0)} ${H-P.b}Z`);
+  area.setAttribute('fill',color);area.setAttribute('opacity','.22');s.appendChild(area);
+  const line=document.createElementNS(NS,'path');line.setAttribute('d',dPath);
+  line.setAttribute('fill','none');line.setAttribute('stroke',color);line.setAttribute('stroke-width','2');s.appendChild(line);
+  const cross=document.createElementNS(NS,'line');cross.setAttribute('stroke','#888');cross.setAttribute('stroke-dasharray','3 3');cross.setAttribute('y1',P.t);cross.setAttribute('y2',H-P.b);cross.style.display='none';s.appendChild(cross);
+  const dot=document.createElementNS(NS,'circle');dot.setAttribute('r','4');dot.setAttribute('fill',color);dot.setAttribute('stroke','#111');dot.setAttribute('stroke-width','2');dot.style.display='none';s.appendChild(dot);
+  function move(ev){const r=s.getBoundingClientRect();const cx=(ev.touches?ev.touches[0].clientX:ev.clientX);
+    const fx=(cx-r.left)/r.width*W;const i=Math.max(0,Math.min(data.length-1,Math.round((fx-P.l)/(W-P.l-P.r)*(data.length-1))));
+    cross.setAttribute('x1',X(i));cross.setAttribute('x2',X(i));cross.style.display='';
+    dot.setAttribute('cx',X(i));dot.setAttribute('cy',Y(data[i]));dot.style.display='';
+    showTip(labelFn(i,data[i]),cx,(ev.touches?ev.touches[0].clientY:ev.clientY))}
+  s.addEventListener('mousemove',move);s.addEventListener('touchmove',move,{passive:true});
+  s.addEventListener('mouseleave',()=>{cross.style.display='none';dot.style.display='none';hideTip()});
+  s.addEventListener('touchend',()=>{cross.style.display='none';dot.style.display='none';hideTip()});
+  el.appendChild(s)}
+function barChart(el,labels,seriesArr,colors,names,unit){
+  const W=480,H=200,P={l:6,r:6,t:14,b:22};const s=svgEl(W,H);
+  const all=seriesArr.flat();const max=Math.max(...all,0),min=Math.min(...all,0);const rg=(max-min)||1;
+  const Y=v=>P.t+(max-v)/rg*(H-P.t-P.b);const y0=Y(0);
+  const n=labels.length,ns=seriesArr.length;
+  const slot=(W-P.l-P.r)/n,bw=Math.min(26,(slot-6)/ns-2);
+  labels.forEach((lb,i)=>{
+    seriesArr.forEach((ser,k)=>{
+      const v=ser[i];const x=P.l+slot*i+slot/2-(bw*ns+2*(ns-1))/2+k*(bw+2);
+      const y=Math.min(Y(v),y0),h=Math.max(2,Math.abs(Y(v)-y0));
+      const rc=document.createElementNS(NS,'rect');
+      rc.setAttribute('x',x);rc.setAttribute('y',y);rc.setAttribute('width',bw);rc.setAttribute('height',h);
+      rc.setAttribute('rx','4');rc.setAttribute('fill',colors[k]);
+      rc.addEventListener('mousemove',ev=>showTip(`<b>${lb}</b><br>${names[k]}: ${fmt(v)}${unit}`,ev.clientX,ev.clientY));
+      rc.addEventListener('mouseleave',hideTip);
+      rc.addEventListener('touchstart',ev=>{const t=ev.touches[0];showTip(`<b>${lb}</b><br>${names[k]}: ${fmt(v)}${unit}`,t.clientX,t.clientY)},{passive:true});
+      s.appendChild(rc)});
+    const tx=document.createElementNS(NS,'text');tx.setAttribute('x',P.l+slot*i+slot/2);tx.setAttribute('y',H-6);
+    tx.setAttribute('text-anchor','middle');tx.setAttribute('font-size','10');tx.setAttribute('fill','#8f9096');tx.textContent=lb;s.appendChild(tx)});
+  const ax=document.createElementNS(NS,'line');ax.setAttribute('x1',P.l);ax.setAttribute('x2',W-P.r);ax.setAttribute('y1',y0);ax.setAttribute('y2',y0);ax.setAttribute('stroke','#3a3b40');s.appendChild(ax);
+  el.appendChild(s)}
+function multiLine(el,labels,seriesArr,colors,names,unit){
+  const W=480,H=190,P={l:6,r:6,t:12,b:22};const s=svgEl(W,H);
+  const all=seriesArr.flat();const max=Math.max(...all),min=Math.min(...all,0);const rg=(max-min)||1;
+  const X=i=>P.l+i*(W-P.l-P.r)/(labels.length-1),Y=v=>P.t+(max-v)/rg*(H-P.t-P.b);
+  seriesArr.forEach((ser,k)=>{let d='';ser.forEach((v,i)=>d+=(i?'L':'M')+X(i)+' '+Y(v));
+    const p=document.createElementNS(NS,'path');p.setAttribute('d',d);p.setAttribute('fill','none');
+    p.setAttribute('stroke',colors[k]);p.setAttribute('stroke-width','2');p.setAttribute('stroke-linejoin','round');s.appendChild(p);
+    ser.forEach((v,i)=>{const c=document.createElementNS(NS,'circle');c.setAttribute('cx',X(i));c.setAttribute('cy',Y(v));c.setAttribute('r','4');
+      c.setAttribute('fill',colors[k]);c.setAttribute('stroke','#131416');c.setAttribute('stroke-width','2');
+      c.addEventListener('mousemove',ev=>showTip(`<b>${labels[i]}</b><br>${names[k]}: ${fmt(v)}${unit}`,ev.clientX,ev.clientY));
+      c.addEventListener('mouseleave',hideTip);s.appendChild(c)})});
+  labels.forEach((lb,i)=>{const tx=document.createElementNS(NS,'text');tx.setAttribute('x',X(i));tx.setAttribute('y',H-4);
+    tx.setAttribute('text-anchor','middle');tx.setAttribute('font-size','10');tx.setAttribute('fill','#8f9096');tx.textContent=lb;s.appendChild(tx)});
+  el.appendChild(s)}
+</script>
+<script>
+/* ================= TAB 1 RENDER ================= */
+(function(){
+  const strong=STOCKS.filter(s=>s.sc>=8).sort((a,b)=>b.sc-a.sc).slice(0,6);
+  document.getElementById('reco-chips').innerHTML=strong.map(s=>`<span class="chip">${s.t} <small>${sign(s.sc)}</small></span>`).join('');
+  const top=strong.map(s=>s.t).join(', ');
+  document.getElementById('today-summary').textContent=
+    `시장은 '${MARKET.mood}' 구간입니다. SPY가 52주 고점 대비 ${MARKET.spy52}% 눌린 가운데 VIX ${MARKET.vix}, Fear & Greed ${MARKET.fg}(공포)로 변동성 경계가 유지되고 있습니다. 강한 매수 신호는 ${top} 등 ${strong.length}종목에서 발생했습니다. 공포 구간의 분할 매수 원칙을 유지하세요.`;
+  const M=[['SPY 52주↓',fmt(MARKET.spy52)+'%',MARKET.spyPt],['VIX',fmt(MARKET.vix,2),MARKET.vixPt],['F&G INDEX',MARKET.fg,MARKET.fgPt]];
+  document.getElementById('market-rows').innerHTML=
+    M.map(([k,v,p])=>`<div class="mrow"><span class="k">${k}</span><span class="v">${v}<span class="pt ${p>0?'up':p<0?'dn':'zr'}">${p===0?'0':sign(p)}</span></span></div>`).join('')
+    +`<div class="mrow"><span class="k">현재 시장 상황</span><span class="v"><span class="badge neutral">${MARKET.mood}</span><span class="pt zr">0</span></span></div>`;
+  const ft=document.getElementById('f-theme');
+  THEMES.forEach(t=>ft.insertAdjacentHTML('beforeend',`<option>${t}</option>`));
+  function draw(){
+    const th=ft.value,bd=document.getElementById('f-band').value;
+    document.getElementById('sig-body').innerHTML=STOCKS
+      .filter(s=>(!th||s.th===th)&&(!bd||band(s.sc)===bd))
+      .map(s=>`<tr style="cursor:pointer" onclick="openDetail('${s.t}')">
+        <td class="tk">${s.t}<small>${s.n}</small></td>
+        <td class="theme-cell">${s.th}</td>
+        <td style="text-align:right"><span class="sig ${bandCls(s.sc)}"><span class="dot"></span>${band(s.sc)} <b>${sign(s.sc)}</b></span></td></tr>`).join('');
+  }
+  ft.onchange=draw;document.getElementById('f-band').onchange=draw;draw();
+})();
+
+/* ================= TAB 3 RENDER ================= */
+(function(){
+  const ct=document.getElementById('c-theme');
+  THEMES.forEach(t=>ct.insertAdjacentHTML('beforeend',`<option>${t}</option>`));
+  function h(v,ok){return `<span class="${ok?'hp':'hn'}">${v}</span>`}
+  function draw(){
+    const th=ct.value;
+    document.getElementById('cmp-body').innerHTML=STOCKS.filter(s=>!th||s.th===th).map(s=>{
+      const d=detail(s);const gap=Math.round((d.fwdPer/d.avgFwdPer-1)*1000)/10;
+      return `<tr onclick="openDetail('${s.t}')" style="cursor:pointer">
+      <td class="tk">${s.t}</td><td class="theme-cell">${s.th}</td>
+      <td>$${fmt(s.p,2)}</td><td>${mc(s.mc)}</td>
+      <td>${d.fwdPer?fmt(d.fwdPer):'—'}</td><td>${fmt(d.psr,2)}</td><td>${fmt(d.evEbitda)}</td>
+      <td>${h(fmt(d.gross)+'%',d.gross>=40)}</td><td>${h(fmt(d.op)+'%',d.op>=20)}</td>
+      <td>${h(fmt(d.profit)+'%',d.profit>=10)}</td><td>${h(pct(gap),gap<0)}</td></tr>`}).join('');
+  }
+  ct.onchange=draw;draw();
+})();
+
+/* ================= TAB 2 RENDER ================= */
+let curTicker='NVDA';
+function openDetail(t){curTicker=t;go('detail');renderDetail()}
+function renderDetail(){
+  const s=STOCKS.find(x=>x.t===curTicker);const d=detail(s);
+  const gap=Math.round((d.fwdPer/d.avgFwdPer-1)*1000)/10;
+  const root=document.getElementById('detail-root');
+  const opts=THEMES.map(th=>`<optgroup label="${th}">`+STOCKS.filter(x=>x.th===th).map(x=>`<option value="${x.t}" ${x.t===s.t?'selected':''}>${x.t} — ${x.n}</option>`).join('')+`</optgroup>`).join('');
+  const pr=priceSeries(s);
+  const kr=(k,v,pt)=>`<div class="krow"><span class="k">${k}</span><span class="v">${v}${pt!==undefined?`<span class="pt ${pt>0?'up':pt<0?'dn':'zr'}" style="color:${pt>0?'#9fd07f':pt<0?'#e58f6a':'#6a6b70'}">${pt===0?'0':sign(pt)}</span>`:''}</span></div>`;
+  root.innerHTML=`
+  <div class="picker"><select id="tick-sel" onchange="curTicker=this.value;renderDetail()">${opts}</select></div>
+  <div class="price-line"><span class="nm">${s.n} · ${s.th}</span></div>
+  <div class="price-line"><span class="sig ${bandCls(s.sc)}"><span class="dot"></span>${band(s.sc)} <b>${sign(s.sc)}</b></span>
+    <span class="big-price">$${fmt(s.p,2)}</span><span class="ytd" style="color:${s.ytd>=0?'#9fd07f':'#e58f6a'}">${pct(s.ytd)} YTD</span></div>
+
+  <div class="sec-label"><span class="no">01</span><span class="t">판단</span></div>
+  <h3 class="sec-title">종합 판단</h3>
+  <p class="sec-sub">9개 지표 룰 기반 종합 점수 · 시장 타이밍 공통 반영</p>
+  <div class="d-card">
+    <div class="score-hero" style="color:${s.sc>=4?'#9fd07f':s.sc>=-2?'#c9c9c2':'#e3c05a'}">${sign(s.sc)}</div>
+    <div class="gauge"><div class="mk" style="left:calc(${((s.sc+10)/20*100).toFixed(1)}% - 2px)"></div></div>
+    <div class="gauge-lb"><span>매도</span><span>관망</span><span>강한 매수</span></div>
+    <div class="comment"><b>투자 코멘트</b><p>${d.cmt}</p></div>
+  </div>
+
+  <div class="d-card"><div class="d-h">가격·수급 지표</div>
+    ${kr('12개월 수익률',pct(d.ret12),d.ret12pt)}
+    ${kr('고점 대비 낙폭',fmt(d.dd)+'%',d.ddpt)}
+    ${kr('RSI (14일)',fmt(d.rsi),d.rsipt)}
+    ${kr('공매도 비율',fmt(d.shortR,2),d.shortpt)}
+    ${kr('거래량 증가율',pct(d.volCh),d.volpt)}
+    ${kr('52주 밴드 위치',fmt(((s.p-Math.min(...pr))/(Math.max(...pr)-Math.min(...pr))*100))+'%',1)}
+  </div>
+
+  <div class="d-card"><div class="d-h">주가 추이 · 최근 1년</div>
+    <div style="font-weight:800;font-size:1.1rem;margin-bottom:4px">$${fmt(s.p,2)}</div>
+    <div class="chart-box" id="px-chart"></div>
+  </div>
+
+  <div class="d-card"><div class="d-h">시장 환경</div>
+    ${kr('NASDAQ',MARKET.nasdaq.toLocaleString(),undefined)}
+    ${kr('S&P500',MARKET.sp500.toLocaleString(),undefined)}
+    ${kr('VIX',fmt(MARKET.vix,2)+' · 경계',MARKET.vixPt)}
+    ${kr('Fear & Greed',MARKET.fg+' · 공포',MARKET.fgPt)}
+  </div>
+
+  <div class="sec-label"><span class="no">02</span><span class="t">밸류에이션 · 퀄리티</span></div>
+  <h3 class="sec-title">밸류에이션</h3>
+  <p class="sec-sub">3년 대비 이격, 그리고 시장의 값</p>
+  <div class="d-card">
+    ${kr('FWD PER',fmt(d.fwdPer)+`<span class="gap-tag ${gap<0?'':'over'}">${gap<0?'3Y 평균 대비 저평가':'3Y 평균 대비 고평가'} ${pct(gap)}</span>`,undefined)}
+    ${kr('3Y 평균 FWD PER',fmt(d.avgFwdPer),undefined)}
+    ${kr('PSR',fmt(d.psr,2),undefined)}
+    ${kr('FWD PSR',fmt(d.fwdPsr,2),undefined)}
+    ${kr('5Y 평균 PSR',fmt(d.avgPsr,2),undefined)}
+    ${kr('EV/EBITDA',fmt(d.evEbitda,2),undefined)}
+    ${kr('PEG',fmt(d.peg,2),undefined)}
+    ${kr('FCF 수익률',fmt(d.fcfY,2)+'%',undefined)}
+  </div>
+  <div class="d-card"><div class="d-h">퀄리티</div>
+    ${kr('ROA',pct(d.roa),1)}
+    ${kr('ROE',pct(d.roe),d.roe>30?1:0)}
+    ${kr('Gross Margin',pct(d.gross),d.gross>=40?1:0)}
+    ${kr('Operating Margin',pct(d.op),d.op>=20?1:0)}
+    ${kr('FCF Margin',pct(d.fcfM),d.fcfM>=15?1:0)}
+    ${kr('Current Ratio',fmt(d.curR,2),undefined)}
+    ${kr('Quick Ratio',fmt(d.quickR,2),undefined)}
+    ${kr('LT Debt/Equity',fmt(d.ltDE,2),undefined)}
+  </div>
+
+  <div class="sec-label"><span class="no">03</span><span class="t">실적</span></div>
+  <h3 class="sec-title">실적 추이</h3>
+  <p class="sec-sub">매출 · 손익 · 현금흐름</p>
+  <div class="d-card"><div class="d-h">실적 추이 · 분기별 데이터</div>
+    <div class="legend"><span><i style="background:var(--c1)"></i>매출</span><span><i style="background:var(--c2)"></i>영업이익</span></div>
+    <div class="chart-box" id="q-chart"></div>
+  </div>
+  <div class="d-card"><div class="d-h">연도별 실적</div>
+    <div class="legend"><span><i style="background:var(--c1)"></i>매출</span></div>
+    <div class="chart-box" id="y-chart"></div>
+  </div>
+  <div class="d-card"><div class="d-h">연도별 현금흐름</div>
+    <div class="legend"><span><i style="background:var(--c1)"></i>영업현금흐름</span><span><i style="background:var(--c2)"></i>CAPEX</span><span><i style="background:var(--c3)"></i>FCF</span></div>
+    <div class="chart-box" id="cf-chart"></div>
+  </div>
+  <div class="d-card"><div class="d-h">분기별 요약</div>
+    <div class="scroll-x"><table class="fin-table"><thead><tr><th>항목</th><th>TTM</th><th>YoY</th><th>3Y CAGR</th></tr></thead><tbody>
+      <tr><td>매출</td><td>$${fmt(d.qRev.slice(4).reduce((a,b)=>a+b,0),1)}B</td><td class="grw">${pct(d.revG[1])}</td><td class="grw">${pct(d.revG[2])}</td></tr>
+      <tr><td>영업이익</td><td>$${fmt(d.qOp.slice(4).reduce((a,b)=>a+b,0),1)}B</td><td class="grw">${pct(d.revG[1]*1.05)}</td><td class="grw">${pct(d.revG[2]*1.1)}</td></tr>
+      <tr><td>영업이익률</td><td>${fmt(d.op)}%</td><td class="grw">+${fmt(d.op*0.04)}%p</td><td>—</td></tr>
+      <tr><td>EBITDA</td><td>$${fmt(d.qOp.slice(4).reduce((a,b)=>a+b,0)*1.12,1)}B</td><td class="grw">${pct(d.revG[1]*1.08)}</td><td class="grw">${pct(d.revG[2])}</td></tr>
+    </tbody></table></div>
+  </div>
+  <div class="d-card"><div class="d-h">현금흐름 (최근 회계연도)</div>
+    <div class="scroll-x"><table class="fin-table"><thead><tr><th>항목</th><th>금액</th><th>매출 대비</th></tr></thead><tbody>
+      <tr><td>영업현금흐름</td><td>$${fmt(d.yOcf[4],1)}B</td><td>${fmt(d.yOcf[4]/d.yRev[4]*100)}%</td></tr>
+      <tr><td>CAPEX</td><td class="grw dn">-$${fmt(Math.abs(d.yCapex[4]),1)}B</td><td>${fmt(Math.abs(d.yCapex[4])/d.yRev[4]*100)}%</td></tr>
+      <tr><td>잉여현금흐름(FCF)</td><td class="grw">$${fmt(d.yOcf[4]+d.yCapex[4],1)}B</td><td>${fmt((d.yOcf[4]+d.yCapex[4])/d.yRev[4]*100)}%</td></tr>
+    </tbody></table></div>
+  </div>
+
+  <div class="sec-label"><span class="no">04</span><span class="t">예상 실적</span></div>
+  <h3 class="sec-title">예상 실적</h3>
+  <p class="sec-sub">컨센서스 기반 매출·EPS 전망</p>
+  <div class="d-card"><div class="d-h">컨센서스 전망</div>
+    <div class="scroll-x"><table class="fin-table"><thead><tr><th>연도</th><th>매출</th><th>성장률</th><th>EPS</th><th>EPS 성장률</th></tr></thead><tbody>
+      ${d.est.map(e=>`<tr><td>${e.y}</td><td>$${fmt(e.rev,0)}B</td><td class="grw">${pct(e.g)}</td><td>$${fmt(e.eps,2)}</td><td class="grw">${pct(e.epsG)}</td></tr>`).join('')}
+    </tbody></table></div>
+  </div>
+  <div class="d-card"><div class="d-h">예상 매출 기반 추이</div>
+    <div class="legend"><span><i style="background:var(--c1)"></i>예상 매출</span></div>
+    <div class="chart-box" id="est-chart"></div>
+  </div>
+  <p class="foot-note" style="color:#6a6b70">※ 샘플 데이터 기준. 실데이터 연동 시 야후 파이낸스 → Supabase 파이프라인에서 로드됩니다.</p>`;
+  const c1=getComputedStyle(document.documentElement).getPropertyValue('--c1').trim();
+  const c2=getComputedStyle(document.documentElement).getPropertyValue('--c2').trim();
+  const c3=getComputedStyle(document.documentElement).getPropertyValue('--c3').trim();
+  areaChart(document.getElementById('px-chart'),pr,c1,(i,v)=>`<b>${Math.round((252-i)/21)}개월 전</b><br>$${fmt(v,2)}`);
+  const qLb=['Q1','Q2','Q3','Q4','Q1','Q2','Q3','Q4'];
+  barChart(document.getElementById('q-chart'),qLb,[d.qRev,d.qOp],[c1,c2],['매출','영업이익'],'B');
+  barChart(document.getElementById('y-chart'),d.yrs,[d.yRev],[c1],['매출'],'B');
+  multiLine(document.getElementById('cf-chart'),d.yrs,[d.yOcf,d.yCapex.map(v=>v),d.yOcf.map((v,i)=>v+d.yCapex[i])],[c1,c2,c3],['영업현금흐름','CAPEX','FCF'],'B');
+  barChart(document.getElementById('est-chart'),d.est.map(e=>e.y),[d.est.map(e=>e.rev)],[c1],['예상 매출'],'B');
+}
+
+/* ================= NAV ================= */
+function go(t){
+  ['board','detail','compare'].forEach(x=>{
+    document.getElementById('tab-'+x).classList.toggle('hidden',x!==t);
+    document.getElementById('nb-'+x).classList.toggle('on',x===t)});
+  window.scrollTo(0,0);
+  if(t==='detail'&&!document.getElementById('tick-sel'))renderDetail();
+}
+</script>
+</body>
+</html>
