@@ -125,7 +125,8 @@ svg text{font-family:inherit}
 </head>
 <body>
 <div id="tip"></div>
-<header class="top"><div class="wrap"><div class="logo">나만의<br>분석</div><h1>나만의 투자분석</h1></div></header>
+<header class="top"><div class="wrap"><div class="logo">나만의<br>분석</div><h1>나만의 투자분석</h1>
+<button id="live-cfg" onclick="setFinnKey()" title="실시간 시세 API 키 설정" style="margin-left:auto;background:none;border:1px solid var(--line);border-radius:8px;padding:4px 9px;font-size:.85rem;cursor:pointer;color:var(--ink2);font-family:inherit">⚙</button></div></header>
 
 <!-- ============ TAB 1 : 시그널 보드 ============ -->
 <main id="tab-board" class="wrap">
@@ -430,7 +431,7 @@ function renderDetail(){
   <div class="picker"><select id="tick-sel" onchange="curTicker=this.value;renderDetail()">${opts}</select></div>
   <div class="price-line"><span class="nm">${s.n} · ${s.th}</span></div>
   <div class="price-line"><span class="sig ${bandCls(s.sc)}"><span class="dot"></span>${band(s.sc)} <b>${sign(s.sc)}</b></span>
-    <span class="big-price">$${fmt(s.p,2)}</span><span class="ytd" style="color:${s.ytd>=0?'#9fd07f':'#e58f6a'}">${pct(s.ytd)} YTD</span></div>
+    <span class="big-price">$${fmt(s.p,2)}</span><span class="ytd" id="ytd-lbl" style="color:${s.ytd>=0?'#9fd07f':'#e58f6a'}">${pct(s.ytd)} YTD</span>${s.dp!=null?`<span class="ytd" id="day-chg" style="color:${s.dp>=0?'#9fd07f':'#e58f6a'}">${pct(s.dp)} 오늘</span>`:'<span class="ytd" id="day-chg"></span>'}</div>
 
   <div class="sec-label"><span class="no">01</span><span class="t">판단</span></div>
   <h3 class="sec-title">종합 판단</h3>
@@ -568,13 +569,83 @@ function applyLiveData(D){
 function updateStatus(){
   const el=document.getElementById('data-status'),note=document.getElementById('board-note');
   if(META.live){
-    el.textContent=`실데이터 · 업데이트 ${META.updated} KST`;
-    note.textContent=`※ yfinance 실데이터 기준 (${META.updated} KST 업데이트, 매일 미국 장 마감 후 자동 갱신). 적자 종목의 FWD PER "—"는 결측 → 0점 처리.`;
+    let t=`실데이터 · 업데이트 ${META.updated} KST`;
+    if(finnKey())t+=lastQuote?` · 실시간 시세 ${lastQuote.getHours().toString().padStart(2,'0')}:${lastQuote.getMinutes().toString().padStart(2,'0')}`:' · 실시간 시세 연결 중…';
+    else t+=' · 우측 상단 ⚙에서 무료 Finnhub 키 등록 시 실시간 시세';
+    el.textContent=t;
+    note.textContent=`※ yfinance 실데이터 기준 (${META.updated} KST 업데이트, 매일 자동 갱신)${finnKey()?' + Finnhub 실시간 시세(점수·재무는 일별 갱신)':''}. 적자 종목의 FWD PER "—"는 결측 → 0점 처리.`;
   }else{
     el.textContent='⚠ 실데이터 로드 실패 — 내장 샘플 데이터 표시 중';
     note.textContent='※ 샘플 데이터 기준 — data.json 로드에 실패해 내장 데이터로 표시 중입니다. 적자 종목의 FWD PER "—"는 결측 → 0점 처리.';
   }
 }
+
+/* ============ 실시간 시세 (Finnhub REST, CORS 지원) ============
+   무료 키(finnhub.io) 를 ⚙ 버튼 또는 ?finnhub=KEY 로 등록하면
+   미국 장중 60초 / 장외 10분 주기로 현재가를 갱신한다.
+   키는 localStorage에만 저장되고 저장소에는 커밋되지 않는다. */
+const FINN_MAP={'BRK-B':'BRK.B'};
+let liveTimer=null,lastQuote=null,lastFetchMs=0,liveBusy=false;
+function finnKey(){try{return localStorage.getItem('finnhub_key')||''}catch(e){return ''}}
+function setFinnKey(){
+  const k=prompt('Finnhub API 키를 입력하세요 (finnhub.io 무료 발급 · 비우고 확인하면 해제):',finnKey());
+  if(k===null)return;
+  try{k.trim()?localStorage.setItem('finnhub_key',k.trim()):localStorage.removeItem('finnhub_key')}catch(e){}
+  lastQuote=null;startLive();
+}
+function usMarketOpen(){
+  try{
+    const et=new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'}));
+    const d=et.getDay();if(d===0||d===6)return false;
+    const m=et.getHours()*60+et.getMinutes();
+    return m>=570&&m<960; /* 09:30–16:00 ET */
+  }catch(e){return true}
+}
+async function refreshQuotes(force){
+  const key=finnKey();
+  if(!key||liveBusy)return;
+  const gapMs=usMarketOpen()?55000:590000; /* 장중 60초 · 장외 10분 */
+  if(!force&&Date.now()-lastFetchMs<gapMs)return;
+  liveBusy=true;lastFetchMs=Date.now();
+  let ok=0;
+  await Promise.all(STOCKS.map(async s=>{
+    try{
+      const sym=FINN_MAP[s.t]||s.t;
+      const r=await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(sym)}&token=${encodeURIComponent(key)}`);
+      if(!r.ok)return;
+      const q=await r.json();
+      if(q&&q.c>0&&s.p>0){
+        const ratio=q.c/s.p;
+        if(s.mc!=null)s.mc=Math.round(s.mc*ratio*10)/10;
+        if(s.ytd!=null)s.ytd=Math.round(((1+s.ytd/100)*ratio-1)*1000)/10;
+        s.p=Math.round(q.c*100)/100;s.dp=(q.dp==null?s.dp:Math.round(q.dp*10)/10);ok++;
+      }
+    }catch(e){}
+  }));
+  liveBusy=false;
+  if(ok){lastQuote=new Date();rerenderLive()}
+}
+function rerenderLive(){
+  /* 필터 유지한 채 보드·비교 테이블 갱신, 상세 탭은 가격 텍스트만 교체(차트 깜빡임 방지) */
+  const keep=['f-theme','f-band','c-theme'].map(id=>[id,document.getElementById(id).value]);
+  renderBoard();renderCompare();
+  keep.forEach(([id,v])=>{const el=document.getElementById(id);if([...el.options].some(o=>o.value===v)){el.value=v;el.onchange&&el.onchange()}});
+  const s=STOCKS.find(x=>x.t===curTicker);
+  if(s){
+    const bp=document.querySelector('#tab-detail .big-price');if(bp)bp.textContent='$'+fmt(s.p,2);
+    const yl=document.getElementById('ytd-lbl');if(yl){yl.textContent=pct(s.ytd)+' YTD';yl.style.color=(s.ytd??0)>=0?'#9fd07f':'#e58f6a'}
+    const dc=document.getElementById('day-chg');if(dc&&s.dp!=null){dc.textContent=pct(s.dp)+' 오늘';dc.style.color=s.dp>=0?'#9fd07f':'#e58f6a'}
+  }
+  updateStatus();
+}
+function startLive(){
+  if(liveTimer){clearInterval(liveTimer);liveTimer=null}
+  updateStatus();
+  if(!finnKey())return;
+  refreshQuotes(true);
+  liveTimer=setInterval(()=>{if(document.visibilityState==='visible')refreshQuotes(false)},60000);
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshQuotes(false)});
 (async function boot(){
   try{
     const r=await fetch('data.json',{cache:'no-store'});
@@ -586,7 +657,11 @@ function updateStatus(){
   }
   renderBoard();renderCompare();
   if(!document.getElementById('tab-detail').classList.contains('hidden'))renderDetail();
-  updateStatus();
+  try{
+    const k=new URLSearchParams(location.search).get('finnhub');
+    if(k)localStorage.setItem('finnhub_key',k.trim());
+  }catch(e){}
+  startLive(); /* updateStatus 포함 */
 })();
 </script>
 </body>

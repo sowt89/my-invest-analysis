@@ -4,6 +4,8 @@ on:
   schedule:
     # 매일 미국 장 마감 후 실행 (21:30 UTC = 17:30 EDT / 16:30 EST, 화~토 UTC = 미국 월~금 저녁)
     - cron: "30 21 * * 2-6"
+    # 미국 장중 2시간 간격 갱신 (14:30~20:30 UTC = 10:30~16:30 EDT, 점수·재무 최신화)
+    - cron: "30 14,16,18,20 * * 1-5"
   workflow_dispatch:
 
 permissions:
