@@ -1,0 +1,533 @@
+#!/usr/bin/env python3
+"""나만의 투자분석 — 실데이터 수집 스크립트.
+
+yfinance로 워치리스트 39종목의 시세·1년 주가·재무·마진·컨센서스와
+시장지표(^VIX, ^IXIC, ^GSPC, SPY 52주 낙폭, CNN Fear & Greed)를 수집하고
+9개 지표 룰 기반 종합 점수를 계산해 data.json으로 저장한다.
+
+판단 구간: +8 이상 강한 매수 / +4~+7 매수 대기 / -2~+3 관망 / -3 이하 매도 대기.
+적자 종목 등 FWD PER 결측은 밸류에이션 지표 0점 처리.
+"""
+
+import json
+import math
+import os
+import sys
+import time
+import traceback
+from datetime import datetime, timezone, timedelta
+
+import requests as std_requests
+import yfinance as yf
+from curl_cffi import requests as curl_requests
+
+# ---------------------------------------------------------------- watchlist
+WATCHLIST = [
+    ("NVDA", "NVIDIA", "매그니피센트7"),
+    ("AAPL", "Apple", "매그니피센트7"),
+    ("MSFT", "Microsoft", "매그니피센트7"),
+    ("GOOGL", "Alphabet", "매그니피센트7"),
+    ("AMZN", "Amazon", "매그니피센트7"),
+    ("META", "Meta Platforms", "매그니피센트7"),
+    ("TSLA", "Tesla", "매그니피센트7"),
+    ("AVGO", "Broadcom", "반도체"),
+    ("AMD", "AMD", "반도체"),
+    ("ARM", "Arm Holdings", "반도체"),
+    ("QCOM", "Qualcomm", "반도체"),
+    ("ORCL", "Oracle", "SW 주식"),
+    ("PLTR", "Palantir", "SW 주식"),
+    ("NEE", "NextEra Energy", "전력"),
+    ("CEG", "Constellation Energy", "전력"),
+    ("SMR", "NuScale Power", "전력"),
+    ("NXT", "Nextracker", "전력"),
+    ("CVX", "Chevron", "전력"),
+    ("RKLB", "Rocket Lab", "우주"),
+    ("LUNR", "Intuitive Machines", "우주"),
+    ("RDW", "Redwire", "우주"),
+    ("IONQ", "IonQ", "양자"),
+    ("INFQ", "Infleqtion", "양자"),
+    ("JOBY", "Joby Aviation", "드론"),
+    ("PL", "Planet Labs", "우주"),
+    ("MU", "Micron Technology", "반도체"),
+    ("INTC", "Intel", "반도체"),
+    ("SNPS", "Synopsys", "반도체"),
+    ("CDNS", "Cadence Design", "반도체"),
+    ("CRM", "Salesforce", "SW 주식"),
+    ("SPCX", "SpaceX", "우주"),
+    ("NFLX", "Netflix", "커뮤니케이션"),
+    ("NKE", "Nike", "소비재"),
+    ("DIS", "Walt Disney", "커뮤니케이션"),
+    ("UBER", "Uber", "기술"),
+    ("ISRG", "Intuitive Surgical", "헬스케어"),
+    ("LMT", "Lockheed Martin", "산업재"),
+    ("COIN", "Coinbase", "금융"),
+    ("BRK-B", "Berkshire Hathaway", "금융"),
+]
+
+OUT_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data.json")
+UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+      "(KHTML, like Gecko) Chrome/126.0 Safari/537.36")
+
+
+# ---------------------------------------------------------------- session
+def make_session():
+    """야후 접속용 curl_cffi 세션. 브라우저 TLS 지문(impersonate)이 막히는
+    프록시 환경에서는 일반 세션으로 폴백한다."""
+    ca = os.environ.get("YF_CA_BUNDLE")
+    if not ca and os.path.exists("/root/.ccr/ca-bundle.crt"):
+        ca = "/root/.ccr/ca-bundle.crt"
+    verify = ca if ca else True
+    test_url = "https://query1.finance.yahoo.com/v8/finance/chart/SPY?range=1d&interval=1d"
+    try:
+        s = curl_requests.Session(impersonate="chrome", verify=verify)
+        s.get(test_url, timeout=15).raise_for_status()
+        print("session: curl_cffi (impersonate=chrome)")
+        return s
+    except Exception:
+        pass
+    s = curl_requests.Session(verify=verify, headers={"User-Agent": UA})
+    print("session: curl_cffi (plain)")
+    return s
+
+
+# ---------------------------------------------------------------- helpers
+def rnd(x, d=2):
+    if x is None:
+        return None
+    try:
+        x = float(x)
+    except (TypeError, ValueError):
+        return None
+    if math.isnan(x) or math.isinf(x):
+        return None
+    return round(x, d)
+
+
+def pick_row(df, names):
+    """재무제표 DataFrame에서 이름 후보 중 첫 매칭 행을 반환."""
+    if df is None or getattr(df, "empty", True):
+        return None
+    for n in names:
+        if n in df.index:
+            return df.loc[n]
+    return None
+
+
+def series_vals(row, cols):
+    out = []
+    for c in cols:
+        try:
+            v = row[c]
+            out.append(None if v is None or (isinstance(v, float) and math.isnan(v)) else float(v))
+        except Exception:
+            out.append(None)
+    return out
+
+
+def compute_rsi(closes, period=14):
+    if len(closes) < period + 1:
+        return None
+    gains, losses = [], []
+    for i in range(1, len(closes)):
+        ch = closes[i] - closes[i - 1]
+        gains.append(max(ch, 0.0))
+        losses.append(max(-ch, 0.0))
+    avg_g = sum(gains[:period]) / period
+    avg_l = sum(losses[:period]) / period
+    for i in range(period, len(gains)):
+        avg_g = (avg_g * (period - 1) + gains[i]) / period
+        avg_l = (avg_l * (period - 1) + losses[i]) / period
+    if avg_l == 0:
+        return 100.0
+    rs = avg_g / avg_l
+    return 100 - 100 / (1 + rs)
+
+
+def retry(fn, tries=3, delay=2.0, default=None):
+    for i in range(tries):
+        try:
+            return fn()
+        except Exception:
+            if i == tries - 1:
+                return default
+            time.sleep(delay * (2 ** i))
+    return default
+
+
+# ---------------------------------------------------------------- scoring rules
+# 9개 지표: 종목별 6개 + 시장 타이밍 3개(전 종목 공통 가산)
+
+def pt_ret12(v):        # 1) 12개월 수익률 — 과열은 감점, 급락은 역발상 가점
+    if v is None: return 0
+    if v <= -30: return 2
+    if v <= -10: return 1
+    if v >= 100: return -2
+    if v >= 50: return -1
+    return 0
+
+def pt_drawdown(v):     # 2) 52주 고점 대비 낙폭
+    if v is None: return 0
+    if v <= -30: return 2
+    if v <= -15: return 1
+    if v >= -3: return -1
+    return 0
+
+def pt_rsi(v):          # 3) RSI(14)
+    if v is None: return 0
+    if v < 30: return 2
+    if v < 40: return 1
+    if v > 70: return -2
+    if v > 60: return -1
+    return 0
+
+def pt_short(v):        # 4) 공매도 비율(days-to-cover)
+    if v is None: return 0
+    if v < 2: return 1
+    if v > 8: return -1
+    return 0
+
+def pt_volume(v):       # 5) 거래량 증가율(최근 20일 vs 이전 60일)
+    if v is None: return 0
+    if v >= 100: return 2
+    if v >= 30: return 1
+    if v <= -40: return -1
+    return 0
+
+def pt_valuation(gap, fwd_per):  # 6) FWD PER 3년 평균 대비 괴리 — 결측(적자)은 0점
+    if fwd_per is None or gap is None: return 0
+    if gap <= -30: return 2
+    if gap <= -10: return 1
+    if gap >= 30: return -2
+    if gap >= 10: return -1
+    return 0
+
+def pt_spy(dd):         # 7) SPY 52주 고점 대비 낙폭 (시장 공통)
+    if dd is None: return 0
+    if dd <= -15: return 2
+    if dd <= -7: return 1
+    if dd >= -2: return -1
+    return 0
+
+def pt_vix(v):          # 8) VIX (시장 공통, 역발상)
+    if v is None: return 0
+    if v >= 30: return 2
+    if v >= 24: return 1
+    if v <= 14: return -1
+    return 0
+
+def pt_fg(v):           # 9) CNN Fear & Greed (시장 공통, 역발상)
+    if v is None: return 0
+    if v <= 25: return 2
+    if v <= 40: return 1
+    if v >= 75: return -2
+    if v >= 60: return -1
+    return 0
+
+
+def band(score):
+    if score >= 8: return "강한 매수"
+    if score >= 4: return "매수 대기"
+    if score >= -2: return "관망"   # -2 ~ +3
+    return "매도 대기"
+
+
+def fg_label(v):
+    if v is None: return "정보 없음"
+    if v <= 25: return "극단적 공포"
+    if v <= 45: return "공포"
+    if v <= 55: return "중립"
+    if v <= 75: return "탐욕"
+    return "극단적 탐욕"
+
+
+# ---------------------------------------------------------------- market
+def fetch_fear_greed():
+    try:
+        r = std_requests.get(
+            "https://production.dataviz.cnn.io/index/fearandgreed/graphdata",
+            headers={"User-Agent": UA, "Accept": "application/json"}, timeout=20)
+        r.raise_for_status()
+        return float(r.json()["fear_and_greed"]["score"])
+    except Exception as e:
+        print(f"  ! Fear&Greed 수집 실패: {e}")
+        return None
+
+
+def fetch_market(session):
+    out = {}
+    def last_close(sym, period="5d"):
+        h = yf.Ticker(sym, session=session).history(period=period, interval="1d")
+        return float(h["Close"].iloc[-1]) if len(h) else None
+
+    out["vix"] = rnd(retry(lambda: last_close("^VIX")), 2)
+    out["nasdaq"] = rnd(retry(lambda: last_close("^IXIC")), 0)
+    out["sp500"] = rnd(retry(lambda: last_close("^GSPC")), 0)
+
+    spy_dd = None
+    try:
+        h = yf.Ticker("SPY", session=session).history(period="1y", interval="1d")
+        if len(h):
+            hi = float(h["Close"].max())
+            cur = float(h["Close"].iloc[-1])
+            spy_dd = (cur / hi - 1) * 100
+    except Exception as e:
+        print(f"  ! SPY 수집 실패: {e}")
+    out["spy_dd_52w"] = rnd(spy_dd, 1)
+
+    fg = fetch_fear_greed()
+    out["fear_greed"] = rnd(fg, 0)
+    out["fg_label"] = fg_label(fg)
+
+    out["spy_pt"] = pt_spy(out["spy_dd_52w"])
+    out["vix_pt"] = pt_vix(out["vix"])
+    out["fg_pt"] = pt_fg(out["fear_greed"])
+    total = out["spy_pt"] + out["vix_pt"] + out["fg_pt"]
+    out["market_pt"] = total
+    out["mood"] = ("공포 우위" if total >= 2 else "중립" if total >= -1 else "과열 경계")
+    return out
+
+
+# ---------------------------------------------------------------- per stock
+def fetch_stock(session, ticker, name, theme, market):
+    tk = yf.Ticker(ticker, session=session)
+    info = retry(lambda: tk.info, default={}) or {}
+
+    # ---- 가격 히스토리 (5년 주봉: 1년 차트 + 3Y/5Y 평균 프록시, 6개월 일봉: RSI·거래량)
+    h5 = retry(lambda: tk.history(period="5y", interval="1wk"))
+    hd = retry(lambda: tk.history(period="6mo", interval="1d"))
+
+    price = info.get("currentPrice") or info.get("regularMarketPrice")
+    if price is None and hd is not None and len(hd):
+        price = float(hd["Close"].iloc[-1])
+    if price is None:
+        raise RuntimeError("가격 정보 없음")
+    price = float(price)
+
+    prices, price_dates = [], []
+    ret12 = dd = ytd = None
+    avg3y_px = avg5y_px = None
+    if h5 is not None and len(h5) > 5:
+        closes5 = [float(x) for x in h5["Close"]]
+        dates5 = [d.strftime("%Y-%m-%d") for d in h5.index]
+        n1y = min(53, len(closes5))
+        prices = [rnd(x, 2) for x in closes5[-n1y:]]
+        price_dates = dates5[-n1y:]
+        if len(closes5) > n1y - 1:
+            ret12 = (price / closes5[-n1y] - 1) * 100
+        hi52 = max(closes5[-n1y:] + [price])
+        dd = (price / hi52 - 1) * 100
+        year = datetime.now(timezone.utc).year
+        ytd_base = next((c for d, c in zip(dates5, closes5) if d >= f"{year}-01-01"), None)
+        if ytd_base:
+            ytd = (price / ytd_base - 1) * 100
+        avg3y_px = sum(closes5[-min(157, len(closes5)):]) / min(157, len(closes5))
+        avg5y_px = sum(closes5) / len(closes5)
+
+    rsi = vol_ch = None
+    if hd is not None and len(hd) > 20:
+        closes_d = [float(x) for x in hd["Close"]]
+        rsi = compute_rsi(closes_d)
+        vols = [float(x) for x in hd["Volume"]]
+        if len(vols) >= 40:
+            recent = vols[-20:]
+            prior = vols[-80:-20] if len(vols) >= 80 else vols[:-20]
+            if prior and sum(prior) > 0:
+                vol_ch = (sum(recent) / len(recent)) / (sum(prior) / len(prior)) * 100 - 100
+
+    # ---- 밸류에이션·퀄리티 (info)
+    mcap = info.get("marketCap")
+    fwd_per = info.get("forwardPE")
+    if fwd_per is not None and fwd_per <= 0:
+        fwd_per = None  # 적자(예상 EPS 음수) → 결측 처리
+    # 3Y 평균 FWD PER 프록시: 현재 예상 EPS 기준으로 과거 3년 평균 주가를 환산
+    avg_fwd_per = (fwd_per * avg3y_px / price) if (fwd_per and avg3y_px) else None
+    gap = ((fwd_per / avg_fwd_per - 1) * 100) if (fwd_per and avg_fwd_per) else None
+
+    psr = info.get("priceToSalesTrailing12Months")
+    avg_psr = (psr * avg5y_px / price) if (psr and avg5y_px) else None
+    total_rev = info.get("totalRevenue")
+    fcf = info.get("freeCashflow")
+    short_ratio = info.get("shortRatio")
+
+    pct100 = lambda v: None if v is None else v * 100
+    d = {
+        "ret12": rnd(ret12, 1), "dd": rnd(dd, 1), "rsi": rnd(rsi, 1),
+        "shortR": rnd(short_ratio, 2), "volCh": rnd(vol_ch, 1),
+        "fwdPer": rnd(fwd_per, 1), "avgFwdPer": rnd(avg_fwd_per, 1),
+        "psr": rnd(psr, 2), "avgPsr": rnd(avg_psr, 2),
+        "evEbitda": rnd(info.get("enterpriseToEbitda"), 2),
+        "peg": rnd(info.get("trailingPegRatio") or info.get("pegRatio"), 2),
+        "fcfY": rnd(pct100(fcf / mcap) if (fcf and mcap) else None, 2),
+        "roa": rnd(pct100(info.get("returnOnAssets")), 1),
+        "roe": rnd(pct100(info.get("returnOnEquity")), 1),
+        "gross": rnd(pct100(info.get("grossMargins")), 1),
+        "op": rnd(pct100(info.get("operatingMargins")), 1),
+        "profit": rnd(pct100(info.get("profitMargins")), 1),
+        "fcfM": rnd(pct100(fcf / total_rev) if (fcf and total_rev) else None, 1),
+        "curR": rnd(info.get("currentRatio"), 2),
+        "quickR": rnd(info.get("quickRatio"), 2),
+        "ltDE": rnd((info.get("debtToEquity") or 0) / 100 or None, 2),
+        "prices": prices, "priceDates": price_dates,
+    }
+    # FWD PSR = 시총 / 당해연도 예상 매출 (아래 컨센서스에서 채움)
+    d["fwdPsr"] = None
+
+    # ---- 분기·연간 실적
+    B = 1e9
+    qi = retry(lambda: tk.quarterly_income_stmt)
+    d["qLabels"], d["qRev"], d["qOp"] = [], [], []
+    if qi is not None and not getattr(qi, "empty", True):
+        cols = sorted(qi.columns)[-8:]
+        rev = pick_row(qi, ["Total Revenue", "Operating Revenue"])
+        op = pick_row(qi, ["Operating Income", "Total Operating Income As Reported", "EBIT"])
+        if rev is not None:
+            d["qLabels"] = [f"{c.year % 100}Q{(c.month - 1) // 3 + 1}" for c in cols]
+            d["qRev"] = [rnd(v / B, 2) if v is not None else None for v in series_vals(rev, cols)]
+            d["qOp"] = ([rnd(v / B, 2) if v is not None else None for v in series_vals(op, cols)]
+                        if op is not None else [None] * len(cols))
+
+    yi = retry(lambda: tk.income_stmt)
+    cf = retry(lambda: tk.cashflow)
+    d["yrs"], d["yRev"], d["yOcf"], d["yCapex"] = [], [], [], []
+    rev_hist = []
+    if yi is not None and not getattr(yi, "empty", True):
+        cols = sorted(yi.columns)[-4:]
+        rev = pick_row(yi, ["Total Revenue", "Operating Revenue"])
+        ocf = pick_row(cf, ["Operating Cash Flow"]) if cf is not None else None
+        capex = pick_row(cf, ["Capital Expenditure"]) if cf is not None else None
+        if rev is not None:
+            d["yrs"] = [f"FY{c.year % 100}" for c in cols]
+            rev_hist = series_vals(rev, cols)
+            d["yRev"] = [rnd(v / B, 2) if v is not None else None for v in rev_hist]
+            for key, row in (("yOcf", ocf), ("yCapex", capex)):
+                d[key] = ([rnd(v / B, 2) if v is not None else None for v in series_vals(row, cols)]
+                          if row is not None else [None] * len(cols))
+
+    # 매출 성장률: [최근-2 YoY, 최근 YoY, 3Y CAGR]
+    d["revG"] = [None, None, None]
+    vals = [v for v in rev_hist if v]
+    if len(vals) >= 2:
+        d["revG"][1] = rnd((vals[-1] / vals[-2] - 1) * 100, 1)
+    if len(vals) >= 3:
+        d["revG"][0] = rnd((vals[-2] / vals[-3] - 1) * 100, 1)
+    if len(vals) >= 4 and vals[-4] > 0:
+        d["revG"][2] = rnd(((vals[-1] / vals[-4]) ** (1 / 3) - 1) * 100, 1)
+
+    # ---- 컨센서스 (당해·차기 연도)
+    d["est"] = []
+    rev_est = retry(lambda: tk.revenue_estimate)
+    eps_est = retry(lambda: tk.earnings_estimate)
+    cur_year = datetime.now(timezone.utc).year
+    try:
+        if rev_est is not None and not rev_est.empty:
+            for i, period in enumerate(["0y", "+1y"]):
+                if period not in rev_est.index:
+                    continue
+                r = rev_est.loc[period]
+                e = eps_est.loc[period] if (eps_est is not None and period in eps_est.index) else None
+                rev_avg = r.get("avg")
+                if rev_avg is None or (isinstance(rev_avg, float) and math.isnan(rev_avg)):
+                    continue
+                d["est"].append({
+                    "y": f"FY{(cur_year + i) % 100}E",
+                    "rev": rnd(rev_avg / B, 1),
+                    "g": rnd((r.get("growth") or 0) * 100, 1),
+                    "eps": rnd(e.get("avg"), 2) if e is not None else None,
+                    "epsG": rnd((e.get("growth") or 0) * 100, 1) if e is not None else None,
+                })
+            if d["est"] and mcap:
+                fwd_rev = d["est"][0]["rev"]
+                if fwd_rev:
+                    d["fwdPsr"] = rnd(mcap / (fwd_rev * B), 2)
+    except Exception:
+        pass
+
+    # 예상 실적 연도를 연간 실적 차트에 연결
+    if d["est"] and d["yrs"]:
+        d["yrs"].append(d["est"][0]["y"])
+        d["yRev"].append(d["est"][0]["rev"])
+        d["yOcf"].append(None)
+        d["yCapex"].append(None)
+
+    # ---- 점수 (종목 6개 + 시장 3개)
+    pts = {
+        "ret12": pt_ret12(d["ret12"]),
+        "drawdown": pt_drawdown(d["dd"]),
+        "rsi": pt_rsi(d["rsi"]),
+        "short": pt_short(d["shortR"]),
+        "volume": pt_volume(d["volCh"]),
+        "valuation": pt_valuation(rnd(gap, 1), d["fwdPer"]),
+        "spy": market["spy_pt"],
+        "vix": market["vix_pt"],
+        "fg": market["fg_pt"],
+    }
+    score = sum(pts.values())
+    d.update({
+        "ret12pt": pts["ret12"], "ddpt": pts["drawdown"], "rsipt": pts["rsi"],
+        "shortpt": pts["short"], "volpt": pts["volume"], "valpt": pts["valuation"],
+        "gap": rnd(gap, 1),
+    })
+
+    bd = band(score)
+    gap_txt = ""
+    if d["gap"] is not None:
+        gap_txt = (f" FWD PER은 3년 평균 대비 {abs(d['gap']):.1f}% "
+                   f"{'저평가' if d['gap'] < 0 else '고평가'} 구간입니다.")
+    elif d["fwdPer"] is None:
+        gap_txt = " 예상 EPS가 음수(적자)라 FWD PER 지표는 0점으로 처리했습니다."
+    cmt = (f"{name}은(는) 종목 지표 6개와 시장 타이밍 3개를 합산한 종합 점수 "
+           f"{score:+d}점으로 '{bd}' 구간입니다.{gap_txt} "
+           f"룰 기반 판단이므로 실적 발표·가이던스 등 개별 이벤트는 별도 확인이 필요합니다.")
+
+    return {
+        "ticker": ticker, "name": name, "theme": theme,
+        "price": rnd(price, 2),
+        "market_cap_b": rnd(mcap / B, 1) if mcap else None,
+        "ytd": rnd(ytd, 1),
+        "score": score, "band": bd, "points": pts,
+        "detail": {**d, "cmt": cmt},
+    }
+
+
+# ---------------------------------------------------------------- main
+def main():
+    session = make_session()
+    print("시장지표 수집…")
+    market = fetch_market(session)
+    print(f"  VIX {market['vix']} / SPY 52주 {market['spy_dd_52w']}% / "
+          f"F&G {market['fear_greed']}({market['fg_label']}) → 시장 가산 {market['market_pt']:+d}")
+
+    stocks, failed = [], []
+    for i, (ticker, name, theme) in enumerate(WATCHLIST):
+        try:
+            s = fetch_stock(session, ticker, name, theme, market)
+            stocks.append(s)
+            print(f"  [{i+1:2d}/{len(WATCHLIST)}] {ticker:6s} ${s['price']:>9.2f}  "
+                  f"score {s['score']:+3d}  {s['band']}")
+        except Exception as e:
+            failed.append(ticker)
+            print(f"  [{i+1:2d}/{len(WATCHLIST)}] {ticker:6s} 실패: {e}")
+            traceback.print_exc(limit=1)
+        time.sleep(0.5)
+
+    if len(stocks) < len(WATCHLIST) * 0.6:
+        print(f"오류: 성공 종목이 {len(stocks)}개뿐이라 data.json을 갱신하지 않습니다.")
+        sys.exit(1)
+
+    now = datetime.now(timezone.utc)
+    payload = {
+        "updated_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "updated_at_kst": (now + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M"),
+        "source": "yfinance + CNN Fear & Greed",
+        "market": market,
+        "stocks": stocks,
+        "failed_tickers": failed,
+    }
+    with open(OUT_PATH, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
+    size = os.path.getsize(OUT_PATH)
+    print(f"저장 완료: {OUT_PATH} ({size/1024:.0f} KB, 종목 {len(stocks)}개, 실패 {failed})")
+
+
+if __name__ == "__main__":
+    main()
