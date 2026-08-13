@@ -2,10 +2,8 @@ name: Update market data
 
 on:
   schedule:
-    # 매일 미국 장 마감 후 실행 (21:30 UTC = 17:30 EDT / 16:30 EST, 화~토 UTC = 미국 월~금 저녁)
-    - cron: "30 21 * * 2-6"
-    # 미국 장중 2시간 간격 갱신 (14:30~20:30 UTC = 10:30~16:30 EDT, 점수·재무 최신화)
-    - cron: "30 14,16,18,20 * * 1-5"
+    # 2시간 간격 상시 실행 — 실질 데이터 변경이 없으면 커밋은 생략됨
+    - cron: "30 */2 * * *"
   workflow_dispatch:
 
 permissions:
@@ -34,12 +32,17 @@ jobs:
 
       - name: Commit and push data.json
         run: |
+          # updated_at 타임스탬프만 바뀐 경우(장외·주말)는 커밋하지 않는다
+          if git cat-file -e HEAD:data.json 2>/dev/null; then
+            jq -S 'del(.updated_at,.updated_at_kst)' data.json > /tmp/new.json
+            git show HEAD:data.json | jq -S 'del(.updated_at,.updated_at_kst)' > /tmp/old.json
+            if cmp -s /tmp/new.json /tmp/old.json; then
+              echo "실질 데이터 변경 없음 — 커밋 생략"
+              exit 0
+            fi
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data.json
-          if git diff --cached --quiet; then
-            echo "data.json 변경 없음 — 커밋 생략"
-            exit 0
-          fi
           git commit -m "chore: update market data ($(date -u +'%Y-%m-%d %H:%M UTC'))"
           git push

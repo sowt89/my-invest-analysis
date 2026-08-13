@@ -573,7 +573,7 @@ function updateStatus(){
     if(finnKey())t+=lastQuote?` · 실시간 시세 ${lastQuote.getHours().toString().padStart(2,'0')}:${lastQuote.getMinutes().toString().padStart(2,'0')}`:' · 실시간 시세 연결 중…';
     else t+=' · 우측 상단 ⚙에서 무료 Finnhub 키 등록 시 실시간 시세';
     el.textContent=t;
-    note.textContent=`※ yfinance 실데이터 기준 (${META.updated} KST 업데이트, 매일 자동 갱신)${finnKey()?' + Finnhub 실시간 시세(점수·재무는 일별 갱신)':''}. 적자 종목의 FWD PER "—"는 결측 → 0점 처리.`;
+    note.textContent=`※ yfinance 실데이터 기준 (${META.updated} KST 업데이트, 2시간 주기 자동 갱신)${finnKey()?' + Finnhub 실시간 시세':''}. 적자 종목의 FWD PER "—"는 결측 → 0점 처리.`;
   }else{
     el.textContent='⚠ 실데이터 로드 실패 — 내장 샘플 데이터 표시 중';
     note.textContent='※ 샘플 데이터 기준 — data.json 로드에 실패해 내장 데이터로 표시 중입니다. 적자 종목의 FWD PER "—"는 결측 → 0점 처리.';
