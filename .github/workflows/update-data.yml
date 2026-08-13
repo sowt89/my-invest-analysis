@@ -1,0 +1,48 @@
+name: Update market data
+
+on:
+  schedule:
+    # 2시간 간격 상시 실행 — 실질 데이터 변경이 없으면 커밋은 생략됨
+    - cron: "30 */2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install yfinance requests curl_cffi
+
+      - name: Fetch data
+        run: python scripts/fetch_data.py
+
+      - name: Commit and push data.json
+        run: |
+          # updated_at 타임스탬프만 바뀐 경우(장외·주말)는 커밋하지 않는다
+          if git cat-file -e HEAD:data.json 2>/dev/null; then
+            jq -S 'del(.updated_at,.updated_at_kst)' data.json > /tmp/new.json
+            git show HEAD:data.json | jq -S 'del(.updated_at,.updated_at_kst)' > /tmp/old.json
+            if cmp -s /tmp/new.json /tmp/old.json; then
+              echo "실질 데이터 변경 없음 — 커밋 생략"
+              exit 0
+            fi
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data.json
+          git commit -m "chore: update market data ($(date -u +'%Y-%m-%d %H:%M UTC'))"
+          git push
