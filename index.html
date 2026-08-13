@@ -585,8 +585,11 @@ function updateStatus(){
    미국 장중 60초 / 장외 10분 주기로 현재가를 갱신한다.
    키는 localStorage에만 저장되고 저장소에는 커밋되지 않는다. */
 const FINN_MAP={'BRK-B':'BRK.B'};
+/* 아래에 키를 넣으면 모든 방문자에게 기본 적용된다 (공개 저장소이므로 키도 공개됨에 유의).
+   ⚙ 버튼이나 ?finnhub=KEY 로 등록한 개인 키가 있으면 그쪽이 우선. */
+const DEFAULT_FINN_KEY='';
 let liveTimer=null,lastQuote=null,lastFetchMs=0,liveBusy=false;
-function finnKey(){try{return localStorage.getItem('finnhub_key')||''}catch(e){return ''}}
+function finnKey(){try{return localStorage.getItem('finnhub_key')||DEFAULT_FINN_KEY}catch(e){return DEFAULT_FINN_KEY}}
 function setFinnKey(){
   const k=prompt('Finnhub API 키를 입력하세요 (finnhub.io 무료 발급 · 비우고 확인하면 해제):',finnKey());
   if(k===null)return;
