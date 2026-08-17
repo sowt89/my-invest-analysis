@@ -23,6 +23,7 @@ from curl_cffi import requests as curl_requests
 
 # ---------------------------------------------------------------- watchlist
 WATCHLIST = [
+    ("QQQ", "NASDAQ 100", "지수 ETF"),  # TIGER 미국나스닥100 참고용
     ("NVDA", "NVIDIA", "매그니피센트7"),
     ("AAPL", "Apple", "매그니피센트7"),
     ("MSFT", "Microsoft", "매그니피센트7"),
