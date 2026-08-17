@@ -3,7 +3,8 @@
 
 yfinance로 워치리스트 39종목의 시세·1년 주가·재무·마진·컨센서스와
 시장지표(^VIX, ^IXIC, ^GSPC, SPY 52주 낙폭, CNN Fear & Greed)를 수집하고
-9개 지표 룰 기반 종합 점수를 계산해 data.json으로 저장한다.
+10개 지표(종목 7 + 시장 타이밍 3) 룰 기반 종합 점수를 계산해 data.json으로 저장한다.
+시장 감점은 SPY 200일선 위(상승 추세)일 때 절반으로 완화된다(추세 보정).
 
 판단 구간: +8 이상 강한 매수 / +4~+7 매수 대기 / -2~+3 관망 / -3 이하 매도 대기.
 적자 종목 등 FWD PER 결측은 밸류에이션 지표 0점 처리.
@@ -212,19 +213,26 @@ def pt_spy(dd):         # 7) SPY 52주 고점 대비 낙폭 (시장 공통)
     if dd >= -2: return -1
     return 0
 
-def pt_vix(v):          # 8) VIX (시장 공통, 역발상)
+def pt_vix(v):          # 8) VIX (시장 공통, 역발상 — 극단에서만 감점)
     if v is None: return 0
     if v >= 30: return 2
     if v >= 24: return 1
-    if v <= 14: return -1
+    if v <= 12: return -1
     return 0
 
-def pt_fg(v):           # 9) CNN Fear & Greed (시장 공통, 역발상)
+def pt_fg(v):           # 9) CNN Fear & Greed (시장 공통, 역발상 — 극단에서만 감점)
     if v is None: return 0
     if v <= 25: return 2
     if v <= 40: return 1
-    if v >= 75: return -2
-    if v >= 60: return -1
+    if v >= 80: return -2
+    if v >= 70: return -1
+    return 0
+
+def pt_surprise(v):     # 10) 최근 분기 어닝 서프라이즈 %
+    if v is None: return 0
+    if v >= 10: return 1
+    if v <= -10: return -2
+    if v < 0: return -1
     return 0
 
 
@@ -267,16 +275,20 @@ def fetch_market(session):
     out["nasdaq"] = rnd(retry(lambda: last_close("^IXIC")), 0)
     out["sp500"] = rnd(retry(lambda: last_close("^GSPC")), 0)
 
-    spy_dd = None
+    spy_dd = spy_above_ma200 = None
     try:
         h = yf.Ticker("SPY", session=session).history(period="1y", interval="1d")
         if len(h):
-            hi = float(h["Close"].max())
-            cur = float(h["Close"].iloc[-1])
+            closes = [float(x) for x in h["Close"]]
+            hi = max(closes)
+            cur = closes[-1]
             spy_dd = (cur / hi - 1) * 100
+            if len(closes) >= 200:
+                spy_above_ma200 = cur > sum(closes[-200:]) / 200
     except Exception as e:
         print(f"  ! SPY 수집 실패: {e}")
     out["spy_dd_52w"] = rnd(spy_dd, 1)
+    out["spy_ma200_above"] = spy_above_ma200
 
     fg = fetch_fear_greed()
     out["fear_greed"] = rnd(fg, 0)
@@ -285,9 +297,12 @@ def fetch_market(session):
     out["spy_pt"] = pt_spy(out["spy_dd_52w"])
     out["vix_pt"] = pt_vix(out["vix"])
     out["fg_pt"] = pt_fg(out["fear_greed"])
-    total = out["spy_pt"] + out["vix_pt"] + out["fg_pt"]
-    out["market_pt"] = total
-    out["mood"] = ("공포 우위" if total >= 2 else "중립" if total >= -1 else "과열 경계")
+    raw = out["spy_pt"] + out["vix_pt"] + out["fg_pt"]
+    # 추세 필터: SPY가 200일선 위(상승 추세)면 역발상 감점을 절반으로 완화
+    adj = math.trunc(raw / 2) if (spy_above_ma200 and raw < 0) else raw
+    out["trend_adj"] = adj - raw
+    out["market_pt"] = adj
+    out["mood"] = ("공포 우위" if adj >= 2 else "중립" if adj >= -1 else "과열 경계")
     return out
 
 
@@ -305,8 +320,12 @@ def save_history(hist, stocks):
     """오늘 첫 실행에만 스냅샷을 추가하고 3년 초과분은 제거."""
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     if today not in hist:
-        snap = {s["ticker"]: s["detail"]["fwdPer"] for s in stocks
-                if s["detail"].get("fwdPer") is not None}
+        snap = {}
+        for s in stocks:
+            d = s["detail"]
+            eps = d["est"][0].get("eps") if d.get("est") else None  # 당해연도 EPS 컨센서스 (리비전 추적용)
+            if d.get("fwdPer") is not None or eps is not None:
+                snap[s["ticker"]] = {"per": d.get("fwdPer"), "eps": eps}
         if snap:
             hist[today] = snap
     cutoff = (datetime.now(timezone.utc) - timedelta(days=HIST_DAYS)).strftime("%Y-%m-%d")
@@ -318,7 +337,14 @@ def save_history(hist, stocks):
 
 def hist_avg_fwd_per(hist, ticker):
     """누적 실측 평균과 (실측 기간/3년) 가중치를 반환."""
-    vals = [(d, v[ticker]) for d, v in hist.items() if ticker in v]
+    vals = []
+    for d, v in hist.items():
+        e = v.get(ticker)
+        if e is None:
+            continue
+        per = e if isinstance(e, (int, float)) else e.get("per")  # 구버전은 숫자, 신버전은 dict
+        if per is not None:
+            vals.append((d, per))
     if not vals:
         return None, 0.0
     avg = sum(v for _, v in vals) / len(vals)
@@ -494,7 +520,31 @@ def fetch_stock(session, ticker, name, theme, market, hist):
         d["yOcf"].append(None)
         d["yCapex"].append(None)
 
-    # ---- 점수 (종목 6개 + 시장 3개)
+    # ---- 실적 이벤트: 다음 발표일(D-day 표시용), 최근 분기 어닝 서프라이즈
+    earnings_date = earnings_in = surprise = None
+    cal = retry(lambda: tk.calendar, default={}) or {}
+    try:
+        dates = [x.date() if isinstance(x, datetime) else x
+                 for x in (cal.get("Earnings Date") or [])]
+        today = datetime.now(timezone.utc).date()
+        future = sorted(x for x in dates if x >= today)
+        if future:
+            earnings_date = future[0].isoformat()
+            earnings_in = (future[0] - today).days
+    except Exception:
+        pass
+    eh = retry(lambda: tk.earnings_history)
+    try:
+        if eh is not None and not eh.empty:
+            for _, row in eh.iloc[::-1].iterrows():
+                act, est = row.get("epsActual"), row.get("epsEstimate")
+                if act is not None and est and not math.isnan(act) and not math.isnan(est):
+                    surprise = (act - est) / abs(est) * 100
+                    break
+    except Exception:
+        pass
+
+    # ---- 점수 (종목 7개 + 시장 3개 + 추세 보정)
     pts = {
         "ret12": pt_ret12(d["ret12"]),
         "drawdown": pt_drawdown(d["dd"]),
@@ -502,15 +552,18 @@ def fetch_stock(session, ticker, name, theme, market, hist):
         "short": pt_short(d["shortR"]),
         "volume": pt_volume(d["volCh"]),
         "valuation": pt_valuation(rnd(gap, 1), d["fwdPer"]),
+        "surprise": pt_surprise(rnd(surprise, 1)),
         "spy": market["spy_pt"],
         "vix": market["vix_pt"],
         "fg": market["fg_pt"],
+        "trend": market["trend_adj"],
     }
     score = sum(pts.values())
     d.update({
         "ret12pt": pts["ret12"], "ddpt": pts["drawdown"], "rsipt": pts["rsi"],
         "shortpt": pts["short"], "volpt": pts["volume"], "valpt": pts["valuation"],
-        "gap": rnd(gap, 1),
+        "surprisept": pts["surprise"], "gap": rnd(gap, 1),
+        "surprise": rnd(surprise, 1), "earningsDate": earnings_date,
     })
 
     bd = band(score)
@@ -520,12 +573,13 @@ def fetch_stock(session, ticker, name, theme, market, hist):
                    f"{'저평가' if d['gap'] < 0 else '고평가'} 구간입니다.")
     elif d["fwdPer"] is None:
         gap_txt = " 예상 EPS가 음수(적자)라 FWD PER 지표는 0점으로 처리했습니다."
-    cmt = (f"{name}은(는) 종목 지표 6개와 시장 타이밍 3개를 합산한 종합 점수 "
+    cmt = (f"{name}은(는) 종목 지표 7개와 시장 타이밍 3개(200일선 추세 보정 포함)를 합산한 종합 점수 "
            f"{score:+d}점으로 '{bd}' 구간입니다.{gap_txt} "
            f"룰 기반 판단이므로 실적 발표·가이던스 등 개별 이벤트는 별도 확인이 필요합니다.")
 
     return {
         "ticker": ticker, "name": name, "theme": theme,
+        "earnings_in": earnings_in,
         "price": rnd(price, 2),
         "market_cap_b": rnd(mcap / B, 1) if mcap else None,
         "ytd": rnd(ytd, 1),
