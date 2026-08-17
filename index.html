@@ -376,6 +376,7 @@ function renderBoard(){
   document.getElementById('today-summary').textContent=
     `시장은 '${MARKET.mood}' 구간입니다. SPY가 52주 고점 대비 ${fmt(MARKET.spy52)}% 눌린 가운데 VIX ${fmt(MARKET.vix,2)}, Fear & Greed ${fmt(MARKET.fg,0)}(${MARKET.fgLabel||'—'}) 상태입니다. ${strongTxt} 룰 기반 시그널은 참고 지표이며, 분할 매수·리스크 관리 원칙을 유지하세요.`;
   const M=[['SPY 52주↓',fmt(MARKET.spy52)+'%',MARKET.spyPt],['VIX',fmt(MARKET.vix,2),MARKET.vixPt],['F&G INDEX',fmt(MARKET.fg,0),MARKET.fgPt]];
+  if(MARKET.trendAbove!=null)M.push(['추세 필터 (SPY 200일선)',MARKET.trendAbove?'위 · 상승 추세':'아래 · 하락 추세',MARKET.trendAdj]);
   const qqq=STOCKS.find(s=>s.t==='QQQ');
   document.getElementById('market-rows').innerHTML=
     M.map(([k,v,p])=>`<div class="mrow"><span class="k">${k}</span><span class="v">${v}<span class="pt ${p>0?'up':p<0?'dn':'zr'}">${p===0?'0':sign(p)}</span></span></div>`).join('')
@@ -389,7 +390,7 @@ function renderBoard(){
     document.getElementById('sig-body').innerHTML=STOCKS
       .filter(s=>(!th||s.th===th)&&(!bd||band(s.sc)===bd))
       .map(s=>`<tr style="cursor:pointer" onclick="openDetail('${s.t}')">
-        <td class="tk">${s.t}<small>${s.n}</small></td>
+        <td class="tk">${s.t}${s.ed!=null&&s.ed<=7?` <span style="background:#33261455;color:#e3c05a;font-size:.62rem;font-weight:800;border-radius:5px;padding:1px 5px;vertical-align:1px">실적 D-${s.ed}</span>`:''}<small>${s.n}</small></td>
         <td class="theme-cell">${s.th}</td>
         <td style="text-align:right"><span class="sig ${bandCls(s.sc)}"><span class="dot"></span>${band(s.sc)} <b>${sign(s.sc)}</b></span></td></tr>`).join('');
   }
@@ -434,11 +435,11 @@ function renderDetail(){
   <div class="picker"><select id="tick-sel" onchange="curTicker=this.value;renderDetail()">${opts}</select></div>
   <div class="price-line"><span class="nm">${s.n} · ${s.th}</span></div>
   <div class="price-line"><span class="sig ${bandCls(s.sc)}"><span class="dot"></span>${band(s.sc)} <b>${sign(s.sc)}</b></span>
-    <span class="big-price">$${fmt(s.p,2)}</span><span class="ytd" id="ytd-lbl" style="color:${s.ytd>=0?'#9fd07f':'#e58f6a'}">${pct(s.ytd)} YTD</span>${s.dp!=null?`<span class="ytd" id="day-chg" style="color:${s.dp>=0?'#9fd07f':'#e58f6a'}">${pct(s.dp)} 오늘</span>`:'<span class="ytd" id="day-chg"></span>'}</div>
+    <span class="big-price">$${fmt(s.p,2)}</span><span class="ytd" id="ytd-lbl" style="color:${s.ytd>=0?'#9fd07f':'#e58f6a'}">${pct(s.ytd)} YTD</span>${s.dp!=null?`<span class="ytd" id="day-chg" style="color:${s.dp>=0?'#9fd07f':'#e58f6a'}">${pct(s.dp)} 오늘</span>`:'<span class="ytd" id="day-chg"></span>'}${s.ed!=null&&s.ed<=14?`<span class="gap-tag over" title="${d.earningsDate||''}">실적 발표 D-${s.ed}${s.ed<=3?' · 변동성 주의':''}</span>`:''}</div>
 
   <div class="sec-label"><span class="no">01</span><span class="t">판단</span></div>
   <h3 class="sec-title">종합 판단</h3>
-  <p class="sec-sub">9개 지표 룰 기반 종합 점수 · 시장 타이밍 공통 반영</p>
+  <p class="sec-sub">10개 지표 룰 기반 종합 점수 · 시장 타이밍 공통 반영 (200일선 추세 보정)</p>
   <div class="d-card">
     <div class="score-hero" style="color:${s.sc>=4?'#9fd07f':s.sc>=-2?'#c9c9c2':'#e3c05a'}">${sign(s.sc)}</div>
     <div class="gauge"><div class="mk" style="left:calc(${Math.max(0,Math.min(100,(s.sc+10)/20*100)).toFixed(1)}% - 2px)"></div></div>
@@ -452,6 +453,7 @@ function renderDetail(){
     ${kr('RSI (14일)',fmt(d.rsi),d.rsipt)}
     ${kr('공매도 비율',fmt(d.shortR,2),d.shortpt)}
     ${kr('거래량 증가율',pct(d.volCh),d.volpt)}
+    ${d.surprise!==undefined?kr('최근 어닝 서프라이즈',pct(d.surprise),d.surprisept):''}
     ${pr.length>1?kr('52주 밴드 위치',fmt(((s.p-Math.min(...pr))/((Math.max(...pr)-Math.min(...pr))||1)*100))+'%',undefined):''}
   </div>
 
@@ -559,13 +561,13 @@ function go(t){
 function applyLiveData(D){
   if(!D||!Array.isArray(D.stocks)||!D.stocks.length||!D.market)throw new Error('bad data.json');
   DETAILS={};
-  STOCKS=D.stocks.map(s=>({t:s.ticker,n:s.name,th:s.theme,p:s.price,mc:s.market_cap_b,sc:s.score,ytd:s.ytd}));
+  STOCKS=D.stocks.map(s=>({t:s.ticker,n:s.name,th:s.theme,p:s.price,mc:s.market_cap_b,sc:s.score,ytd:s.ytd,ed:s.earnings_in}));
   D.stocks.forEach(s=>DETAILS[s.ticker]=s.detail);
   THEMES=[...new Set(STOCKS.map(s=>s.th))];
   const m=D.market;
   MARKET={spy52:m.spy_dd_52w,spyPt:m.spy_pt||0,vix:m.vix,vixPt:m.vix_pt||0,
     fg:m.fear_greed,fgPt:m.fg_pt||0,fgLabel:m.fg_label,mood:m.mood||'중립',moodPt:0,
-    nasdaq:m.nasdaq,sp500:m.sp500};
+    nasdaq:m.nasdaq,sp500:m.sp500,trendAbove:m.spy_ma200_above,trendAdj:m.trend_adj||0};
   META={updated:D.updated_at_kst,updatedUtc:D.updated_at,live:true};
   if(!STOCKS.some(x=>x.t===curTicker))curTicker=STOCKS[0].t;
 }
