@@ -185,7 +185,7 @@ svg text{font-family:inherit}
       </tr></thead><tbody id="cmp-body"></tbody></table>
     </div>
   </div>
-  <p class="foot-note">※ 괴리 = FWD PER의 3년 평균 대비 이격(현재 예상 EPS 기준 환산 프록시). 음수(초록)는 역사적 평균 대비 저평가를 뜻합니다.</p>
+  <p class="foot-note">※ 괴리 = FWD PER의 3년 평균 대비 이격(일별 실측 누적+환산 프록시 혼합). 음수(초록)는 역사적 평균 대비 저평가를 뜻합니다.</p>
 </main>
 
 <nav class="nav"><div class="wrap">
@@ -533,7 +533,7 @@ function renderDetail(){
     <div class="legend"><span><i style="background:var(--c1)"></i>예상 매출</span></div>
     <div class="chart-box" id="est-chart"></div>
   </div>
-  <p class="foot-note" style="color:#6a6b70">${META.live?`※ 실데이터 기준 (yfinance · ${META.updated} KST 업데이트). 3Y 평균 FWD PER은 현재 예상 EPS 기준 환산 프록시입니다.`:'※ 샘플 데이터 기준 — data.json 로드에 실패해 내장 데이터로 표시 중입니다.'}</p>`;
+  <p class="foot-note" style="color:#6a6b70">${META.live?`※ 실데이터 기준 (yfinance · ${META.updated} KST 업데이트). 3Y 평균 FWD PER은 일별 실측 누적과 환산 프록시의 혼합값입니다(누적될수록 실측 비중 증가).`:'※ 샘플 데이터 기준 — data.json 로드에 실패해 내장 데이터로 표시 중입니다.'}</p>`;
   const c1=getComputedStyle(document.documentElement).getPropertyValue('--c1').trim();
   const c2=getComputedStyle(document.documentElement).getPropertyValue('--c2').trim();
   const c3=getComputedStyle(document.documentElement).getPropertyValue('--c3').trim();

@@ -65,7 +65,10 @@ WATCHLIST = [
     ("BRK-B", "Berkshire Hathaway", "금융"),
 ]
 
-OUT_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data.json")
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT_PATH = os.path.join(_ROOT, "data.json")
+HIST_PATH = os.path.join(_ROOT, "history.json")
+HIST_DAYS = 1095  # 3년
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/126.0 Safari/537.36")
 
@@ -289,7 +292,42 @@ def fetch_market(session):
 
 
 # ---------------------------------------------------------------- per stock
-def fetch_stock(session, ticker, name, theme, market):
+def load_history():
+    """일별 FWD PER 스냅샷 {"YYYY-MM-DD": {"NVDA": 17.5, ...}}."""
+    try:
+        with open(HIST_PATH, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def save_history(hist, stocks):
+    """오늘 첫 실행에만 스냅샷을 추가하고 3년 초과분은 제거."""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    if today not in hist:
+        snap = {s["ticker"]: s["detail"]["fwdPer"] for s in stocks
+                if s["detail"].get("fwdPer") is not None}
+        if snap:
+            hist[today] = snap
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=HIST_DAYS)).strftime("%Y-%m-%d")
+    hist = {d: v for d, v in hist.items() if d >= cutoff}
+    with open(HIST_PATH, "w", encoding="utf-8") as f:
+        json.dump(dict(sorted(hist.items())), f, ensure_ascii=False, separators=(",", ":"))
+    return hist
+
+
+def hist_avg_fwd_per(hist, ticker):
+    """누적 실측 평균과 (실측 기간/3년) 가중치를 반환."""
+    vals = [(d, v[ticker]) for d, v in hist.items() if ticker in v]
+    if not vals:
+        return None, 0.0
+    avg = sum(v for _, v in vals) / len(vals)
+    span = (datetime.now(timezone.utc)
+            - datetime.strptime(min(d for d, _ in vals), "%Y-%m-%d").replace(tzinfo=timezone.utc)).days
+    return avg, min(1.0, span / HIST_DAYS)
+
+
+def fetch_stock(session, ticker, name, theme, market, hist):
     tk = yf.Ticker(ticker, session=session)
     info = retry(lambda: tk.info, default={}) or {}
 
@@ -340,8 +378,14 @@ def fetch_stock(session, ticker, name, theme, market):
     fwd_per = info.get("forwardPE")
     if fwd_per is not None and fwd_per <= 0:
         fwd_per = None  # 적자(예상 EPS 음수) → 결측 처리
-    # 3Y 평균 FWD PER 프록시: 현재 예상 EPS 기준으로 과거 3년 평균 주가를 환산
-    avg_fwd_per = (fwd_per * avg3y_px / price) if (fwd_per and avg3y_px) else None
+    # 3Y 평균 FWD PER: 일별 실측 누적(history.json)과 프록시(현재 예상 EPS 기준
+    # 과거 3년 평균 주가 환산)를 누적 기간 비중으로 혼합. 누적될수록 실측이 대체.
+    proxy_avg = (fwd_per * avg3y_px / price) if (fwd_per and avg3y_px) else None
+    h_avg, h_w = hist_avg_fwd_per(hist, ticker)
+    if h_avg is not None and proxy_avg is not None:
+        avg_fwd_per = h_w * h_avg + (1 - h_w) * proxy_avg
+    else:
+        avg_fwd_per = h_avg if h_avg is not None else proxy_avg
     gap = ((fwd_per / avg_fwd_per - 1) * 100) if (fwd_per and avg_fwd_per) else None
 
     psr = info.get("priceToSalesTrailing12Months")
@@ -498,10 +542,11 @@ def main():
     print(f"  VIX {market['vix']} / SPY 52주 {market['spy_dd_52w']}% / "
           f"F&G {market['fear_greed']}({market['fg_label']}) → 시장 가산 {market['market_pt']:+d}")
 
+    hist = load_history()
     stocks, failed = [], []
     for i, (ticker, name, theme) in enumerate(WATCHLIST):
         try:
-            s = fetch_stock(session, ticker, name, theme, market)
+            s = fetch_stock(session, ticker, name, theme, market, hist)
             stocks.append(s)
             print(f"  [{i+1:2d}/{len(WATCHLIST)}] {ticker:6s} ${s['price']:>9.2f}  "
                   f"score {s['score']:+3d}  {s['band']}")
@@ -526,6 +571,8 @@ def main():
     }
     with open(OUT_PATH, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
+    hist = save_history(hist, stocks)
+    print(f"FWD PER 히스토리: {len(hist)}일 누적 (history.json)")
     size = os.path.getsize(OUT_PATH)
     print(f"저장 완료: {OUT_PATH} ({size/1024:.0f} KB, 종목 {len(stocks)}개, 실패 {failed})")
 
