@@ -367,6 +367,7 @@ function gapOf(d){
   return Math.round((d.fwdPer/d.avgFwdPer-1)*1000)/10;
 }
 function renderBoard(){
+  document.querySelector('#tab-board .kicker').textContent=`관심종목 ${STOCKS.length}개 · 테마 ${THEMES.length}개`;
   const strong=STOCKS.filter(s=>s.sc>=8).sort((a,b)=>b.sc-a.sc).slice(0,6);
   document.getElementById('reco-chips').innerHTML=strong.length
     ?strong.map(s=>`<span class="chip">${s.t} <small>${sign(s.sc)}</small></span>`).join('')
@@ -375,9 +376,11 @@ function renderBoard(){
   document.getElementById('today-summary').textContent=
     `시장은 '${MARKET.mood}' 구간입니다. SPY가 52주 고점 대비 ${fmt(MARKET.spy52)}% 눌린 가운데 VIX ${fmt(MARKET.vix,2)}, Fear & Greed ${fmt(MARKET.fg,0)}(${MARKET.fgLabel||'—'}) 상태입니다. ${strongTxt} 룰 기반 시그널은 참고 지표이며, 분할 매수·리스크 관리 원칙을 유지하세요.`;
   const M=[['SPY 52주↓',fmt(MARKET.spy52)+'%',MARKET.spyPt],['VIX',fmt(MARKET.vix,2),MARKET.vixPt],['F&G INDEX',fmt(MARKET.fg,0),MARKET.fgPt]];
+  const qqq=STOCKS.find(s=>s.t==='QQQ');
   document.getElementById('market-rows').innerHTML=
     M.map(([k,v,p])=>`<div class="mrow"><span class="k">${k}</span><span class="v">${v}<span class="pt ${p>0?'up':p<0?'dn':'zr'}">${p===0?'0':sign(p)}</span></span></div>`).join('')
-    +`<div class="mrow"><span class="k">현재 시장 상황</span><span class="v"><span class="badge neutral">${MARKET.mood}</span><span class="pt zr">0</span></span></div>`;
+    +`<div class="mrow"><span class="k">현재 시장 상황</span><span class="v"><span class="badge neutral">${MARKET.mood}</span><span class="pt zr">0</span></span></div>`
+    +(qqq?`<div class="mrow" style="cursor:pointer" onclick="openDetail('QQQ')"><span class="k">나스닥100 판단 (QQQ · TIGER 참고)</span><span class="v"><span class="sig ${bandCls(qqq.sc)}" style="background:${qqq.sc>=4?'#e6efdc':qqq.sc>=-2?'#ececea':'#f5ecd2'};color:${qqq.sc>=4?'#3f6f2b':qqq.sc>=-2?'#6b6b66':'#b58612'}"><span class="dot"></span>${band(qqq.sc)} <b>${sign(qqq.sc)}</b></span></span></div>`:'');
   const ft=document.getElementById('f-theme');
   ft.innerHTML='<option value="">테마 ▾</option>';
   THEMES.forEach(t=>ft.insertAdjacentHTML('beforeend',`<option>${t}</option>`));
@@ -468,7 +471,7 @@ function renderDetail(){
   <h3 class="sec-title">밸류에이션</h3>
   <p class="sec-sub">3년 대비 이격, 그리고 시장의 값</p>
   <div class="d-card">
-    ${kr('FWD PER',d.fwdPer==null?'— <span class="gap-tag over">결측(적자) → 0점</span>':fmt(d.fwdPer)+(gap==null?'':`<span class="gap-tag ${gap<0?'':'over'}">${gap<0?'3Y 평균 대비 저평가':'3Y 평균 대비 고평가'} ${pct(gap)}</span>`),d.valpt)}
+    ${kr('FWD PER',d.fwdPer==null?'— <span class="gap-tag over">결측 → 0점</span>':fmt(d.fwdPer)+(gap==null?'':`<span class="gap-tag ${gap<0?'':'over'}">${gap<0?'3Y 평균 대비 저평가':'3Y 평균 대비 고평가'} ${pct(gap)}</span>`),d.valpt)}
     ${kr('3Y 평균 FWD PER',fmt(d.avgFwdPer),undefined)}
     ${kr('PSR',fmt(d.psr,2),undefined)}
     ${kr('FWD PSR',fmt(d.fwdPsr,2),undefined)}
