@@ -71,7 +71,7 @@ table{width:100%;border-collapse:collapse}
 /* bottom nav */
 .nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(250,250,248,.95);backdrop-filter:blur(12px);border-top:1px solid var(--line)}
 .nav .wrap{display:flex}
-.nav button{flex:1;background:none;border:none;font-family:inherit;padding:10px 0 max(10px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:3px;font-size:.72rem;font-weight:700;color:#9a9a94;cursor:pointer}
+.nav button{flex:1;background:none;border:none;font-family:inherit;padding:10px 0 max(10px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:3px;font-size:.68rem;font-weight:700;color:#9a9a94;cursor:pointer}
 .nav button.on{color:var(--orange)}
 .nav svg{width:22px;height:22px}
 /* detail tab (dark) */
@@ -151,7 +151,7 @@ svg text{font-family:inherit}
 <button onclick="toggleGuide(1)" title="사용법" style="margin-left:auto;background:var(--orange);border:none;border-radius:8px;padding:5px 11px;font-size:.8rem;font-weight:800;cursor:pointer;color:#fff;font-family:inherit">사용법</button>
 <button id="live-cfg" onclick="setFinnKey()" title="실시간 시세 API 키 설정" style="margin-left:6px;background:none;border:1px solid var(--line);border-radius:8px;padding:4px 9px;font-size:.85rem;cursor:pointer;color:var(--ink2);font-family:inherit">⚙</button></div></header>
 
-<!-- ============ TAB 1 : 시그널 보드 ============ -->
+<!-- ============ TAB 1 : 모멘텀 ============ -->
 <main id="tab-board" class="wrap">
   <section class="hero">
     <div class="kicker">관심종목 39개 · 테마 13개</div>
@@ -164,27 +164,48 @@ svg text{font-family:inherit}
     <div class="card-b" style="padding:14px 14px 12px"><div id="mom-list"></div></div>
   </div>
 
+  <div class="card dark-card" style="padding-bottom:4px">
+    <div class="card-h" style="padding-top:16px">모멘텀 순위 · 전 종목</div>
+    <div class="filters dark-sel" style="padding-left:16px">
+      <select id="f-theme"><option value="">테마 ▾</option></select>
+      <select id="f-band"><option value="">판단 ▾</option><option>매수</option><option>관심</option><option>보류</option></select>
+    </div>
+    <div class="card-b" style="padding:8px 8px 10px">
+      <table class="sig-table"><thead><tr><th style="width:30px">순위</th><th>종목</th><th style="text-align:right">모멘텀</th><th style="text-align:right">판단</th></tr></thead><tbody id="sig-body"></tbody></table>
+    </div>
+  </div>
+  <p class="foot-note" id="board-note">※ 모멘텀 = 최근 1개월을 제외한 1년 수익률과 200일선 이격도를 반반 합산한 값. 순위 1~5위 매수 · 6~15위 관심 · 16위↓ 보류. 26년 백테스트에서 4개 시대 모두 균등보유 대비 우위. 지수 ETF는 순위 제외.</p>
+</main>
+
+<!-- ============ TAB 2 : 매매 점수 ============ -->
+<main id="tab-score" class="wrap hidden">
+  <section class="hero">
+    <div class="kicker">참고 지표 · 예측력 미검증</div>
+    <h2>매매 점수</h2>
+    <p>종합 점수(11지표)와 밸류·재무 점수입니다. 백테스트로 예측력이 확인되지 않아 참고용이며, 매매 판단은 모멘텀 탭을 기준으로 하세요.</p>
+  </section>
+
   <div class="card dark-card">
     <div class="card-h">오늘 판단</div>
     <div class="card-b"><p id="today-summary" style="font-size:.85rem;line-height:1.7;color:#d6d5cf"></p></div>
   </div>
 
   <div class="card">
-    <div class="card-h">시장 타이밍 · 전 종목 공통</div>
+    <div class="card-h">시장 타이밍 · 전 종목 공통 가산</div>
     <div class="card-b" id="market-rows"></div>
   </div>
 
   <div class="card dark-card" style="padding-bottom:4px">
-    <div class="card-h" style="padding-top:16px">관심종목 시그널 · 종목·판단·현재가 우선</div>
+    <div class="card-h" style="padding-top:16px">종목별 점수</div>
     <div class="filters dark-sel" style="padding-left:16px">
-      <select id="f-theme"><option value="">테마 ▾</option></select>
-      <select id="f-band"><option value="">판단 ▾</option><option>매수</option><option>관심</option><option>보류</option></select>
+      <select id="s-theme"><option value="">테마 ▾</option></select>
+      <select id="s-sort"><option value="score">종합 점수순</option><option value="value">밸류 점수순</option><option value="ticker">종목명순</option></select>
     </div>
     <div class="card-b" style="padding:8px 8px 10px">
-      <table class="sig-table"><thead><tr><th style="width:30px">순위</th><th>종목</th><th style="text-align:right">밸류</th><th style="text-align:right">판단</th></tr></thead><tbody id="sig-body"></tbody></table>
+      <table class="sig-table"><thead><tr><th>종목</th><th style="text-align:right">종합</th><th style="text-align:right">밸류</th><th style="text-align:right">밸류 구간</th></tr></thead><tbody id="score-body"></tbody></table>
     </div>
   </div>
-  <p class="foot-note" id="board-note">※ 판단 = 모멘텀 순위 (모멘텀 + 200일선 이격도). 1~5위 매수 · 6~15위 관심 · 16위↓ 보류. 26년 백테스트에서 4개 시대 모두 균등보유 대비 우위. 지수 ETF는 순위 제외. 밸류 점수는 저평가·수익성·재무건전성 기준 참고 지표로, 예측력은 검증되지 않았습니다.</p>
+  <p class="foot-note">※ <b>종합 점수</b> = 12개월 수익률·낙폭·RSI·공매도·거래량·FWD PER 괴리·어닝 서프라이즈 + 시장 타이밍 3지표 + 200일선 추세 보정. 하락한 종목일수록 높아지는 역발상 설계로, 정보계수(IC) 측정에서 음의 예측력이 나왔습니다.<br>※ <b>밸류 점수</b> = FWD PER 괴리·영업이익률·ROE·부채비율·FCF 수익률. 과거 재무 데이터를 재현할 수 없어 백테스트 검증이 불가능합니다.</p>
 </main>
 
 <!-- ============ TAB 2 : 종목 상세 ============ -->
@@ -270,8 +291,9 @@ svg text{font-family:inherit}
 </div></div>
 
 <nav class="nav"><div class="wrap">
-  <button id="nb-board" class="on" onclick="go('board')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 12 6 12 9 5 14 19 17 12 22 12"/></svg>시그널 보드</button>
-  <button id="nb-detail" onclick="go('detail')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg>종목 상세</button>
+  <button id="nb-board" class="on" onclick="go('board')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg>모멘텀</button>
+  <button id="nb-score" onclick="go('score')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 12 6 12 9 5 14 19 17 12 22 12"/></svg>매매 점수</button>
+  <button id="nb-detail" onclick="go('detail')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>종목 상세</button>
   <button id="nb-compare" onclick="go('compare')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="20" x2="6" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="18" y1="20" x2="18" y2="14"/></svg>밸류 비교</button>
 </div></nav>
 
@@ -489,10 +511,33 @@ function renderBoard(){
       .map(s=>`<tr style="cursor:pointer" onclick="openDetail('${s.t}')">
         <td style="color:${s.mr&&s.mr<=5?'#9fd07f':'var(--dk-ink3)'};font-weight:800;font-size:.8rem">${s.mr||'—'}</td>
         <td class="tk">${s.t}${s.ed!=null&&s.ed<=7?` <span style="background:#33261455;color:#e3c05a;font-size:.62rem;font-weight:800;border-radius:5px;padding:1px 5px;vertical-align:1px">실적 D-${s.ed}</span>`:''}<small>${s.n}</small></td>
-        <td style="text-align:right;font-weight:800;font-size:.8rem;color:${s.vs>=4?'#9fd07f':s.vs>=1?'#c6d9a3':s.vs>=-2?'#9d9ea5':'#e3c05a'}">${s.vs!=null?sign(s.vs):'—'}</td>
+        <td style="text-align:right;font-weight:700;font-size:.8rem;color:var(--dk-ink2)">${s.ms!=null?fmt(s.ms,1):'—'}</td>
         <td style="text-align:right"><span class="sig ${bandCls(s)}"><span class="dot"></span>${band(s)}</span></td></tr>`).join('');
   }
   ft.onchange=draw;document.getElementById('f-band').onchange=draw;draw();
+}
+
+/* ================= 매매 점수 탭 RENDER ================= */
+function renderScore(){
+  const st=document.getElementById('s-theme'), so=document.getElementById('s-sort');
+  st.innerHTML='<option value="">테마 ▾</option>';
+  THEMES.forEach(t=>st.insertAdjacentHTML('beforeend',`<option>${t}</option>`));
+  const vcol=v=>v==null?'#9d9ea5':v>=4?'#9fd07f':v>=1?'#c6d9a3':v>=-2?'#9d9ea5':'#e3c05a';
+  const scol=v=>v==null?'#9d9ea5':v>=4?'#9fd07f':v>=1?'#c6d9a3':v>=-5?'#9d9ea5':'#e3c05a';
+  function draw(){
+    const th=st.value, sort=so.value;
+    let list=STOCKS.filter(x=>!th||x.th===th);
+    list.sort(sort==='value'?(a,b)=>(b.vs??-99)-(a.vs??-99)
+            :sort==='ticker'?(a,b)=>a.t.localeCompare(b.t)
+            :(a,b)=>(b.sc??-99)-(a.sc??-99));
+    document.getElementById('score-body').innerHTML=list.map(x=>`
+      <tr style="cursor:pointer" onclick="openDetail('${x.t}')">
+        <td class="tk">${x.t}<small>${x.n}</small></td>
+        <td style="text-align:right;font-weight:800;color:${scol(x.sc)}">${x.sc!=null?sign(x.sc):'—'}</td>
+        <td style="text-align:right;font-weight:800;color:${vcol(x.vs)}">${x.vs!=null?sign(x.vs):'—'}</td>
+        <td style="text-align:right;font-size:.78rem;color:var(--dk-ink2)">${x.vb||'—'}</td></tr>`).join('');
+  }
+  st.onchange=draw; so.onchange=draw; draw();
 }
 
 /* ================= TAB 3 RENDER ================= */
@@ -669,7 +714,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')toggleGuide(0)});
 
 /* ================= NAV ================= */
 function go(t){
-  ['board','detail','compare'].forEach(x=>{
+  ['board','score','detail','compare'].forEach(x=>{
     document.getElementById('tab-'+x).classList.toggle('hidden',x!==t);
     document.getElementById('nb-'+x).classList.toggle('on',x===t)});
   window.scrollTo(0,0);
@@ -755,7 +800,7 @@ async function refreshQuotes(force){
 function rerenderLive(){
   /* 필터 유지한 채 보드·비교 테이블 갱신, 상세 탭은 가격 텍스트만 교체(차트 깜빡임 방지) */
   const keep=['f-theme','f-band','c-theme'].map(id=>[id,document.getElementById(id).value]);
-  renderBoard();renderCompare();
+  renderBoard();renderScore();renderCompare();
   keep.forEach(([id,v])=>{const el=document.getElementById(id);if([...el.options].some(o=>o.value===v)){el.value=v;el.onchange&&el.onchange()}});
   const s=STOCKS.find(x=>x.t===curTicker);
   if(s){
@@ -782,7 +827,7 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
     console.warn('data.json 로드 실패, 샘플 데이터로 폴백:',e);
     META={updated:null,updatedUtc:null,live:false};
   }
-  renderBoard();renderCompare();
+  renderBoard();renderScore();renderCompare();
   if(!document.getElementById('tab-detail').classList.contains('hidden'))renderDetail();
   try{
     const k=new URLSearchParams(location.search).get('finnhub');
