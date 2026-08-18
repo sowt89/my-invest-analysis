@@ -132,24 +132,18 @@ svg text{font-family:inherit}
 <main id="tab-board" class="wrap">
   <section class="hero">
     <div class="kicker">관심종목 39개 · 테마 13개</div>
-    <h2>매수 / 매도 시그널</h2>
-    <p>워치리스트 전 종목의 룰 기반 종합 점수 — 시장 타이밍 3지표가 모든 종목에 공통 가산됩니다.</p>
+    <h2>이번 달 매수 종목</h2>
+    <p>모멘텀 상위 5종목입니다. 한 달에 한 번 확인해 5위 밖으로 밀린 종목만 교체하세요.</p>
     <p id="data-status" style="margin-top:10px;font-size:.72rem;color:#ffd9c2;font-weight:700">데이터 로딩 중…</p>
   </section>
+
+  <div class="card" style="border:2px solid var(--orange);margin-top:-10px;position:relative;z-index:2">
+    <div class="card-b" style="padding:14px 14px 12px"><div id="mom-list"></div></div>
+  </div>
 
   <div class="card dark-card">
     <div class="card-h">오늘 판단</div>
     <div class="card-b"><p id="today-summary" style="font-size:.85rem;line-height:1.7;color:#d6d5cf"></p></div>
-  </div>
-
-  <div class="card">
-    <div class="card-h">모멘텀 상위 종목 · 월 1회 교체</div>
-    <div class="card-b">
-      <p style="font-size:.75rem;color:var(--ink2);line-height:1.6;margin-bottom:10px">
-        12-1 모멘텀과 200일선 이격도로 매긴 순위입니다. 26년(닷컴·금융위기 포함) 백테스트에서
-        4개 시대 모두 균등보유를 앞섰습니다. 한 달에 한 번 상위 종목으로 교체하는 방식입니다.</p>
-      <div id="mom-list"></div>
-    </div>
   </div>
 
   <div class="card">
@@ -376,6 +370,21 @@ function gapOf(d){
 }
 function renderBoard(){
   document.querySelector('#tab-board .kicker').textContent=`관심종목 ${STOCKS.length}개 · 테마 ${THEMES.length}개`;
+
+  /* 최상단 — 이번 달 매수 종목 (모멘텀 상위 5) */
+  const mom=STOCKS.filter(s=>s.mr).sort((a,b)=>a.mr-b.mr).slice(0,5);
+  document.getElementById('mom-list').innerHTML = mom.length
+    ? mom.map(s=>`<div class="mrow" style="cursor:pointer;padding:11px 0" onclick="openDetail('${s.t}')">
+        <span class="k" style="display:flex;align-items:center;gap:10px">
+          <b style="background:var(--orange);color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.75rem;flex-shrink:0">${s.mr}</b>
+          <span><b style="font-size:1rem;color:var(--ink)">${s.t}</b>
+          <small style="display:block;color:var(--ink3);font-size:.72rem">${s.n}</small></span></span>
+        <span class="v" style="text-align:right"><span style="font-size:.95rem">$${fmt(s.p,2)}</span>
+        <small style="display:block;color:var(--ink2);font-weight:600;font-size:.72rem">모멘텀 ${fmt(s.ms,1)}</small></span></div>`).join('')
+      + `<p style="font-size:.7rem;color:var(--ink3);line-height:1.5;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)">
+         12-1 모멘텀 + 200일선 이격도 순위 · 26년 백테스트에서 4개 시대 모두 균등보유 대비 우위</p>`
+    : '<span style="font-size:.83rem;color:var(--ink2)">모멘텀 데이터 없음 (샘플 데이터 표시 중)</span>';
+
   const top3=STOCKS.filter(s=>s.mr&&s.mr<=3).sort((a,b)=>a.mr-b.mr);
   const momTxt=top3.length?`모멘텀 상위는 ${top3.map(s=>s.t).join(', ')} 순입니다.`:'';
   document.getElementById('today-summary').textContent=
