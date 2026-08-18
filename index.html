@@ -185,6 +185,11 @@ svg text{font-family:inherit}
     <p>종합 점수(11지표)와 밸류·재무 점수입니다. 백테스트로 예측력이 확인되지 않아 참고용이며, 매매 판단은 '매수 종목' 탭을 기준으로 하세요.</p>
   </section>
 
+  <div class="card" style="border:2px solid var(--orange);margin-top:16px">
+    <div class="card-h" style="padding:14px 16px 0">이번 달 매수 종목 · 참고 점수 대조</div>
+    <div class="card-b" style="padding:10px 14px 12px"><div id="score-top5"></div></div>
+  </div>
+
   <div class="card dark-card">
     <div class="card-h">오늘 판단</div>
     <div class="card-b"><p id="today-summary" style="font-size:.85rem;line-height:1.7;color:#d6d5cf"></p></div>
@@ -519,6 +524,24 @@ function renderBoard(){
 
 /* ================= 매매 점수 탭 RENDER ================= */
 function renderScore(){
+  /* 최상단 — 매수 종목 5개의 참고 점수 대조 */
+  const top5=STOCKS.filter(x=>x.mr&&x.mr<=5).sort((a,b)=>a.mr-b.mr);
+  const c=(v,hi,mid)=>v==null?'var(--ink3)':v>=hi?'#4c8f3a':v>=mid?'#6b6b66':'#c4472e';
+  document.getElementById('score-top5').innerHTML = top5.length
+    ? `<div class="mrow" style="padding:6px 0;border-bottom:1px solid var(--line)">
+         <span class="k" style="font-size:.72rem;color:var(--ink3)">종목</span>
+         <span class="v" style="font-size:.72rem;color:var(--ink3);font-weight:600">종합 · 밸류</span></div>`
+      + top5.map(x=>`<div class="mrow" style="cursor:pointer;padding:9px 0" onclick="openDetail('${x.t}')">
+        <span class="k" style="display:flex;align-items:center;gap:9px">
+          <b style="background:var(--orange);color:#fff;width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.72rem;flex-shrink:0">${x.mr}</b>
+          <span><b style="color:var(--ink)">${x.t}</b> <span style="color:var(--ink3);font-size:.74rem">${x.n}</span></span></span>
+        <span class="v" style="gap:12px">
+          <span style="color:${c(x.sc,4,1)};min-width:26px;text-align:right">${x.sc!=null?sign(x.sc):'—'}</span>
+          <span style="color:${c(x.vs,4,1)};min-width:26px;text-align:right">${x.vs!=null?sign(x.vs):'—'}</span></span></div>`).join('')
+      + `<p style="font-size:.7rem;color:var(--ink3);line-height:1.5;margin-top:9px;padding-top:9px;border-top:1px solid var(--line)">
+         모멘텀 상위 5종목의 참고 점수입니다. 두 점수가 낮아도 매수 판단은 모멘텀 순위를 따릅니다.</p>`
+    : '<span style="font-size:.83rem;color:var(--ink2)">모멘텀 데이터 없음 (샘플 데이터 표시 중)</span>';
+
   const st=document.getElementById('s-theme'), so=document.getElementById('s-sort');
   st.innerHTML='<option value="">테마 ▾</option>';
   THEMES.forEach(t=>st.insertAdjacentHTML('beforeend',`<option>${t}</option>`));
