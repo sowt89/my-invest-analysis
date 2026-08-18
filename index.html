@@ -162,7 +162,7 @@ svg text{font-family:inherit}
       <table class="sig-table"><thead><tr><th>종목</th><th>테마</th><th style="text-align:right">판단</th></tr></thead><tbody id="sig-body"></tbody></table>
     </div>
   </div>
-  <p class="foot-note" id="board-note">※ 적자 종목의 FWD PER "—"는 결측 → 0점 처리. 종합 점수 셀 색상 signal_band 기준.</p>
+  <p class="foot-note" id="board-note">※ 판단 구간: +4↑ 강한 매수 / +1~+3 매수 대기 / -5~0 관망 / -6↓ 매도 대기(종목 200일선 아래일 때만). 적자 종목 FWD PER "—"는 0점 처리.</p>
 </main>
 
 <!-- ============ TAB 2 : 종목 상세 ============ -->
@@ -242,8 +242,10 @@ let STOCKS=[
 ];
 let THEMES=[...new Set(STOCKS.map(s=>s.th))];
 let MARKET={spy52:-4.1,spyPt:-1,vix:20.66,vixPt:1,fg:32,fgPt:0,fgLabel:'공포',mood:'중립',moodPt:0,nasdaq:24443,sp500:6728};
-function band(sc){return sc>=8?'강한 매수':sc>=4?'매수 대기':sc>=-2?'관망':'매도 대기'}
-function bandCls(sc){return sc>=8?'s-strong':sc>=4?'s-buy':sc>=-2?'s-hold':'s-sell'}
+/* 판단 구간 — 38종목×63조합 백테스트 기반.
+   매도는 점수 -6 이하 + 종목이 자기 200일선 아래일 때만 발동(추세 존중). */
+function band(sc,ab){return sc>=4?'강한 매수':sc>=1?'매수 대기':(sc<=-6&&!ab)?'매도 대기':'관망'}
+function bandCls(sc,ab){const b=band(sc,ab);return b==='강한 매수'?'s-strong':b==='매수 대기'?'s-buy':b==='매도 대기'?'s-sell':'s-hold'}
 const fmt=(x,d=1)=>x==null||isNaN(x)?'—':x.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
 const sign=x=>x==null||isNaN(x)?'—':(x>0?'+':'')+x;
 const pct=(x,d=1)=>x==null||isNaN(x)?'—':(x>0?'+':'')+fmt(x,d)+'%';
@@ -280,7 +282,7 @@ function detail(s){
     qRev,qOp,yrs:['FY22','FY23','FY24','FY25','FY26E'],yRev,yOcf,yCapex,
     revG:[g(-10+r()*60),g(-5+r()*70),g(r()*80)],
     est:[0,1,2].map(i=>({y:'FY2'+(6+i)+'E',rev:g(yRev[4]*(1+0.25*(i+1))),g:g(10+r()*40),eps:g(1+r()*8),epsG:g(5+r()*45)})),
-    cmt:`${s.n}은(는) 종합 점수 ${sign(s.sc)}점으로 '${band(s.sc)}' 구간입니다. 밸류에이션 이격과 수급, 시장 타이밍 지표를 함께 반영한 룰 기반 판단이며, 개별 이벤트(실적 발표·가이던스)는 별도 확인이 필요합니다.`};
+    cmt:`${s.n}은(는) 종합 점수 ${sign(s.sc)}점으로 '${band(s.sc,s.ab)}' 구간입니다. 밸류에이션 이격과 수급, 시장 타이밍 지표를 함께 반영한 룰 기반 판단이며, 개별 이벤트(실적 발표·가이던스)는 별도 확인이 필요합니다.`};
 }
 
 /* price series 1Y — 실데이터 주봉이 있으면 사용 */
@@ -368,7 +370,7 @@ function gapOf(d){
 }
 function renderBoard(){
   document.querySelector('#tab-board .kicker').textContent=`관심종목 ${STOCKS.length}개 · 테마 ${THEMES.length}개`;
-  const strong=STOCKS.filter(s=>s.sc>=8).sort((a,b)=>b.sc-a.sc).slice(0,6);
+  const strong=STOCKS.filter(s=>s.sc>=4).sort((a,b)=>b.sc-a.sc).slice(0,6);
   document.getElementById('reco-chips').innerHTML=strong.length
     ?strong.map(s=>`<span class="chip">${s.t} <small>${sign(s.sc)}</small></span>`).join('')
     :'<span style="font-size:.83rem;color:var(--ink2)">현재 \'강한 매수\'(+8 이상) 신호 종목이 없습니다.</span>';
@@ -381,18 +383,18 @@ function renderBoard(){
   document.getElementById('market-rows').innerHTML=
     M.map(([k,v,p])=>`<div class="mrow"><span class="k">${k}</span><span class="v">${v}<span class="pt ${p>0?'up':p<0?'dn':'zr'}">${p===0?'0':sign(p)}</span></span></div>`).join('')
     +`<div class="mrow"><span class="k">현재 시장 상황</span><span class="v"><span class="badge neutral">${MARKET.mood}</span><span class="pt zr">0</span></span></div>`
-    +(qqq?`<div class="mrow" style="cursor:pointer" onclick="openDetail('QQQ')"><span class="k">나스닥100 판단 (QQQ · TIGER 참고)</span><span class="v"><span class="sig ${bandCls(qqq.sc)}" style="background:${qqq.sc>=4?'#e6efdc':qqq.sc>=-2?'#ececea':'#f5ecd2'};color:${qqq.sc>=4?'#3f6f2b':qqq.sc>=-2?'#6b6b66':'#b58612'}"><span class="dot"></span>${band(qqq.sc)} <b>${sign(qqq.sc)}</b></span></span></div>`:'');
+    +(qqq?`<div class="mrow" style="cursor:pointer" onclick="openDetail('QQQ')"><span class="k">나스닥100 판단 (QQQ · TIGER 참고)</span><span class="v"><span class="sig ${bandCls(qqq.sc,qqq.ab)}" style="background:${bandCls(qqq.sc,qqq.ab)==='s-strong'?'#e6efdc':bandCls(qqq.sc,qqq.ab)==='s-buy'?'#eef3e6':bandCls(qqq.sc,qqq.ab)==='s-sell'?'#f5ecd2':'#ececea'};color:${bandCls(qqq.sc,qqq.ab)==='s-strong'?'#3f6f2b':bandCls(qqq.sc,qqq.ab)==='s-buy'?'#5b8f3d':bandCls(qqq.sc,qqq.ab)==='s-sell'?'#b58612':'#6b6b66'}"><span class="dot"></span>${band(qqq.sc,qqq.ab)} <b>${sign(qqq.sc)}</b></span></span></div>`:'');
   const ft=document.getElementById('f-theme');
   ft.innerHTML='<option value="">테마 ▾</option>';
   THEMES.forEach(t=>ft.insertAdjacentHTML('beforeend',`<option>${t}</option>`));
   function draw(){
     const th=ft.value,bd=document.getElementById('f-band').value;
     document.getElementById('sig-body').innerHTML=STOCKS
-      .filter(s=>(!th||s.th===th)&&(!bd||band(s.sc)===bd))
+      .filter(s=>(!th||s.th===th)&&(!bd||band(s.sc,s.ab)===bd))
       .map(s=>`<tr style="cursor:pointer" onclick="openDetail('${s.t}')">
         <td class="tk">${s.t}${s.ed!=null&&s.ed<=7?` <span style="background:#33261455;color:#e3c05a;font-size:.62rem;font-weight:800;border-radius:5px;padding:1px 5px;vertical-align:1px">실적 D-${s.ed}</span>`:''}<small>${s.n}</small></td>
         <td class="theme-cell">${s.th}</td>
-        <td style="text-align:right"><span class="sig ${bandCls(s.sc)}"><span class="dot"></span>${band(s.sc)} <b>${sign(s.sc)}</b></span></td></tr>`).join('');
+        <td style="text-align:right"><span class="sig ${bandCls(s.sc,s.ab)}"><span class="dot"></span>${band(s.sc,s.ab)} <b>${sign(s.sc)}</b></span></td></tr>`).join('');
   }
   ft.onchange=draw;document.getElementById('f-band').onchange=draw;draw();
 }
@@ -434,16 +436,16 @@ function renderDetail(){
   root.innerHTML=`
   <div class="picker"><select id="tick-sel" onchange="curTicker=this.value;renderDetail()">${opts}</select></div>
   <div class="price-line"><span class="nm">${s.n} · ${s.th}</span></div>
-  <div class="price-line"><span class="sig ${bandCls(s.sc)}"><span class="dot"></span>${band(s.sc)} <b>${sign(s.sc)}</b></span>
+  <div class="price-line"><span class="sig ${bandCls(s.sc,s.ab)}"><span class="dot"></span>${band(s.sc,s.ab)} <b>${sign(s.sc)}</b></span>
     <span class="big-price">$${fmt(s.p,2)}</span><span class="ytd" id="ytd-lbl" style="color:${s.ytd>=0?'#9fd07f':'#e58f6a'}">${pct(s.ytd)} YTD</span>${s.dp!=null?`<span class="ytd" id="day-chg" style="color:${s.dp>=0?'#9fd07f':'#e58f6a'}">${pct(s.dp)} 오늘</span>`:'<span class="ytd" id="day-chg"></span>'}${s.ed!=null&&s.ed<=14?`<span class="gap-tag over" title="${d.earningsDate||''}">실적 발표 D-${s.ed}${s.ed<=3?' · 변동성 주의':''}</span>`:''}</div>
 
   <div class="sec-label"><span class="no">01</span><span class="t">판단</span></div>
   <h3 class="sec-title">종합 판단</h3>
   <p class="sec-sub">10개 지표 룰 기반 종합 점수 · 시장 타이밍 공통 반영 (200일선 추세 보정)</p>
   <div class="d-card">
-    <div class="score-hero" style="color:${s.sc>=4?'#9fd07f':s.sc>=-2?'#c9c9c2':'#e3c05a'}">${sign(s.sc)}</div>
-    <div class="gauge"><div class="mk" style="left:calc(${Math.max(0,Math.min(100,(s.sc+10)/20*100)).toFixed(1)}% - 2px)"></div></div>
-    <div class="gauge-lb"><span>매도</span><span>관망</span><span>강한 매수</span></div>
+    <div class="score-hero" style="color:${s.sc>=4?'#9fd07f':s.sc>=-6?'#c9c9c2':'#e3c05a'}">${sign(s.sc)}</div>
+    <div class="gauge"><div class="mk" style="left:calc(${Math.max(0,Math.min(100,(s.sc+8)/16*100)).toFixed(1)}% - 2px)"></div></div>
+    <div class="gauge-lb"><span>-8 매도</span><span>0 관망</span><span>+8 강한 매수</span></div>
     <div class="comment"><b>투자 코멘트</b><p>${d.cmt}</p></div>
   </div>
 
@@ -561,7 +563,7 @@ function go(t){
 function applyLiveData(D){
   if(!D||!Array.isArray(D.stocks)||!D.stocks.length||!D.market)throw new Error('bad data.json');
   DETAILS={};
-  STOCKS=D.stocks.map(s=>({t:s.ticker,n:s.name,th:s.theme,p:s.price,mc:s.market_cap_b,sc:s.score,ytd:s.ytd,ed:s.earnings_in}));
+  STOCKS=D.stocks.map(s=>({t:s.ticker,n:s.name,th:s.theme,p:s.price,mc:s.market_cap_b,sc:s.score,ytd:s.ytd,ed:s.earnings_in,ab:s.above_ma200}));
   D.stocks.forEach(s=>DETAILS[s.ticker]=s.detail);
   THEMES=[...new Set(STOCKS.map(s=>s.th))];
   const m=D.market;
