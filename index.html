@@ -16,6 +16,21 @@
   --neg:#c4472e; --pos:#4c8f3a;
   --c1:#E86A38; --c2:#4E90C9; --c3:#5FA84E;
 }
+body.dark{--bg:#131416;--ink:#f0efeb;--ink2:#a8a8a2;--ink3:#75756f;--card:#1c1d20;--line:#2a2b2f;
+  --buy-bg:#26301f;--buy-ink:#c6d9a3;--sell-bg:#332a14;--hold-bg:#26272b;--orange-soft:#3a2517}
+body.dark .top{background:rgba(19,20,22,.92)}
+body.dark .nav{background:rgba(19,20,22,.95)}
+body.dark .nav button{color:#75756f}
+body.dark .nav button.on{color:var(--orange)}
+body.dark select{background-color:var(--card);border-color:var(--line);color:var(--ink)}
+body.dark .chip small{color:#a9c76f}
+body.dark .badge.neutral{background:var(--hold-bg);color:var(--ink2)}
+body.dark .dark-card{border-color:var(--line)}
+body.dark #guide .gtop{background:rgba(19,20,22,.96)}
+body.dark #guide .lead{background:#3a2517;color:#f0b28a}
+body.dark #guide .warn{background:#2b211a}
+body.dark #guide .warn p{color:#d9b79a}
+body.dark #guide .gclose{color:var(--ink2)}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{font-size:15px}
 body{font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR",sans-serif;background:var(--bg);color:var(--ink);padding-bottom:76px}
@@ -148,7 +163,8 @@ svg text{font-family:inherit}
 <body>
 <div id="tip"></div>
 <header class="top"><div class="wrap"><div class="logo">나만의<br>분석</div><h1>나만의 투자분석</h1>
-<button onclick="toggleGuide(1)" title="설명서" style="margin-left:auto;background:var(--orange);border:none;border-radius:8px;padding:5px 11px;font-size:.8rem;font-weight:800;cursor:pointer;color:#fff;font-family:inherit">설명서</button>
+<button id="theme-btn" onclick="toggleTheme()" title="라이트/다크 전환" style="margin-left:auto;background:none;border:1px solid var(--line);border-radius:8px;padding:4px 9px;font-size:.85rem;cursor:pointer;font-family:inherit">🌙</button>
+<button onclick="toggleGuide(1)" title="설명서" style="margin-left:6px;background:var(--orange);border:none;border-radius:8px;padding:5px 11px;font-size:.8rem;font-weight:800;cursor:pointer;color:#fff;font-family:inherit">설명서</button>
 <button id="live-cfg" onclick="setFinnKey()" title="실시간 시세 API 키 설정" style="margin-left:6px;background:none;border:1px solid var(--line);border-radius:8px;padding:4px 9px;font-size:.85rem;cursor:pointer;color:var(--ink2);font-family:inherit">⚙</button></div></header>
 
 <!-- ============ TAB 1 : 매수 종목 ============ -->
@@ -791,6 +807,19 @@ function renderDetail(){
   if(d.yOcf&&d.yOcf.some(v=>v!=null))multiLine(document.getElementById('cf-chart'),d.yrs,[d.yOcf,d.yCapex,d.yOcf.map((v,i)=>v!=null&&d.yCapex[i]!=null?v+d.yCapex[i]:null)],[c1,c2,c3],['영업현금흐름','CAPEX','FCF'],'B');
   if(d.est&&d.est.length)barChart(document.getElementById('est-chart'),d.est.map(e=>e.y),[d.est.map(e=>e.rev)],[c1],['예상 매출'],'B');
 }
+
+/* ================= 테마 ================= */
+function applyTheme(t){
+  document.body.classList.toggle('dark',t==='dark');
+  const b=document.getElementById('theme-btn'); if(b)b.textContent=t==='dark'?'☀️':'🌙';
+  const m=document.querySelector('meta[name="theme-color"]'); if(m)m.setAttribute('content',t==='dark'?'#131416':'#f7f7f5');
+}
+function toggleTheme(){
+  const t=document.body.classList.contains('dark')?'light':'dark';
+  try{localStorage.setItem('theme',t)}catch(e){}
+  applyTheme(t);
+}
+(function(){let t='dark';try{t=localStorage.getItem('theme')||'dark'}catch(e){}applyTheme(t)})();
 
 /* ================= 사용법 오버레이 ================= */
 function toggleGuide(on){
