@@ -385,18 +385,39 @@ def load_history():
         return {}
 
 
+def score_inputs(d):
+    """3축 점수의 원자료. 나중에 기준을 바꿔 재채점·예측력(IC) 측정을 하기 위해 함께 남긴다."""
+    psr, apsr = d.get("psr"), d.get("avgPsr")
+    qr, qo = d.get("qRev") or [], d.get("qOp") or []
+    mt = None
+    if len(qr) >= 5 and qr[-1] and qr[-5] and qo[-1] is not None and qo[-5] is not None:
+        mt = rnd((qo[-1] / qr[-1] - qo[-5] / qr[-5]) * 100, 2)
+    rev = d.get("revG", [None] * 3)
+    raw = {"yoy": rev[1], "cagr": rev[2], "sp": d.get("surprise"),
+           "fwdG": d["est"][0].get("g") if d.get("est") else None, "mt": mt,
+           "gap": d.get("gap"), "psrG": rnd((psr / apsr - 1) * 100, 1) if (psr and apsr) else None,
+           "fcfY": d.get("fcfY"), "peg": d.get("peg"),
+           "op": d.get("op"), "roe": d.get("roe"), "de": d.get("ltDE"),
+           "cr": d.get("curR"), "fcfM": d.get("fcfM")}
+    return {k: v for k, v in raw.items() if v is not None}
+
+
 def save_history(hist, stocks):
     """오늘 첫 실행에만 스냅샷을 추가하고 3년 초과분은 제거."""
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     prev_today = hist.get(today)
-    if today not in hist or not any(
-            isinstance(r, dict) and r.get("rank") for r in (prev_today or {}).values()):
+    complete = lambda k: any(isinstance(r, dict) and r.get(k) is not None
+                             for r in (prev_today or {}).values())
+    if today not in hist or not complete("rank") or not complete("gs"):
         snap = {}
         for s in stocks:
             d = s["detail"]
             eps = d["est"][0].get("eps") if d.get("est") else None  # 당해연도 EPS 컨센서스 (리비전 추적용)
             rec = {"per": d.get("fwdPer"), "eps": eps,
-                   "rank": s.get("mom_rank"), "mom": s.get("mom_score")}
+                   "rank": s.get("mom_rank"), "mom": s.get("mom_score"),
+                   "px": s.get("price"),                      # 사후 수익률 계산용
+                   "gs": s.get("grow_score"), "vs": s.get("val_score"),
+                   "fs": s.get("fin_score"), "raw": score_inputs(d) or None}
             if any(v is not None for v in rec.values()):
                 snap[s["ticker"]] = rec
         if snap:
