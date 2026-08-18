@@ -28,6 +28,7 @@ body.dark .badge.neutral{background:var(--hold-bg);color:var(--ink2)}
 body.dark .dark-card{border-color:var(--line)}
 body.dark #guide .gtop{background:rgba(19,20,22,.96)}
 body.dark #guide .lead{background:#3a2517;color:#f0b28a}
+body.dark #alerts .card-b{color:#f0b28a}
 body.dark #guide .warn{background:#2b211a}
 body.dark #guide .warn p{color:#d9b79a}
 body.dark #guide .gclose{color:var(--ink2)}
@@ -179,6 +180,8 @@ svg text{font-family:inherit}
     <p id="data-status" style="margin-top:10px;font-size:.72rem;color:#ffd9c2;font-weight:700">데이터 로딩 중…</p>
   </section>
 
+  <div id="alerts"></div>
+
   <div class="card" style="border:2px solid var(--orange);margin-top:16px">
     <div class="card-b" style="padding:14px 14px 12px"><div id="mom-list"></div></div>
   </div>
@@ -301,6 +304,11 @@ svg text{font-family:inherit}
     <tr><td>16위~</td><td>보류</td></tr>
   </table>
   <p style="font-size:.78rem;color:var(--ink3)">지수 ETF는 순위 제외 · 순위 변동은 월 평균 0.6종목</p>
+  <table><colgroup><col class="c-ind"><col></colgroup>
+    <tr><td>▲3 / ▼2</td><td>약 한 달 전 대비 순위 상승 / 하락</td></tr>
+    <tr><td>NEW</td><td>비교 기록 없음 (누적 시작 후 표시)</td></tr>
+    <tr><td>⚠ 배너</td><td>섹터 쏠림(5종목 중 3개 이상 같은 테마) · 데이터 24시간 이상 미갱신</td></tr>
+  </table>
 
   <h3>2. 시장 국면</h3>
   <p>매수 종목 아래에 표시. 26년 데이터(주간 1,327표본) 검증 기준입니다.</p>
@@ -436,6 +444,15 @@ let STOCKS=[
 ];
 let THEMES=[...new Set(STOCKS.map(s=>s.th))];
 let MARKET={spy52:-4.1,spyPt:-1,vix:20.66,vixPt:1,fg:32,fgPt:0,fgLabel:'공포',mood:'중립',moodPt:0,nasdaq:24443,sp500:6728};
+/* 순위 변동 배지 — 이전 기록 대비 */
+function rankDelta(s){
+  if(!s.mr) return '';
+  if(s.pr==null) return `<span style="color:var(--ink3);font-size:.7rem;font-weight:700">NEW</span>`;
+  const d=s.pr-s.mr;
+  if(d===0) return `<span style="color:var(--ink3);font-size:.7rem">—</span>`;
+  return `<span style="color:${d>0?'#4c8f3a':'#c4472e'};font-size:.7rem;font-weight:800">${d>0?'▲':'▼'}${Math.abs(d)}</span>`;
+}
+
 /* 판단 = 모멘텀 횡단면 순위 (모멘텀[최근 1개월 제외 1년 수익률] + 200일선 이격도).
    26년 백테스트에서 4개 시대 모두 균등보유를 앞선 유일한 방식.
    1~5위 매수(검증 구간) / 6~15위 관심 / 16위↓ 보류 */
@@ -575,10 +592,22 @@ function renderBoard(){
           <span><b style="font-size:1rem;color:var(--ink)">${s.t}</b>
           <small style="display:block;color:var(--ink3);font-size:.72rem">${s.n}</small></span></span>
         <span class="v" style="text-align:right"><span style="font-size:.95rem">$${fmt(s.p,2)}</span>
-        <small style="display:block;color:var(--ink2);font-weight:600;font-size:.72rem">모멘텀 ${fmt(s.ms,1)}</small></span></div>`).join('')
+        <small style="display:block;color:var(--ink2);font-weight:600;font-size:.72rem">모멘텀 ${fmt(s.ms,1)} ${rankDelta(s)}</small></span></div>`).join('')
       + `<p style="font-size:.7rem;color:var(--ink3);line-height:1.5;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)">
          모멘텀 + 200일선 이격도 순위<br>26년 백테스트 · 4개 시대 모두 균등보유 대비 우위</p>`
     : '<span style="font-size:.83rem;color:var(--ink2)">모멘텀 데이터 없음 (샘플 데이터 표시 중)</span>';
+
+  /* 경고 배너 — 섹터 쏠림 · 데이터 정지 */
+  const al=[];
+  if(MARKET.topThemeN>=3&&MARKET.topTheme)
+    al.push(`매수 5종목 중 <b>${MARKET.topThemeN}개가 ${MARKET.topTheme}</b> · 섹터 쏠림에 유의하세요`);
+  if(META.updatedUtc){
+    const hrs=(Date.now()-new Date(META.updatedUtc).getTime())/36e5;
+    if(hrs>=24) al.push(`데이터가 <b>${Math.floor(hrs/24)}일 ${Math.floor(hrs%24)}시간</b> 갱신되지 않았습니다`);
+  } else if(!META.live) al.push('실데이터 로드 실패 · 내장 샘플 표시 중');
+  document.getElementById('alerts').innerHTML=al.map(t=>
+    `<div class="card" style="margin-top:14px;margin-bottom:0;border-left:3px solid var(--orange);background:var(--orange-soft)">
+       <div class="card-b" style="padding:11px 14px;font-size:.8rem;line-height:1.6;color:#8a3d13;word-break:keep-all">⚠ ${t}</div></div>`).join('');
 
   /* 시장 국면 카드 */
   const rg=MARKET.regime, rgc=rg==='상승장'?'#4c8f3a':rg==='하락장'?'#c4472e':'#b58612';
@@ -618,7 +647,7 @@ function renderBoard(){
       .filter(s=>(!th||s.th===th)&&(!bd||band(s)===bd))
       .sort((a,b)=>(a.mr||999)-(b.mr||999))
       .map(s=>`<tr style="cursor:pointer" onclick="openDetail('${s.t}')">
-        <td style="color:${s.mr&&s.mr<=5?'#9fd07f':'var(--dk-ink3)'};font-weight:800;font-size:.8rem">${s.mr||'—'}</td>
+        <td style="color:${s.mr&&s.mr<=5?'#9fd07f':'var(--dk-ink3)'};font-weight:800;font-size:.8rem">${s.mr||'—'}<small style="display:block;font-weight:700">${rankDelta(s)}</small></td>
         <td class="tk">${s.t}${s.ed!=null&&s.ed<=7?` <span style="background:#33261455;color:#e3c05a;font-size:.62rem;font-weight:800;border-radius:5px;padding:1px 5px;vertical-align:1px">실적 D-${s.ed}</span>`:''}<small>${s.n}</small></td>
         <td style="text-align:right;font-weight:700;font-size:.8rem;color:var(--dk-ink2)">${s.ms!=null?fmt(s.ms,1):'—'}</td>
         <td style="text-align:right"><span class="sig ${bandCls(s)}"><span class="dot"></span>${band(s)}</span></td></tr>`).join('');
@@ -855,14 +884,14 @@ function go(t){
 function applyLiveData(D){
   if(!D||!Array.isArray(D.stocks)||!D.stocks.length||!D.market)throw new Error('bad data.json');
   DETAILS={};
-  STOCKS=D.stocks.map(s=>({t:s.ticker,n:s.name,th:s.theme,p:s.price,mc:s.market_cap_b,sc:s.score,ytd:s.ytd,ed:s.earnings_in,ab:s.above_ma200,ms:s.mom_score,mr:s.mom_rank,mb:s.mom_band,mt:s.mom_total,gs:s.grow_score,vs:s.val_score,fs:s.fin_score}));
+  STOCKS=D.stocks.map(s=>({t:s.ticker,n:s.name,th:s.theme,p:s.price,mc:s.market_cap_b,sc:s.score,ytd:s.ytd,ed:s.earnings_in,ab:s.above_ma200,ms:s.mom_score,mr:s.mom_rank,mb:s.mom_band,mt:s.mom_total,gs:s.grow_score,vs:s.val_score,fs:s.fin_score,pr:s.prev_rank}));
   D.stocks.forEach(s=>DETAILS[s.ticker]=s.detail);
   THEMES=[...new Set(STOCKS.map(s=>s.th))];
   const m=D.market;
   MARKET={spy52:m.spy_dd_52w,spyPt:m.spy_pt||0,vix:m.vix,vixPt:m.vix_pt||0,
     fg:m.fear_greed,fgPt:m.fg_pt||0,fgLabel:m.fg_label,mood:m.mood||'중립',moodPt:0,
-    nasdaq:m.nasdaq,sp500:m.sp500,trendAbove:m.spy_ma200_above,trendAdj:m.trend_adj||0,regime:m.regime,breadth:m.breadth_pct,golden:m.spy_golden,panic:m.panic};
-  META={updated:D.updated_at_kst,updatedUtc:D.updated_at,live:true};
+    nasdaq:m.nasdaq,sp500:m.sp500,trendAbove:m.spy_ma200_above,trendAdj:m.trend_adj||0,regime:m.regime,breadth:m.breadth_pct,golden:m.spy_golden,panic:m.panic,topTheme:m.top5_theme,topThemeN:m.top5_theme_count};
+  META={updated:D.updated_at_kst,updatedUtc:D.updated_at,live:true,compareDate:D.compare_date};
   if(!STOCKS.some(x=>x.t===curTicker))curTicker=STOCKS[0].t;
 }
 function updateStatus(){

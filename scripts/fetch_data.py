@@ -388,15 +388,19 @@ def load_history():
 def save_history(hist, stocks):
     """오늘 첫 실행에만 스냅샷을 추가하고 3년 초과분은 제거."""
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    if today not in hist:
+    prev_today = hist.get(today)
+    if today not in hist or not any(
+            isinstance(r, dict) and r.get("rank") for r in (prev_today or {}).values()):
         snap = {}
         for s in stocks:
             d = s["detail"]
             eps = d["est"][0].get("eps") if d.get("est") else None  # 당해연도 EPS 컨센서스 (리비전 추적용)
-            if d.get("fwdPer") is not None or eps is not None:
-                snap[s["ticker"]] = {"per": d.get("fwdPer"), "eps": eps}
+            rec = {"per": d.get("fwdPer"), "eps": eps,
+                   "rank": s.get("mom_rank"), "mom": s.get("mom_score")}
+            if any(v is not None for v in rec.values()):
+                snap[s["ticker"]] = rec
         if snap:
-            hist[today] = snap
+            hist[today] = snap   # 같은 날 재수집 시 누락 필드(순위 등)를 채운다
     cutoff = (datetime.now(timezone.utc) - timedelta(days=HIST_DAYS)).strftime("%Y-%m-%d")
     hist = {d: v for d, v in hist.items() if d >= cutoff}
     with open(HIST_PATH, "w", encoding="utf-8") as f:
@@ -732,6 +736,14 @@ def main():
         # 백테스트 검증 구간: 상위 5종목 보유 · 월 1회 교체
         x["mom_band"] = "매수" if r <= 5 else ("관심" if r <= 15 else "보류")
 
+    top5 = [x for x in ranked[:5]]
+    if top5:
+        from collections import Counter
+        theme_cnt = Counter(x["theme"] for x in top5)
+        top_theme, top_n = theme_cnt.most_common(1)[0]
+        market["top5_theme"] = top_theme
+        market["top5_theme_count"] = top_n
+
     now = datetime.now(timezone.utc)
     payload = {
         "updated_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -741,6 +753,22 @@ def main():
         "stocks": stocks,
         "failed_tickers": failed,
     }
+    # 약 한 달 전 순위와 비교 (없으면 가장 오래된 기록)
+    past_key = None
+    today_key = now.strftime("%Y-%m-%d")
+    has_rank = [d for d, v in hist.items() if d != today_key
+                and any(isinstance(r, dict) and r.get("rank") for r in v.values())]
+    if has_rank:
+        target = (now - timedelta(days=30)).strftime("%Y-%m-%d")
+        older = sorted(d for d in has_rank if d <= target)
+        past_key = older[-1] if older else min(has_rank)
+    if past_key:
+        payload["compare_date"] = past_key
+        for s in stocks:
+            rec = hist[past_key].get(s["ticker"])
+            prev = rec.get("rank") if isinstance(rec, dict) else None
+            s["prev_rank"] = prev
+
     with open(OUT_PATH, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
     hist = save_history(hist, stocks)
