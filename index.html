@@ -200,13 +200,13 @@ svg text{font-family:inherit}
     <div class="card-h" style="padding-top:16px">모멘텀 순위 · 전 종목</div>
     <div class="filters dark-sel" style="padding-left:16px">
       <select id="f-theme"><option value="">테마 ▾</option></select>
-      <select id="f-band"><option value="">판단 ▾</option><option>매수</option><option>관심</option><option>보류</option></select>
+      <select id="f-band"><option value="">순위 ▾</option><option>상위 5</option><option>6~15위</option><option>16위↓</option></select>
     </div>
     <div class="card-b" style="padding:8px 8px 10px">
-      <table class="sig-table"><thead><tr><th style="width:30px">순위</th><th>종목</th><th style="text-align:right">모멘텀</th><th style="text-align:right">판단</th></tr></thead><tbody id="sig-body"></tbody></table>
+      <table class="sig-table"><thead><tr><th style="width:30px">순위</th><th>종목</th><th style="text-align:right">모멘텀</th><th style="text-align:right">구간</th></tr></thead><tbody id="sig-body"></tbody></table>
     </div>
   </div>
-  <p class="foot-note" id="board-note">※ 모멘텀 = 최근 1개월 제외 1년 수익률 + 200일선 이격도 (반반)<br>※ 1~5위 매수 · 6~15위 관심 · 16위↓ 보류 · 지수 ETF 제외</p>
+  <p class="foot-note" id="board-note">※ 모멘텀 = 최근 1개월 제외 1년 수익률 + 200일선 이격도 (반반)<br>※ 구간 = 모멘텀 순위 묶음 (매매 지시 아님) · 지수 ETF 제외</p>
 </main>
 
 <!-- ============ TAB 2 : 종목 진단 ============ -->
@@ -291,9 +291,9 @@ svg text{font-family:inherit}
     <tr><td>200일선 이격도</td><td>(현재가 ÷ 200일 평균 − 1) × 100<span class="sub">추세 생존 여부</span></td></tr>
   </table>
   <table><colgroup><col class="c-ind"><col></colgroup>
-    <tr><td>1~5위</td><td>매수 <span class="sub">백테스트 검증 구간</span></td></tr>
-    <tr><td>6~15위</td><td>관심</td></tr>
-    <tr><td>16위~</td><td>보류</td></tr>
+    <tr><td>1~5위</td><td>상위 5 <span class="sub">보유 대상 · 백테스트 검증 구간</span></td></tr>
+    <tr><td>6~15위</td><td>6~15위 <span class="sub">상위 5 근접</span></td></tr>
+    <tr><td>16위~</td><td>16위↓</td></tr>
   </table>
   <p style="font-size:.78rem;color:var(--ink3)">지수 ETF는 순위 제외 · 순위 변동은 월 평균 0.6종목</p>
   <table><colgroup><col class="c-ind"><col></colgroup>
@@ -451,9 +451,9 @@ function rankDelta(s){
 
 /* 판단 = 모멘텀 횡단면 순위 (모멘텀[최근 1개월 제외 1년 수익률] + 200일선 이격도).
    26년 백테스트에서 4개 시대 모두 균등보유를 앞선 유일한 방식.
-   1~5위 매수(검증 구간) / 6~15위 관심 / 16위↓ 보류 */
+   순위 묶음 표시 — 1~5위 / 6~15위 / 16위↓ (매매 지시 아님) */
 function band(s){return s&&s.mb?s.mb:'—'}
-function bandCls(s){const b=band(s);return b==='매수'?'s-strong':b==='관심'?'s-buy':b==='보류'?'s-hold':'s-hold'}
+function bandCls(s){const b=band(s);return b==='상위 5'?'s-strong':b==='6~15위'?'s-buy':'s-hold'}
 const fmt=(x,d=1)=>x==null||isNaN(x)?'—':x.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
 const sign=x=>x==null||isNaN(x)?'—':(x>0?'+':'')+x;
 const pct=(x,d=1)=>x==null||isNaN(x)?'—':(x>0?'+':'')+fmt(x,d)+'%';
@@ -596,7 +596,7 @@ function renderBoard(){
   /* 경고 배너 — 섹터 쏠림 · 데이터 정지 */
   const al=[];
   if(MARKET.topThemeN>=3&&MARKET.topTheme)
-    al.push(`매수 5종목 중 <b>${MARKET.topThemeN}개가 ${MARKET.topTheme}</b> · 섹터 쏠림에 유의하세요`);
+    al.push(`상위 5종목 중 <b>${MARKET.topThemeN}개가 ${MARKET.topTheme}</b> · 섹터 쏠림에 유의하세요`);
   if(META.updatedUtc){
     const hrs=(Date.now()-new Date(META.updatedUtc).getTime())/36e5;
     if(hrs>=24) al.push(`데이터가 <b>${Math.floor(hrs/24)}일 ${Math.floor(hrs%24)}시간</b> 갱신되지 않았습니다`);
@@ -744,8 +744,8 @@ function renderDetail(){
   <div class="d-card">
     <div class="score-hero" style="color:${s.mr&&s.mr<=5?'#9fd07f':s.mr&&s.mr<=15?'#c9c9c2':'#8f9096'}">${s.mr?s.mr+'위':'—'}<span style="font-size:1rem;font-weight:700;color:var(--dk-ink3)">${s.mt?' / '+s.mt+'종목':''}</span></div>
     <div class="gauge"><div class="mk" style="left:calc(${s.mr&&s.mt?Math.max(0,Math.min(100,(1-(s.mr-1)/(s.mt-1))*100)).toFixed(1):50}% - 2px)"></div></div>
-    <div class="gauge-lb"><span>하위 · 보류</span><span>중위 · 관심</span><span>상위 5 · 매수</span></div>
-    <div class="comment"><b>투자 코멘트</b><p>${s.mr?`모멘텀 <b>${s.mr}위</b> / ${s.mt}종목 · ${fmt(s.ms,1)}점 · <b>${band(s)}</b><br>${s.mr<=5?'백테스트 검증 매수 구간':s.mr<=15?'매수 구간(상위 5) 근접':'모멘텀 약세 구간'}`:d.cmt}</p></div>
+    <div class="gauge-lb"><span>16위↓</span><span>6~15위</span><span>상위 5</span></div>
+    <div class="comment"><b>투자 코멘트</b><p>${s.mr?`모멘텀 <b>${s.mr}위</b> / ${s.mt}종목 · ${fmt(s.ms,1)}점 · <b>${band(s)}</b><br>${s.mr<=5?'백테스트 검증 구간 · 보유 대상':s.mr<=15?'상위 5 근접':'모멘텀 약세 구간'}`:d.cmt}</p></div>
   </div>
 
   <div class="d-card"><div class="d-h">가격·수급 지표</div>
@@ -913,7 +913,7 @@ function updateStatus(){
     else t+=' · 우측 상단 ⚙에서 무료 Finnhub 키 등록 시 실시간 시세';
     el.textContent=t;
     note.innerHTML=`※ 모멘텀 = 최근 1개월 제외 1년 수익률 + 200일선 이격도 (반반)<br>
-      ※ 1~5위 매수 · 6~15위 관심 · 16위↓ 보류 · 지수 ETF 제외<br>
+      ※ 구간 = 모멘텀 순위 묶음 (매매 지시 아님) · 지수 ETF 제외<br>
       ※ yfinance ${META.updated} KST 갱신${finnKey()?' · Finnhub 실시간 시세':''}`;
   }else{
     el.textContent='⚠ 실데이터 로드 실패 — 내장 샘플 데이터 표시 중';
