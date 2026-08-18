@@ -353,6 +353,7 @@ def fetch_market(session):
             spy_dd = (cur / hi - 1) * 100
             if len(closes) >= 200:
                 spy_above_ma200 = cur > sum(closes[-200:]) / 200
+                out["spy_golden"] = (sum(closes[-50:]) / 50) > (sum(closes[-200:]) / 200)
     except Exception as e:
         print(f"  ! SPY 수집 실패: {e}")
     out["spy_dd_52w"] = rnd(spy_dd, 1)
@@ -701,6 +702,23 @@ def main():
     if len(stocks) < len(WATCHLIST) * 0.6:
         print(f"오류: 성공 종목이 {len(stocks)}개뿐이라 data.json을 갱신하지 않습니다.")
         sys.exit(1)
+
+    # 시장 국면: SPY 200일선 × 시장 폭 (26년 검증 — 상승장 3개월 +3.3%/손실 27%,
+    # 하락장 +1.5%/42%. VIX 30↑은 역발상 반등 구간 +10.6%)
+    ma_flags = [x["above_ma200"] for x in stocks if x["above_ma200"] is not None
+                and x["theme"] != "지수 ETF"]
+    breadth = round(sum(ma_flags) / len(ma_flags) * 100) if ma_flags else None
+    market["breadth_pct"] = breadth
+    spy_up = market.get("spy_ma200_above")
+    if spy_up is None or breadth is None:
+        market["regime"] = "판단 불가"
+    elif spy_up and breadth >= 55:
+        market["regime"] = "상승장"
+    elif not spy_up and breadth < 45:
+        market["regime"] = "하락장"
+    else:
+        market["regime"] = "혼조"
+    market["panic"] = bool(market.get("vix") and market["vix"] >= 30)
 
     # 모멘텀 횡단면 순위 (1위가 가장 강함) — 지수 ETF는 제외
     ranked = sorted([x for x in stocks if x.get("mom_score") is not None
