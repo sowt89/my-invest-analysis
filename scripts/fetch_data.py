@@ -6,9 +6,10 @@ yfinance로 워치리스트 39종목의 시세·1년 주가·재무·마진·컨
 10개 지표(종목 7 + 시장 타이밍 3) 룰 기반 종합 점수를 계산해 data.json으로 저장한다.
 시장 감점은 SPY 200일선 위(상승 추세)일 때 절반으로 완화된다(추세 보정).
 
-판단 구간: +4 이상 강한 매수 / +1~+3 매수 대기 / -5~0 관망 / -6 이하 매도 대기.
-매도는 종목이 자기 200일선 아래일 때만 발동한다(백테스트 기반).
-적자 종목 등 FWD PER 결측은 밸류에이션 지표 0점 처리.
+매매 판단은 모멘텀 횡단면 순위(12-1 모멘텀 + 200일선 이격도)를 기준으로 한다.
+26년 백테스트에서 4개 시대 모두 균등보유를 앞선 유일한 방식이다.
+  상위 1~5위 = 매수 / 6~15위 = 관심 / 16위 이하 = 보류
+기존 10지표 종합 점수는 예측력이 검증되지 않아 상세 탭 참고 정보로만 유지한다.
 """
 
 import json
@@ -642,8 +643,13 @@ def main():
     ranked = sorted([x for x in stocks if x.get("mom_score") is not None
                      and x["theme"] != "지수 ETF"],
                     key=lambda x: -x["mom_score"])
+    total = len(ranked)
     for i, x in enumerate(ranked):
-        x["mom_rank"] = i + 1
+        r = i + 1
+        x["mom_rank"] = r
+        x["mom_total"] = total
+        # 백테스트 검증 구간: 상위 5종목 보유 · 월 1회 교체
+        x["mom_band"] = "매수" if r <= 5 else ("관심" if r <= 15 else "보류")
 
     now = datetime.now(timezone.utc)
     payload = {
