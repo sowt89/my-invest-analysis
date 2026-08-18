@@ -151,7 +151,7 @@ svg text{font-family:inherit}
 <button onclick="toggleGuide(1)" title="사용법" style="margin-left:auto;background:var(--orange);border:none;border-radius:8px;padding:5px 11px;font-size:.8rem;font-weight:800;cursor:pointer;color:#fff;font-family:inherit">사용법</button>
 <button id="live-cfg" onclick="setFinnKey()" title="실시간 시세 API 키 설정" style="margin-left:6px;background:none;border:1px solid var(--line);border-radius:8px;padding:4px 9px;font-size:.85rem;cursor:pointer;color:var(--ink2);font-family:inherit">⚙</button></div></header>
 
-<!-- ============ TAB 1 : 모멘텀 ============ -->
+<!-- ============ TAB 1 : 매수 종목 ============ -->
 <main id="tab-board" class="wrap">
   <section class="hero">
     <div class="kicker">관심종목 39개 · 테마 13개</div>
@@ -177,12 +177,12 @@ svg text{font-family:inherit}
   <p class="foot-note" id="board-note">※ 모멘텀 = 최근 1개월을 제외한 1년 수익률과 200일선 이격도를 반반 합산한 값. 순위 1~5위 매수 · 6~15위 관심 · 16위↓ 보류. 26년 백테스트에서 4개 시대 모두 균등보유 대비 우위. 지수 ETF는 순위 제외.</p>
 </main>
 
-<!-- ============ TAB 2 : 매매 점수 ============ -->
+<!-- ============ TAB 2 : 참고 점수 ============ -->
 <main id="tab-score" class="wrap hidden">
   <section class="hero">
     <div class="kicker">참고 지표 · 예측력 미검증</div>
-    <h2>매매 점수</h2>
-    <p>종합 점수(11지표)와 밸류·재무 점수입니다. 백테스트로 예측력이 확인되지 않아 참고용이며, 매매 판단은 모멘텀 탭을 기준으로 하세요.</p>
+    <h2>참고 점수</h2>
+    <p>종합 점수(11지표)와 밸류·재무 점수입니다. 백테스트로 예측력이 확인되지 않아 참고용이며, 매매 판단은 '매수 종목' 탭을 기준으로 하세요.</p>
   </section>
 
   <div class="card dark-card">
@@ -291,8 +291,8 @@ svg text{font-family:inherit}
 </div></div>
 
 <nav class="nav"><div class="wrap">
-  <button id="nb-board" class="on" onclick="go('board')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg>모멘텀</button>
-  <button id="nb-score" onclick="go('score')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 12 6 12 9 5 14 19 17 12 22 12"/></svg>매매 점수</button>
+  <button id="nb-board" class="on" onclick="go('board')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg>매수 종목</button>
+  <button id="nb-score" onclick="go('score')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 12 6 12 9 5 14 19 17 12 22 12"/></svg>참고 점수</button>
   <button id="nb-detail" onclick="go('detail')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>종목 상세</button>
   <button id="nb-compare" onclick="go('compare')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="20" x2="6" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="18" y1="20" x2="18" y2="14"/></svg>밸류 비교</button>
 </div></nav>
@@ -492,7 +492,7 @@ function renderBoard(){
   const top3=STOCKS.filter(s=>s.mr&&s.mr<=3).sort((a,b)=>a.mr-b.mr);
   const momTxt=top3.length?`모멘텀 상위는 ${top3.map(s=>s.t).join(', ')} 순입니다.`:'';
   document.getElementById('today-summary').textContent=
-    `시장은 '${MARKET.mood}' 구간입니다. SPY가 52주 고점 대비 ${fmt(MARKET.spy52)}% 눌린 가운데 VIX ${fmt(MARKET.vix,2)}, Fear & Greed ${fmt(MARKET.fg,0)}(${MARKET.fgLabel||'—'}) 상태입니다. ${momTxt} 종합 점수는 예측력이 검증되지 않은 참고 지표이며, 매매 판단은 모멘텀 순위를 기준으로 하세요.`;
+    `시장은 '${MARKET.mood}' 구간입니다. SPY가 52주 고점 대비 ${fmt(MARKET.spy52)}% 눌린 가운데 VIX ${fmt(MARKET.vix,2)}, Fear & Greed ${fmt(MARKET.fg,0)}(${MARKET.fgLabel||'—'}) 상태입니다. ${momTxt} 종합 점수는 예측력이 검증되지 않은 참고 지표이며, 매매 판단은 '매수 종목' 탭의 모멘텀 순위를 기준으로 하세요.`;
   const M=[['SPY 52주↓',fmt(MARKET.spy52)+'%',MARKET.spyPt],['VIX',fmt(MARKET.vix,2),MARKET.vixPt],['F&G INDEX',fmt(MARKET.fg,0),MARKET.fgPt]];
   if(MARKET.trendAbove!=null)M.push(['추세 필터 (SPY 200일선)',MARKET.trendAbove?'위 · 상승 추세':'아래 · 하락 추세',MARKET.trendAdj]);
   const qqq=STOCKS.find(s=>s.t==='QQQ');
