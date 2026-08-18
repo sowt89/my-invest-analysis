@@ -75,8 +75,22 @@ def collect(us, cands, instant):
 
 
 def quarterly(flows):
-    """분기(80~100일) 값만 남기고, 연간만 있는 구간은 Q4를 역산한다."""
+    """분기값을 만든다.
+
+    현금흐름표 등은 분기가 아니라 누적(YTD)으로 제출되므로
+    같은 회계연도 시작일을 공유하는 누적값의 차분으로 분기값을 역산한다.
+    """
     q = {(s, e): v for (s, e), v in flows.items() if 80 <= days(s, e) <= 100}
+
+    by_start = {}
+    for (s, e), (val, filed) in flows.items():
+        by_start.setdefault(s, []).append((e, val, filed))
+    for s, lst in by_start.items():
+        lst.sort()
+        for (e0, v0, f0), (e1, v1, f1) in zip(lst, lst[1:]):
+            if 80 <= days(e0, e1) <= 100 and (e0, e1) not in q:
+                q[(e0, e1)] = (v1 - v0, max(f0, f1))
+
     for (s, e), (val, filed) in flows.items():
         if not 350 <= days(s, e) <= 380:
             continue
