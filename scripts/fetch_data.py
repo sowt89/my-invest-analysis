@@ -756,7 +756,7 @@ def main():
         x["mom_rank"] = r
         x["mom_total"] = total
         # 백테스트 검증 구간: 상위 5종목 보유 · 월 1회 교체
-        x["mom_band"] = "매수" if r <= 5 else ("관심" if r <= 15 else "보류")
+        x["mom_band"] = "상위 5" if r <= 5 else ("6~15위" if r <= 15 else "16위↓")
 
     top5 = [x for x in ranked[:5]]
     if top5:
