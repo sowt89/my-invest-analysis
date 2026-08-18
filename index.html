@@ -161,7 +161,7 @@ svg text{font-family:inherit}
       <table class="sig-table"><thead><tr><th style="width:34px">순위</th><th>종목</th><th>테마</th><th style="text-align:right">판단</th></tr></thead><tbody id="sig-body"></tbody></table>
     </div>
   </div>
-  <p class="foot-note" id="board-note">※ 판단 = 모멘텀 순위 (12-1 모멘텀 + 200일선 이격도). 1~5위 매수 · 6~15위 관심 · 16위↓ 보류. 26년 백테스트에서 4개 시대 모두 균등보유 대비 우위. 지수 ETF는 순위 제외.</p>
+  <p class="foot-note" id="board-note">※ 판단 = 모멘텀 순위 (모멘텀 + 200일선 이격도). 1~5위 매수 · 6~15위 관심 · 16위↓ 보류. 26년 백테스트에서 4개 시대 모두 균등보유 대비 우위. 지수 ETF는 순위 제외.</p>
 </main>
 
 <!-- ============ TAB 2 : 종목 상세 ============ -->
@@ -241,7 +241,7 @@ let STOCKS=[
 ];
 let THEMES=[...new Set(STOCKS.map(s=>s.th))];
 let MARKET={spy52:-4.1,spyPt:-1,vix:20.66,vixPt:1,fg:32,fgPt:0,fgLabel:'공포',mood:'중립',moodPt:0,nasdaq:24443,sp500:6728};
-/* 판단 = 모멘텀 횡단면 순위 (12-1 모멘텀 + 200일선 이격도).
+/* 판단 = 모멘텀 횡단면 순위 (모멘텀[최근 1개월 제외 1년 수익률] + 200일선 이격도).
    26년 백테스트에서 4개 시대 모두 균등보유를 앞선 유일한 방식.
    1~5위 매수(검증 구간) / 6~15위 관심 / 16위↓ 보류 */
 function band(s){return s&&s.mb?s.mb:'—'}
@@ -382,7 +382,7 @@ function renderBoard(){
         <span class="v" style="text-align:right"><span style="font-size:.95rem">$${fmt(s.p,2)}</span>
         <small style="display:block;color:var(--ink2);font-weight:600;font-size:.72rem">모멘텀 ${fmt(s.ms,1)}</small></span></div>`).join('')
       + `<p style="font-size:.7rem;color:var(--ink3);line-height:1.5;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)">
-         12-1 모멘텀 + 200일선 이격도 순위 · 26년 백테스트에서 4개 시대 모두 균등보유 대비 우위</p>`
+         모멘텀 + 200일선 이격도 순위 · 26년 백테스트에서 4개 시대 모두 균등보유 대비 우위</p>`
     : '<span style="font-size:.83rem;color:var(--ink2)">모멘텀 데이터 없음 (샘플 데이터 표시 중)</span>';
 
   const top3=STOCKS.filter(s=>s.mr&&s.mr<=3).sort((a,b)=>a.mr-b.mr);
@@ -455,7 +455,7 @@ function renderDetail(){
 
   <div class="sec-label"><span class="no">01</span><span class="t">판단</span></div>
   <h3 class="sec-title">종합 판단</h3>
-  <p class="sec-sub">모멘텀 횡단면 순위 · 12-1 모멘텀 + 200일선 이격도 (26년 백테스트 검증)</p>
+  <p class="sec-sub">모멘텀 횡단면 순위 · 모멘텀 + 200일선 이격도 (26년 백테스트 검증)</p>
   <div class="d-card">
     <div class="score-hero" style="color:${s.mr&&s.mr<=5?'#9fd07f':s.mr&&s.mr<=15?'#c9c9c2':'#8f9096'}">${s.mr?s.mr+'위':'—'}<span style="font-size:1rem;font-weight:700;color:var(--dk-ink3)">${s.mt?' / '+s.mt+'종목':''}</span></div>
     <div class="gauge"><div class="mk" style="left:calc(${s.mr&&s.mt?Math.max(0,Math.min(100,(1-(s.mr-1)/(s.mt-1))*100)).toFixed(1):50}% - 2px)"></div></div>
@@ -471,7 +471,7 @@ function renderDetail(){
     ${kr('거래량 증가율',pct(d.volCh),d.volpt)}
     ${d.surprise!==undefined?kr('최근 어닝 서프라이즈',pct(d.surprise),d.surprisept):''}
     ${s.ms!=null?kr('모멘텀 점수 <span style="color:var(--dk-ink3);font-weight:400">('+(s.mr?s.mr+'위':'순위 제외')+')</span>',fmt(s.ms,1),undefined):''}
-    ${d.mom12_1!=null?kr('12-1 모멘텀',pct(d.mom12_1),undefined):''}
+    ${d.mom12_1!=null?kr('모멘텀 <span style="color:var(--dk-ink3);font-weight:400">(최근 1개월 제외 1년 수익률)</span>',pct(d.mom12_1),undefined):''}
     ${d.ma200Dist!=null?kr('200일선 이격도',pct(d.ma200Dist),undefined):''}
     ${kr('종합 점수 <span style="color:var(--dk-ink3);font-weight:400">(참고 · 예측력 미검증)</span>',sign(s.sc),undefined)}
     ${pr.length>1?kr('52주 밴드 위치',fmt(((s.p-Math.min(...pr))/((Math.max(...pr)-Math.min(...pr))||1)*100))+'%',undefined):''}
