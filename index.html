@@ -147,10 +147,13 @@ table{width:100%;border-collapse:collapse}
 #guide ul{margin:0 0 12px 18px}
 #guide li{font-size:.86rem;line-height:1.75;color:var(--ink2);margin-bottom:5px}
 #guide .lead{background:var(--orange-soft);border-radius:12px;padding:14px;font-size:.9rem;line-height:1.7;color:#8a3d13;font-weight:600;margin-bottom:4px}
-#guide table{width:100%;border-collapse:collapse;margin-bottom:12px;font-size:.82rem}
-#guide th{text-align:left;color:var(--ink2);font-weight:700;padding:7px 8px;border-bottom:1px solid var(--line)}
-#guide td{padding:7px 8px;border-bottom:1px solid var(--line);color:var(--ink)}
-#guide td:last-child,#guide th:last-child{text-align:right}
+#guide table{width:100%;border-collapse:collapse;margin:2px 0 14px;font-size:.8rem;table-layout:fixed;word-break:keep-all}
+#guide th{text-align:left;color:var(--ink3);font-weight:700;padding:8px 6px;border-bottom:1px solid var(--line);font-size:.72rem;line-height:1.4}
+#guide td{padding:9px 6px;border-bottom:1px solid var(--line);color:var(--ink);line-height:1.55;vertical-align:top}
+#guide td:first-child{font-weight:700}
+#guide td.num,#guide th.num{text-align:right;font-variant-numeric:tabular-nums}
+#guide col.c-ind{width:38%}#guide col.c-half{width:31%}
+#guide .sub{display:block;color:var(--ink3);font-size:.72rem;font-weight:400;margin-top:2px}
 #guide .warn{background:#f7ece6;border-left:3px solid var(--orange);border-radius:0 8px 8px 0;padding:11px 13px;margin-bottom:10px}
 #guide .warn p{margin:0;font-size:.84rem;color:#7a4426}
 #guide .step{display:flex;gap:11px;margin-bottom:13px}
@@ -172,7 +175,7 @@ svg text{font-family:inherit}
   <section class="hero">
     <div class="kicker">관심종목 39개 · 테마 13개</div>
     <h2>이번 달 매수 종목</h2>
-    <p>모멘텀 상위 5종목입니다. 한 달에 한 번 확인해 5위 밖으로 밀린 종목만 교체하세요.</p>
+    <p>모멘텀 상위 5종목입니다.</p>
     <p id="data-status" style="margin-top:10px;font-size:.72rem;color:#ffd9c2;font-weight:700">데이터 로딩 중…</p>
   </section>
 
@@ -276,98 +279,106 @@ svg text{font-family:inherit}
 <div id="guide"><div class="gwrap">
   <div class="gtop"><h2>설명서</h2><button class="gclose" onclick="toggleGuide(0)">닫기</button></div>
 
-  <p class="lead">관심종목 40개 중 <b>최근 흐름이 가장 좋은 5종목</b>을 골라줍니다. 한 달에 한 번 그 목록이 바뀌면 갈아타는 방식입니다.</p>
-
-  <h3>한 달에 5분이면 됩니다</h3>
-  <div class="step"><b class="no">1</b><p style="margin:0">접속하면 <b>맨 위에 이번 달 매수 종목 5개</b>가 바로 보입니다.</p></div>
-  <div class="step"><b class="no">2</b><p style="margin:0">한 달에 한 번(월말 권장) 목록을 확인합니다.<br>
-    · 보유 종목이 <b>5위 안에 그대로</b> → 아무것도 안 함<br>
-    · 보유 종목이 <b>5위 밖으로 밀림</b> → 팔고 새로 들어온 종목 매수<br>
-    · 5종목에 <b>같은 금액씩</b> 나눠 담기</p></div>
-  <div class="step"><b class="no">3</b><p style="margin:0">그게 전부입니다. 중간에 가격이 떨어졌다고 팔거나, 뉴스를 보고 사고팔지 않습니다.</p></div>
-  <p>실제로는 한 달에 평균 <b>0.6종목</b>만 바뀝니다. 대부분의 달은 아무것도 안 해도 됩니다.</p>
+  <p class="lead">관심종목 40개를 매일 자동 분석해 <b>모멘텀 상위 5종목</b>과 <b>실적·밸류·재무 진단</b>을 보여줍니다.</p>
 
   <h3>화면 구성</h3>
+  <table><colgroup><col class="c-ind"><col></colgroup>
+    <tr><td>매수 종목</td><td>모멘텀 상위 5종목 · 시장 국면 · 40종목 순위</td></tr>
+    <tr><td>종목 진단</td><td>실적 · 밸류 · 재무 3축 점수</td></tr>
+    <tr><td>종목 상세</td><td>주가 차트 · 재무 · 현금흐름 · 컨센서스</td></tr>
+    <tr><td>밸류 비교</td><td>40종목 밸류에이션 표</td></tr>
+  </table>
+
+  <h3>1. 모멘텀 순위</h3>
+  <p>두 지표를 <b>반반씩</b> 더해 순위를 매깁니다.</p>
+  <table><colgroup><col class="c-ind"><col></colgroup>
+    <tr><td>모멘텀</td><td>최근 1개월 제외 1년 수익률<span class="sub">단기 되돌림 노이즈 제거 · 학계 표준 12-1 방식</span></td></tr>
+    <tr><td>200일선 이격도</td><td>(현재가 ÷ 200일 평균 − 1) × 100<span class="sub">추세 생존 여부</span></td></tr>
+  </table>
+  <table><colgroup><col class="c-ind"><col></colgroup>
+    <tr><td>1~5위</td><td>매수 <span class="sub">백테스트 검증 구간</span></td></tr>
+    <tr><td>6~15위</td><td>관심</td></tr>
+    <tr><td>16위~</td><td>보류</td></tr>
+  </table>
+  <p style="font-size:.78rem;color:var(--ink3)">지수 ETF는 순위 제외 · 순위 변동은 월 평균 0.6종목</p>
+
+  <h3>2. 시장 국면</h3>
+  <p>매수 종목 아래에 표시. 26년 데이터(주간 1,327표본) 검증 기준입니다.</p>
+  <table><colgroup><col style="width:22%"><col><col style="width:22%"></colgroup>
+    <tr><th>국면</th><th>조건</th><th class="num">3개월<br>손실확률</th></tr>
+    <tr><td>상승장</td><td>S&amp;P500 200일선 위<br>+ 시장 폭 55%↑</td><td class="num">27%</td></tr>
+    <tr><td>혼조</td><td>두 조건 엇갈림</td><td class="num">42%</td></tr>
+    <tr><td>하락장</td><td>S&amp;P500 200일선 아래<br>+ 시장 폭 45%↓</td><td class="num">42%</td></tr>
+  </table>
+  <p><b>시장 폭</b> = 자기 200일선 위에 있는 종목 비중<br>
+     <b>VIX 30↑</b> = 패닉 구간 · 이후 3개월 평균 +10.6%로 반등 잦음</p>
+
+  <h3>3. 종목 진단</h3>
+  <p><b>참고를 위한 측정입니다.</b> 과거 재무 데이터 재현이 불가능해 백테스트로 검증되지 않았습니다. 매매 판단은 모멘텀 순위 기준.</p>
+
+  <p style="margin-bottom:2px"><b>실적 점수</b> (-7 ~ +8) · 칩 기준 +6↑</p>
+  <table><colgroup><col class="c-ind"><col class="c-half"><col class="c-half"></colgroup>
+    <tr><th>지표</th><th class="num">가점</th><th class="num">감점</th></tr>
+    <tr><td>매출 YoY</td><td class="num">+10% → +1<br>+25% → +2</td><td class="num">역성장 → -1<br>-10% → -2</td></tr>
+    <tr><td>매출 3년<br>CAGR</td><td class="num">+10% → +1<br>+20% → +2</td><td class="num">역성장 → -1</td></tr>
+    <tr><td>어닝<br>서프라이즈</td><td class="num">+10% → +1</td><td class="num">미스 → -1<br>-10% → -2</td></tr>
+    <tr><td>예상 성장률</td><td class="num">+10% → +1<br>+20% → +2</td><td class="num">역성장 → -1</td></tr>
+    <tr><td>영업이익률<br>방향</td><td class="num">+2%p → +1</td><td class="num">-2%p → -1</td></tr>
+  </table>
+
+  <p style="margin-bottom:2px"><b>밸류 점수</b> (-5 ~ +6) · 칩 기준 +3↑</p>
+  <table><colgroup><col class="c-ind"><col class="c-half"><col class="c-half"></colgroup>
+    <tr><th>지표</th><th class="num">가점</th><th class="num">감점</th></tr>
+    <tr><td>FWD PER<br>3년 괴리</td><td class="num">-5% → +1<br>-20% → +2</td><td class="num">+10% → -1<br>+30% → -2</td></tr>
+    <tr><td>PSR<br>5년 괴리</td><td class="num">-20% → +1</td><td class="num">+50% → -1</td></tr>
+    <tr><td>FCF 수익률</td><td class="num">3% → +1<br>5% → +2</td><td class="num">음수 → -1</td></tr>
+    <tr><td>PEG</td><td class="num">1 미만 → +1</td><td class="num">2.5 초과 → -1</td></tr>
+  </table>
+
+  <p style="margin-bottom:2px"><b>재무 점수</b> (-6 ~ +7) · 칩 기준 +6↑</p>
+  <table><colgroup><col class="c-ind"><col class="c-half"><col class="c-half"></colgroup>
+    <tr><th>지표</th><th class="num">가점</th><th class="num">감점</th></tr>
+    <tr><td>영업이익률</td><td class="num">15% → +1<br>30% → +2</td><td class="num">적자 → -2</td></tr>
+    <tr><td>ROE</td><td class="num">15% → +1<br>30% → +2</td><td class="num">음수 → -1</td></tr>
+    <tr><td>LT 부채비율</td><td class="num">0.5 이하 → +1</td><td class="num">2 이상 → -1</td></tr>
+    <tr><td>유동비율</td><td class="num">1.5 이상 → +1</td><td class="num">1 미만 → -1</td></tr>
+    <tr><td>FCF 마진</td><td class="num">15% → +1</td><td class="num">음수 → -1</td></tr>
+  </table>
+  <p style="font-size:.78rem;color:var(--ink3)">결측 지표는 0점 처리</p>
+
+  <h3>4. 검증 근거</h3>
+  <p>2000~2026년 26년 · 닷컴버블 · 금융위기 포함</p>
+  <table><colgroup><col><col style="width:26%"></colgroup>
+    <tr><th>방식</th><th class="num">최종</th></tr>
+    <tr><td>모멘텀 상위 3종목</td><td class="num">576배</td></tr>
+    <tr><td>15종목 전부 보유</td><td class="num">116배</td></tr>
+    <tr><td>무작위 3종목 (대조군)</td><td class="num">65배</td></tr>
+  </table>
   <ul>
-    <li><b>매수 종목</b> — 이번 달 살 5종목과 40종목 모멘텀 순위</li>
-    <li><b>종목 진단</b> — 실적·밸류·재무 세 관점의 참고 점수와 시장 상황</li>
-    <li><b>종목 상세</b> — 주가 차트, 밸류에이션, 실적, 현금흐름, 애널리스트 전망</li>
-    <li><b>밸류 비교</b> — 40종목 지표를 표로 비교</li>
+    <li>무작위 대조군이 보유보다 낮음 → 집중 효과가 아닌 <b>선택 능력</b></li>
+    <li>4개 시대(닷컴 · 금융위기 · 강세장 · 코로나 이후) 모두 우위</li>
   </ul>
-  <p>전체 순위는 <b>매수</b>(1~5위) · <b>관심</b>(6~15위) · <b>보류</b>(16위 이하)로 표시됩니다.</p>
+  <p style="font-size:.78rem;color:var(--ink3)">버린 방식: 역발상 점수 매수 · 점수 악화 시 매도 · 200일선 이탈 매도 · 신호 대기 적립 · 가중치 최적화 · 테마별 규칙</p>
 
-  <h3>매수 종목 탭 — 모멘텀 순위</h3>
-  <p>두 지표를 반반씩 더해 점수를 매기고, 워치리스트 전체에서 순위를 냅니다.</p>
-  <table><tr><th>지표</th><th style="text-align:left">계산 방법</th></tr>
-    <tr><td><b>모멘텀</b></td><td style="text-align:left">최근 1개월을 뺀 1년 수익률<br><span style="color:var(--ink3);font-size:.78rem">지난달 급등의 되돌림 노이즈를 제거 (학계 표준 12-1 방식)</span></td></tr>
-    <tr><td><b>200일선 이격도</b></td><td style="text-align:left">(현재가 ÷ 200일 평균가 − 1) × 100<br><span style="color:var(--ink3);font-size:.78rem">지금도 추세가 살아있는가</span></td></tr>
-  </table>
-  <p><b>판단 구간</b>: 1~5위 매수(백테스트 검증 구간) · 6~15위 관심 · 16위 이하 보류. 지수 ETF는 순위에서 제외됩니다.</p>
+  <h3>5. 한계</h3>
+  <div class="warn"><p><b>최대 낙폭 -50%</b> · 26년 중 두 번 반토막. 견딜 수 있는 금액만.</p></div>
+  <div class="warn"><p><b>하락장에선 "덜 떨어진" 종목을 고름</b> · 상대 순위라 전부 하락 중이어도 5개를 채움</p></div>
+  <div class="warn"><p><b>워치리스트가 성과를 좌우</b> · 부진 종목만 모인 풀에서는 오히려 손해</p></div>
+  <div class="warn"><p><b>세금 부담</b> · 26년 시뮬레이션 세전 41억 → 세후 9.4억</p></div>
+  <div class="warn"><p><b>지수보다 낫다고 검증된 것 아님</b> · 검증 범위는 "같은 40종목 안에서의 선택"</p></div>
+  <div class="warn"><p><b>급락 대응 불가</b> · 월 1회 점검 기준</p></div>
 
-  <h3>시장 국면 판단</h3>
-  <p>매수 종목 아래에 현재가 상승장·혼조·하락장 중 어디인지 표시됩니다. 26년 데이터로 검증한 두 조건의 조합입니다.</p>
-  <table><tr><th>국면</th><th style="text-align:left">조건</th><th>이후 3개월<br>손실 확률</th></tr>
-    <tr><td><b>상승장</b></td><td style="text-align:left">S&amp;P500이 200일선 위 + 시장 폭 55% 이상</td><td>27%</td></tr>
-    <tr><td><b>혼조</b></td><td style="text-align:left">두 조건이 엇갈림</td><td>42%</td></tr>
-    <tr><td><b>하락장</b></td><td style="text-align:left">S&amp;P500이 200일선 아래 + 시장 폭 45% 미만</td><td>42%</td></tr>
+  <h3>6. 데이터</h3>
+  <table><colgroup><col><col style="width:34%"></colgroup>
+    <tr><th>출처</th><th class="num">갱신</th></tr>
+    <tr><td>Yahoo Finance<span class="sub">시세 · 재무 · 실적 · 컨센서스</span></td><td class="num">장중 30분</td></tr>
+    <tr><td>CNN Fear &amp; Greed<span class="sub">시장 심리</span></td><td class="num">장중 30분</td></tr>
+    <tr><td>Finnhub<span class="sub">실시간 현재가</span></td><td class="num">장중 60초</td></tr>
   </table>
-  <p>시장 폭 = 워치리스트 중 자기 200일선 위에 있는 종목의 비중. 참고로 <b>VIX 30 이상(패닉)</b>은 역사적으로 이후 3개월 평균 +10.6%로 반등이 잦았던 구간이라 별도 표시됩니다.</p>
-
-  <h3>종목 진단 탭 — 3축 점수</h3>
-  <p>목적이 다른 세 관점으로 종목 상태를 진단합니다. 과거 재무 데이터를 재현할 수 없어 <b>백테스트로 검증되지 않은 참고 지표</b>입니다.</p>
-  <p><b>① 실적 점수 (-7 ~ +8)</b> — 장사가 잘되고 있는가</p>
-  <table><tr><th>지표</th><th>가점</th><th>감점</th></tr>
-    <tr><td>매출 성장 YoY</td><td>+10%↑ +1 · +25%↑ +2</td><td>역성장 -1 · -10%↓ -2</td></tr>
-    <tr><td>매출 3년 CAGR</td><td>+10%↑ +1 · +20%↑ +2</td><td>역성장 -1</td></tr>
-    <tr><td>어닝 서프라이즈</td><td>+10%↑ +1</td><td>미스 -1 · -10%↓ -2</td></tr>
-    <tr><td>예상 성장률</td><td>+10%↑ +1 · +20%↑ +2</td><td>역성장 -1</td></tr>
-    <tr><td>영업이익률 방향</td><td>+2%p↑ +1</td><td>-2%p↓ -1</td></tr>
-  </table>
-  <p><b>② 밸류 점수 (-5 ~ +6)</b> — 싸게 거래되는가</p>
-  <table><tr><th>지표</th><th>가점</th><th>감점</th></tr>
-    <tr><td>FWD PER 3년 괴리</td><td>-5%↓ +1 · -20%↓ +2</td><td>+10%↑ -1 · +30%↑ -2</td></tr>
-    <tr><td>PSR 5년 괴리</td><td>-20%↓ +1</td><td>+50%↑ -1</td></tr>
-    <tr><td>FCF 수익률</td><td>3%↑ +1 · 5%↑ +2</td><td>음수 -1</td></tr>
-    <tr><td>PEG</td><td>1 미만 +1</td><td>2.5 초과 -1</td></tr>
-  </table>
-  <p><b>③ 재무 점수 (-6 ~ +7)</b> — 회사가 튼튼한가</p>
-  <table><tr><th>지표</th><th>가점</th><th>감점</th></tr>
-    <tr><td>영업이익률</td><td>15%↑ +1 · 30%↑ +2</td><td>적자 -2</td></tr>
-    <tr><td>ROE</td><td>15%↑ +1 · 30%↑ +2</td><td>음수 -1</td></tr>
-    <tr><td>LT 부채비율</td><td>0.5 이하 +1</td><td>2 이상 -1</td></tr>
-    <tr><td>유동비율</td><td>1.5 이상 +1</td><td>1 미만 -1</td></tr>
-    <tr><td>FCF 마진</td><td>15%↑ +1</td><td>음수 -1</td></tr>
-  </table>
-  <p>칩 카드 기준: 실적 우수 +6↑ · 저평가 +3↑ · 재무 우량 +6↑. 결측 지표는 0점 처리됩니다.</p>
-
-  <h3>왜 이 방식인가</h3>
-  <p>여러 방식을 과거 데이터로 시험한 뒤 남은 하나입니다. <b>2000~2026년 26년</b>(닷컴버블·금융위기 포함) 검증 결과:</p>
-  <table><tr><th>방식</th><th>최종</th></tr>
-    <tr><td>15종목 전부 보유</td><td>116배</td></tr>
-    <tr><td><b>모멘텀 상위 3종목</b></td><td><b>576배</b></td></tr>
-    <tr><td>무작위 3종목 (대조군)</td><td>65배</td></tr>
-  </table>
-  <p>무작위 대조군이 오히려 보유보다 못하므로, 집중투자 효과가 아니라 <b>종목 선택이 실제로 작동한 것</b>입니다. 닷컴버블·금융위기·강세장·코로나 이후 <b>4개 시대 모두</b> 균등보유를 앞섰습니다.</p>
-  <p style="font-size:.8rem;color:var(--ink3)">시도했다가 버린 것: 저평가(역발상) 점수 매수 · 점수 나빠지면 매도 · 200일선 이탈 매도 · 신호 기다렸다 적립 · 가중치 최적화 · 테마별 다른 규칙</p>
-
-  <h3>꼭 알아야 할 한계</h3>
-  <div class="warn"><p><b>최대 -50%까지 떨어진 적이 있습니다.</b> 26년 중 두 번은 자산이 반토막 났습니다. 견딜 수 있는 금액만 넣으세요.</p></div>
-  <div class="warn"><p><b>하락장에서는 "덜 떨어진 종목"을 고릅니다.</b> 상대 순위라 전부 하락 중이어도 5개를 채웁니다. 상위권 점수가 대부분 마이너스면 시장 전체가 하락 국면이라는 신호입니다.</p></div>
-  <div class="warn"><p><b>워치리스트가 성과의 대부분을 결정합니다.</b> 부진한 종목만 모인 풀에서는 이 방식이 오히려 손해였습니다.</p></div>
-  <div class="warn"><p><b>세금이 수익을 크게 깎습니다.</b> 교체할 때마다 양도차익이 실현됩니다. 26년 시뮬레이션에서 세전 41억이 세후 9.4억이 됐습니다.</p></div>
-  <div class="warn"><p><b>지수(QQQ 등)보다 낫다고 검증된 것은 아닙니다.</b> 검증된 것은 "같은 40종목 안에서 고르는 능력"입니다.</p></div>
-  <div class="warn"><p><b>급락은 못 피합니다.</b> 월 1회 점검이라 하루 만에 폭락하는 사건은 대응할 수 없습니다.</p></div>
-
-  <h3>데이터</h3>
-  <table><tr><th>항목</th><th>갱신</th></tr>
-    <tr><td>시세·재무·실적 (Yahoo)</td><td>장중 30분</td></tr>
-    <tr><td>시장 심리 (CNN F&amp;G)</td><td>장중 30분</td></tr>
-    <tr><td>실시간 현재가 (Finnhub)</td><td>장중 60초</td></tr>
-  </table>
-  <p>자동으로 수집되며 화면 상단에 마지막 갱신 시각이 표시됩니다. 서버 없이 동작해 운영 비용은 없습니다.</p>
+  <p style="font-size:.78rem;color:var(--ink3)">갱신 시각은 화면 상단 표시 · 서버 없이 동작해 운영 비용 없음</p>
 
   <h3>면책</h3>
-  <p style="font-size:.8rem">개인이 과거 데이터를 분석해 만든 참고용 도구입니다. <b>투자 권유가 아니며 미래 수익을 보장하지 않습니다.</b> 과거에 통했던 방식이 앞으로도 통한다는 보장은 없습니다. 투자 판단과 결과는 전적으로 본인 책임입니다.</p>
+  <p style="font-size:.8rem">개인이 과거 데이터로 만든 참고용 도구입니다. <b>투자 권유가 아니며 미래 수익을 보장하지 않습니다.</b> 투자 판단과 결과는 본인 책임입니다.</p>
 </div></div>
 
 <nav class="nav"><div class="wrap">
