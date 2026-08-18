@@ -6,7 +6,8 @@ yfinance로 워치리스트 39종목의 시세·1년 주가·재무·마진·컨
 10개 지표(종목 7 + 시장 타이밍 3) 룰 기반 종합 점수를 계산해 data.json으로 저장한다.
 시장 감점은 SPY 200일선 위(상승 추세)일 때 절반으로 완화된다(추세 보정).
 
-판단 구간: +8 이상 강한 매수 / +4~+7 매수 대기 / -2~+3 관망 / -3 이하 매도 대기.
+판단 구간: +4 이상 강한 매수 / +1~+3 매수 대기 / -5~0 관망 / -6 이하 매도 대기.
+매도는 종목이 자기 200일선 아래일 때만 발동한다(백테스트 기반).
 적자 종목 등 FWD PER 결측은 밸류에이션 지표 0점 처리.
 """
 
@@ -236,11 +237,13 @@ def pt_surprise(v):     # 10) 최근 분기 어닝 서프라이즈 %
     return 0
 
 
-def band(score):
-    if score >= 8: return "강한 매수"
-    if score >= 4: return "매수 대기"
-    if score >= -2: return "관망"   # -2 ~ +3
-    return "매도 대기"
+def band(score, above_ma200=False):
+    """백테스트(38종목×63조합) 기반 구간.
+    매도는 점수 -6 이하 + 종목이 자기 200일선 아래일 때만 (추세 존중)."""
+    if score >= 4: return "강한 매수"
+    if score >= 1: return "매수 대기"
+    if score <= -6 and not above_ma200: return "매도 대기"
+    return "관망"
 
 
 def fg_label(v):
@@ -387,6 +390,11 @@ def fetch_stock(session, ticker, name, theme, market, hist):
             ytd = (price / ytd_base - 1) * 100
         avg3y_px = sum(closes5[-min(157, len(closes5)):]) / min(157, len(closes5))
         avg5y_px = sum(closes5) / len(closes5)
+
+    above_ma200 = None
+    if h5 is not None and len(h5) >= 40:
+        ma200 = sum(float(x) for x in h5["Close"][-40:]) / 40   # 주봉 40주 ≈ 200거래일
+        above_ma200 = price > ma200
 
     rsi = vol_ch = None
     if hd is not None and len(hd) > 20:
@@ -566,7 +574,7 @@ def fetch_stock(session, ticker, name, theme, market, hist):
         "surprise": rnd(surprise, 1), "earningsDate": earnings_date,
     })
 
-    bd = band(score)
+    bd = band(score, bool(above_ma200))
     gap_txt = ""
     if d["gap"] is not None:
         gap_txt = (f" FWD PER은 3년 평균 대비 {abs(d['gap']):.1f}% "
@@ -579,7 +587,7 @@ def fetch_stock(session, ticker, name, theme, market, hist):
 
     return {
         "ticker": ticker, "name": name, "theme": theme,
-        "earnings_in": earnings_in,
+        "earnings_in": earnings_in, "above_ma200": above_ma200,
         "price": rnd(price, 2),
         "market_cap_b": rnd(mcap / B, 1) if mcap else None,
         "ytd": rnd(ytd, 1),
