@@ -130,6 +130,13 @@ def series_vals(row, cols):
     return out
 
 
+def closes_of(h):
+    """가격 히스토리에서 NaN(미확정 당일 봉)을 제외한 종가 리스트."""
+    if h is None or len(h) == 0:
+        return []
+    return [float(x) for x in h["Close"] if x == x]
+
+
 def compute_rsi(closes, period=14):
     if len(closes) < period + 1:
         return None
@@ -271,8 +278,8 @@ def fetch_fear_greed():
 def fetch_market(session):
     out = {}
     def last_close(sym, period="5d"):
-        h = yf.Ticker(sym, session=session).history(period=period, interval="1d")
-        return float(h["Close"].iloc[-1]) if len(h) else None
+        c = closes_of(yf.Ticker(sym, session=session).history(period=period, interval="1d"))
+        return c[-1] if c else None
 
     out["vix"] = rnd(retry(lambda: last_close("^VIX")), 2)
     out["nasdaq"] = rnd(retry(lambda: last_close("^IXIC")), 0)
@@ -281,8 +288,8 @@ def fetch_market(session):
     spy_dd = spy_above_ma200 = None
     try:
         h = yf.Ticker("SPY", session=session).history(period="1y", interval="1d")
-        if len(h):
-            closes = [float(x) for x in h["Close"]]
+        closes = closes_of(h)
+        if closes:
             hi = max(closes)
             cur = closes[-1]
             spy_dd = (cur / hi - 1) * 100
@@ -364,9 +371,10 @@ def fetch_stock(session, ticker, name, theme, market, hist):
     h5 = retry(lambda: tk.history(period="5y", interval="1wk"))
     hd = retry(lambda: tk.history(period="6mo", interval="1d"))
 
+    hd_closes = closes_of(hd)
     price = info.get("currentPrice") or info.get("regularMarketPrice")
-    if price is None and hd is not None and len(hd):
-        price = float(hd["Close"].iloc[-1])
+    if price is None and hd_closes:
+        price = hd_closes[-1]
     if price is None:
         raise RuntimeError("가격 정보 없음")
     price = float(price)
@@ -374,9 +382,10 @@ def fetch_stock(session, ticker, name, theme, market, hist):
     prices, price_dates = [], []
     ret12 = dd = ytd = None
     avg3y_px = avg5y_px = None
-    if h5 is not None and len(h5) > 5:
-        closes5 = [float(x) for x in h5["Close"]]
-        dates5 = [d.strftime("%Y-%m-%d") for d in h5.index]
+    closes5_all = closes_of(h5)
+    if len(closes5_all) > 5:
+        closes5 = closes5_all
+        dates5 = [d.strftime("%Y-%m-%d") for d, x in zip(h5.index, h5["Close"]) if x == x]
         n1y = min(53, len(closes5))
         prices = [rnd(x, 2) for x in closes5[-n1y:]]
         price_dates = dates5[-n1y:]
@@ -391,8 +400,7 @@ def fetch_stock(session, ticker, name, theme, market, hist):
         avg3y_px = sum(closes5[-min(157, len(closes5)):]) / min(157, len(closes5))
         avg5y_px = sum(closes5) / len(closes5)
 
-    # 주봉 종가 (미확정 당일 봉의 NaN 제외)
-    wk = [float(x) for x in h5["Close"] if x == x] if h5 is not None else []
+    wk = closes5_all   # 주봉 종가 (미확정 봉 제외)
     above_ma200 = mom12_1 = ma200_dist = None
     if len(wk) >= 40:
         ma200 = sum(wk[-40:]) / 40            # 주봉 40주 ≈ 200거래일
@@ -403,9 +411,8 @@ def fetch_stock(session, ticker, name, theme, market, hist):
         mom12_1 = (wk[-5] / wk[-53] - 1) * 100
 
     rsi = vol_ch = None
-    if hd is not None and len(hd) > 20:
-        closes_d = [float(x) for x in hd["Close"]]
-        rsi = compute_rsi(closes_d)
+    if len(hd_closes) > 20:
+        rsi = compute_rsi(hd_closes)
         vols = [float(x) for x in hd["Volume"]]
         if len(vols) >= 40:
             recent = vols[-20:]
