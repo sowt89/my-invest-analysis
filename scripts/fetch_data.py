@@ -246,29 +246,60 @@ def pt_surprise(v):     # 10) 최근 분기 어닝 서프라이즈 %
     return 0
 
 
-def value_score(d):
-    """밸류·재무 점수 (-8 ~ +8). 저평가·고수익성·건전재무일수록 높다.
-    ※ 과거 재무 데이터를 재현할 수 없어 백테스트로 검증되지 않은 참고 지표."""
+def growth_score(d):
+    """실적 점수 (-7 ~ +8). 매출 성장·어닝 서프라이즈·마진 방향.
+    ※ 과거 데이터 재현 불가로 백테스트 미검증 참고 지표."""
+    pts = {}
+    yoy = d.get("revG", [None]*3)[1]
+    pts["yoy"] = 0 if yoy is None else (2 if yoy >= 25 else 1 if yoy >= 10 else
+                                        -2 if yoy <= -10 else -1 if yoy < 0 else 0)
+    cagr = d.get("revG", [None]*3)[2]
+    pts["cagr"] = 0 if cagr is None else (2 if cagr >= 20 else 1 if cagr >= 10 else -1 if cagr < 0 else 0)
+    sp = d.get("surprise")
+    pts["surprise"] = 0 if sp is None else (1 if sp >= 10 else -2 if sp <= -10 else -1 if sp < 0 else 0)
+    fg_ = d["est"][0].get("g") if d.get("est") else None
+    pts["fwdGrowth"] = 0 if fg_ is None else (2 if fg_ >= 20 else 1 if fg_ >= 10 else -1 if fg_ < 0 else 0)
+    # 영업이익률 방향: 최근 분기 vs 1년 전 같은 분기
+    mt = None
+    qr, qo = d.get("qRev") or [], d.get("qOp") or []
+    if len(qr) >= 5 and qr[-1] and qr[-5] and qo[-1] is not None and qo[-5] is not None:
+        mt = (qo[-1] / qr[-1] - qo[-5] / qr[-5]) * 100
+    pts["marginTrend"] = 0 if mt is None else (1 if mt >= 2 else -1 if mt <= -2 else 0)
+    return sum(pts.values()), pts
+
+
+def valuation_score(d):
+    """밸류 점수 (-5 ~ +6). 낮은 가격에 거래되는가.
+    ※ 백테스트 미검증 참고 지표."""
     pts = {}
     g = d.get("gap")
-    pts["valuation"] = 0 if g is None else (2 if g <= -20 else 1 if g <= -5 else
-                                            -2 if g >= 30 else -1 if g >= 10 else 0)
+    pts["perGap"] = 0 if g is None else (2 if g <= -20 else 1 if g <= -5 else
+                                         -2 if g >= 30 else -1 if g >= 10 else 0)
+    psr, avg = d.get("psr"), d.get("avgPsr")
+    pr = (psr / avg - 1) * 100 if (psr and avg) else None
+    pts["psrGap"] = 0 if pr is None else (1 if pr <= -20 else -1 if pr >= 50 else 0)
+    f = d.get("fcfY")
+    pts["fcfYield"] = 0 if f is None else (2 if f >= 5 else 1 if f >= 3 else -1 if f < 0 else 0)
+    peg = d.get("peg")
+    pts["peg"] = 0 if peg is None else (1 if peg < 1 else -1 if peg > 2.5 else 0)
+    return sum(pts.values()), pts
+
+
+def finance_score(d):
+    """재무 점수 (-6 ~ +7). 수익성과 재무 건전성.
+    ※ 백테스트 미검증 참고 지표."""
+    pts = {}
     op = d.get("op")
-    pts["margin"] = 0 if op is None else (2 if op >= 30 else 1 if op >= 15 else -1 if op < 0 else 0)
+    pts["opMargin"] = 0 if op is None else (2 if op >= 30 else 1 if op >= 15 else -2 if op < 0 else 0)
     roe = d.get("roe")
     pts["roe"] = 0 if roe is None else (2 if roe >= 30 else 1 if roe >= 15 else -1 if roe < 0 else 0)
     de = d.get("ltDE")
     pts["debt"] = 0 if de is None else (1 if de <= 0.5 else -1 if de >= 2 else 0)
-    fcf = d.get("fcfY")
-    pts["fcf"] = 0 if fcf is None else (1 if fcf >= 4 else -1 if fcf < 0 else 0)
+    cr = d.get("curR")
+    pts["current"] = 0 if cr is None else (1 if cr >= 1.5 else -1 if cr < 1 else 0)
+    fm = d.get("fcfM")
+    pts["fcfMargin"] = 0 if fm is None else (1 if fm >= 15 else -1 if fm < 0 else 0)
     return sum(pts.values()), pts
-
-
-def value_band(v):
-    if v >= 4: return "저평가·우량"
-    if v >= 1: return "양호"
-    if v >= -2: return "보통"
-    return "고평가·주의"
 
 
 def band(score, above_ma200=False):
@@ -615,9 +646,10 @@ def fetch_stock(session, ticker, name, theme, market, hist):
         "surprise": rnd(surprise, 1), "earningsDate": earnings_date,
     })
 
-    vscore, vpts = value_score(d)
-    d["valueScore"] = vscore
-    d["valuePts"] = vpts
+    gscore, gpts = growth_score(d)
+    vscore, vpts = valuation_score(d)
+    fscore, fpts = finance_score(d)
+    d["growPts"], d["valPts"], d["finPts"] = gpts, vpts, fpts
 
     bd = band(score, bool(above_ma200))
     gap_txt = ""
@@ -633,7 +665,7 @@ def fetch_stock(session, ticker, name, theme, market, hist):
     return {
         "ticker": ticker, "name": name, "theme": theme,
         "earnings_in": earnings_in, "above_ma200": above_ma200,
-        "value_score": vscore, "value_band": value_band(vscore),
+        "grow_score": gscore, "val_score": vscore, "fin_score": fscore,
         "mom_score": (rnd(0.5 * mom12_1 + 0.5 * ma200_dist, 1)
                       if (mom12_1 is not None and ma200_dist is not None) else None),
         "price": rnd(price, 2),
