@@ -201,7 +201,7 @@ svg text{font-family:inherit}
       <table class="sig-table"><thead><tr><th style="width:30px">순위</th><th>종목</th><th style="text-align:right">모멘텀</th><th style="text-align:right">판단</th></tr></thead><tbody id="sig-body"></tbody></table>
     </div>
   </div>
-  <p class="foot-note" id="board-note">※ 모멘텀 = 최근 1개월 제외 1년 수익률 + 200일선 이격도 (반반)<br>※ 1~5위 매수 · 6~15위 관심 · 16위↓ 보류 · 지수 ETF 제외<br>※ 26년 백테스트에서 4개 시대 모두 균등보유 대비 우위</p>
+  <p class="foot-note" id="board-note">※ 모멘텀 = 최근 1개월 제외 1년 수익률 + 200일선 이격도 (반반)<br>※ 1~5위 매수 · 6~15위 관심 · 16위↓ 보류 · 지수 ETF 제외</p>
 </main>
 
 <!-- ============ TAB 2 : 종목 진단 ============ -->
@@ -594,7 +594,7 @@ function renderBoard(){
         <span class="v" style="text-align:right"><span style="font-size:.95rem">$${fmt(s.p,2)}</span>
         <small style="display:block;color:var(--ink2);font-weight:600;font-size:.72rem">모멘텀 ${fmt(s.ms,1)} ${rankDelta(s)}</small></span></div>`).join('')
       + `<p style="font-size:.7rem;color:var(--ink3);line-height:1.5;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)">
-         모멘텀 + 200일선 이격도 순위<br>26년 백테스트 · 4개 시대 모두 균등보유 대비 우위</p>`
+         모멘텀 + 200일선 이격도 순위</p>`
     : '<span style="font-size:.83rem;color:var(--ink2)">모멘텀 데이터 없음 (샘플 데이터 표시 중)</span>';
 
   /* 경고 배너 — 섹터 쏠림 · 데이터 정지 */
@@ -621,9 +621,9 @@ function renderBoard(){
        ${chk(MARKET.golden,'골든크로스 (50 &gt; 200일선)')}
        <div class="mrow"><span class="k">시장 폭 (200일선 위 비중)</span><span class="v" style="color:${MARKET.breadth>=55?'#4c8f3a':MARKET.breadth<45?'#c4472e':'#b58612'}">${MARKET.breadth!=null?MARKET.breadth+'%':'—'}</span></div>
        <p style="font-size:.73rem;color:var(--ink3);line-height:1.65;margin-top:9px;word-break:keep-all">${
-         rg==='상승장'?'지수와 다수 종목이 함께 상승 중<br>26년 통계 · 이후 3개월 평균 +3.3%, 손실 확률 27%<br>모멘텀이 가장 잘 작동하는 구간'
-        :rg==='하락장'?'지수와 다수 종목이 하락 중<br>26년 통계 · 이후 3개월 손실 확률 42%<br>순위 상위도 "덜 떨어진 종목"일 수 있음'
-        :'지수와 개별 종목의 추세가 엇갈리는 전환 구간<br>26년 통계 · 이후 3개월 손실 확률 42%<br>순위 변동이 잦아질 수 있음'}</p>`
+         rg==='상승장'?'지수와 다수 종목이 함께 상승 중<br>모멘텀이 가장 잘 작동하는 구간'
+        :rg==='하락장'?'지수와 다수 종목이 하락 중<br>순위 상위도 "덜 떨어진 종목"일 수 있음'
+        :'지수와 개별 종목의 추세가 엇갈리는 전환 구간<br>순위 변동이 잦아질 수 있음'}</p>`
     : '<span style="font-size:.83rem;color:var(--ink2)">국면 데이터 없음 (샘플 데이터 표시 중)</span>';
 
   const top3=STOCKS.filter(s=>s.mr&&s.mr<=3).sort((a,b)=>a.mr-b.mr);
@@ -901,10 +901,12 @@ function updateStatus(){
     if(finnKey())t+=lastQuote?` · 실시간 시세 ${lastQuote.getHours().toString().padStart(2,'0')}:${lastQuote.getMinutes().toString().padStart(2,'0')}`:' · 실시간 시세 연결 중…';
     else t+=' · 우측 상단 ⚙에서 무료 Finnhub 키 등록 시 실시간 시세';
     el.textContent=t;
-    note.textContent=`※ yfinance 실데이터 기준 (${META.updated} KST 업데이트, 장중 30분·장외 2시간 주기 자동 갱신)${finnKey()?' + Finnhub 실시간 시세':''}. 적자 종목의 FWD PER "—"는 결측 → 0점 처리.`;
+    note.innerHTML=`※ 모멘텀 = 최근 1개월 제외 1년 수익률 + 200일선 이격도 (반반)<br>
+      ※ 1~5위 매수 · 6~15위 관심 · 16위↓ 보류 · 지수 ETF 제외<br>
+      ※ yfinance ${META.updated} KST 갱신${finnKey()?' · Finnhub 실시간 시세':''}`;
   }else{
     el.textContent='⚠ 실데이터 로드 실패 — 내장 샘플 데이터 표시 중';
-    note.textContent='※ 샘플 데이터 기준 — data.json 로드에 실패해 내장 데이터로 표시 중입니다. 적자 종목의 FWD PER "—"는 결측 → 0점 처리.';
+    note.textContent='※ 샘플 데이터 · 실데이터 로드 실패';
   }
 }
 
