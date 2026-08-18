@@ -671,6 +671,7 @@ def fetch_stock(session, ticker, name, theme, market, hist):
         "ticker": ticker, "name": name, "theme": theme,
         "earnings_in": earnings_in, "above_ma200": above_ma200,
         "grow_score": gscore, "val_score": vscore, "fin_score": fscore,
+        "total_score": gscore + vscore + fscore,
         "mom_score": (rnd(0.5 * mom12_1 + 0.5 * ma200_dist, 1)
                       if (mom12_1 is not None and ma200_dist is not None) else None),
         "price": rnd(price, 2),
