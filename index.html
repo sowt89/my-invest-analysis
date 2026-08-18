@@ -143,11 +143,6 @@ svg text{font-family:inherit}
   </div>
 
   <div class="card">
-    <div class="card-h">추천 종목</div>
-    <div class="card-b"><div class="chips" id="reco-chips"></div></div>
-  </div>
-
-  <div class="card">
     <div class="card-h">모멘텀 상위 종목 · 월 1회 교체</div>
     <div class="card-b">
       <p style="font-size:.75rem;color:var(--ink2);line-height:1.6;margin-bottom:10px">
@@ -380,13 +375,10 @@ function gapOf(d){
 }
 function renderBoard(){
   document.querySelector('#tab-board .kicker').textContent=`관심종목 ${STOCKS.length}개 · 테마 ${THEMES.length}개`;
-  const strong=STOCKS.filter(s=>s.sc>=4).sort((a,b)=>b.sc-a.sc).slice(0,6);
-  document.getElementById('reco-chips').innerHTML=strong.length
-    ?strong.map(s=>`<span class="chip">${s.t} <small>${sign(s.sc)}</small></span>`).join('')
-    :'<span style="font-size:.83rem;color:var(--ink2)">현재 \'강한 매수\'(+8 이상) 신호 종목이 없습니다.</span>';
-  const strongTxt=strong.length?`강한 매수 신호는 ${strong.map(s=>s.t).join(', ')} 등 ${strong.length}종목에서 발생했습니다.`:'현재 강한 매수(+8 이상) 신호 종목은 없습니다.';
+  const top3=STOCKS.filter(s=>s.mr&&s.mr<=3).sort((a,b)=>a.mr-b.mr);
+  const momTxt=top3.length?`모멘텀 상위는 ${top3.map(s=>s.t).join(', ')} 순입니다.`:'';
   document.getElementById('today-summary').textContent=
-    `시장은 '${MARKET.mood}' 구간입니다. SPY가 52주 고점 대비 ${fmt(MARKET.spy52)}% 눌린 가운데 VIX ${fmt(MARKET.vix,2)}, Fear & Greed ${fmt(MARKET.fg,0)}(${MARKET.fgLabel||'—'}) 상태입니다. ${strongTxt} 룰 기반 시그널은 참고 지표이며, 분할 매수·리스크 관리 원칙을 유지하세요.`;
+    `시장은 '${MARKET.mood}' 구간입니다. SPY가 52주 고점 대비 ${fmt(MARKET.spy52)}% 눌린 가운데 VIX ${fmt(MARKET.vix,2)}, Fear & Greed ${fmt(MARKET.fg,0)}(${MARKET.fgLabel||'—'}) 상태입니다. ${momTxt} 종합 점수는 예측력이 검증되지 않은 참고 지표이며, 매매 판단은 모멘텀 순위를 기준으로 하세요.`;
   const M=[['SPY 52주↓',fmt(MARKET.spy52)+'%',MARKET.spyPt],['VIX',fmt(MARKET.vix,2),MARKET.vixPt],['F&G INDEX',fmt(MARKET.fg,0),MARKET.fgPt]];
   if(MARKET.trendAbove!=null)M.push(['추세 필터 (SPY 200일선)',MARKET.trendAbove?'위 · 상승 추세':'아래 · 하락 추세',MARKET.trendAdj]);
   const qqq=STOCKS.find(s=>s.t==='QQQ');
