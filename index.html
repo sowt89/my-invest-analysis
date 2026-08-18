@@ -181,10 +181,10 @@ svg text{font-family:inherit}
       <select id="f-band"><option value="">판단 ▾</option><option>매수</option><option>관심</option><option>보류</option></select>
     </div>
     <div class="card-b" style="padding:8px 8px 10px">
-      <table class="sig-table"><thead><tr><th style="width:34px">순위</th><th>종목</th><th>테마</th><th style="text-align:right">판단</th></tr></thead><tbody id="sig-body"></tbody></table>
+      <table class="sig-table"><thead><tr><th style="width:30px">순위</th><th>종목</th><th style="text-align:right">밸류</th><th style="text-align:right">판단</th></tr></thead><tbody id="sig-body"></tbody></table>
     </div>
   </div>
-  <p class="foot-note" id="board-note">※ 판단 = 모멘텀 순위 (모멘텀 + 200일선 이격도). 1~5위 매수 · 6~15위 관심 · 16위↓ 보류. 26년 백테스트에서 4개 시대 모두 균등보유 대비 우위. 지수 ETF는 순위 제외.</p>
+  <p class="foot-note" id="board-note">※ 판단 = 모멘텀 순위 (모멘텀 + 200일선 이격도). 1~5위 매수 · 6~15위 관심 · 16위↓ 보류. 26년 백테스트에서 4개 시대 모두 균등보유 대비 우위. 지수 ETF는 순위 제외. 밸류 점수는 저평가·수익성·재무건전성 기준 참고 지표로, 예측력은 검증되지 않았습니다.</p>
 </main>
 
 <!-- ============ TAB 2 : 종목 상세 ============ -->
@@ -489,7 +489,7 @@ function renderBoard(){
       .map(s=>`<tr style="cursor:pointer" onclick="openDetail('${s.t}')">
         <td style="color:${s.mr&&s.mr<=5?'#9fd07f':'var(--dk-ink3)'};font-weight:800;font-size:.8rem">${s.mr||'—'}</td>
         <td class="tk">${s.t}${s.ed!=null&&s.ed<=7?` <span style="background:#33261455;color:#e3c05a;font-size:.62rem;font-weight:800;border-radius:5px;padding:1px 5px;vertical-align:1px">실적 D-${s.ed}</span>`:''}<small>${s.n}</small></td>
-        <td class="theme-cell">${s.th}</td>
+        <td style="text-align:right;font-weight:800;font-size:.8rem;color:${s.vs>=4?'#9fd07f':s.vs>=1?'#c6d9a3':s.vs>=-2?'#9d9ea5':'#e3c05a'}">${s.vs!=null?sign(s.vs):'—'}</td>
         <td style="text-align:right"><span class="sig ${bandCls(s)}"><span class="dot"></span>${band(s)}</span></td></tr>`).join('');
   }
   ft.onchange=draw;document.getElementById('f-band').onchange=draw;draw();
@@ -558,6 +558,14 @@ function renderDetail(){
     ${kr('종합 점수 <span style="color:var(--dk-ink3);font-weight:400">(참고 · 예측력 미검증)</span>',sign(s.sc),undefined)}
     ${pr.length>1?kr('52주 밴드 위치',fmt(((s.p-Math.min(...pr))/((Math.max(...pr)-Math.min(...pr))||1)*100))+'%',undefined):''}
   </div>
+
+  ${s.vs!=null?`<div class="d-card"><div class="d-h">밸류·재무 점수 ${sign(s.vs)} · ${s.vb}
+    <span style="font-weight:400;color:var(--dk-ink3)">(참고 · 백테스트 미검증)</span></div>
+    <p style="font-size:.75rem;color:var(--dk-ink3);line-height:1.6;margin-bottom:8px">모멘텀과 반대 성격의 지표입니다. 싸고 재무가 튼튼한지를 봅니다. 과거 재무 데이터를 재현할 수 없어 예측력은 검증하지 못했습니다.</p>
+    ${[['밸류에이션','valuation'],['영업이익률','margin'],['ROE','roe'],['부채','debt'],['FCF 수익률','fcf']].map(([k,key])=>{
+      const v=d.valuePts?d.valuePts[key]:null;
+      return v==null?'':`<div class="krow"><span class="k">${k}</span><span class="v" style="color:${v>0?'#9fd07f':v<0?'#e58f6a':'#6a6b70'}">${v>0?'+':''}${v}</span></div>`}).join('')}
+  </div>`:''}
 
   <div class="d-card"><div class="d-h">주가 추이 · 최근 1년</div>
     <div style="font-weight:800;font-size:1.1rem;margin-bottom:4px">$${fmt(s.p,2)}</div>
@@ -672,7 +680,7 @@ function go(t){
 function applyLiveData(D){
   if(!D||!Array.isArray(D.stocks)||!D.stocks.length||!D.market)throw new Error('bad data.json');
   DETAILS={};
-  STOCKS=D.stocks.map(s=>({t:s.ticker,n:s.name,th:s.theme,p:s.price,mc:s.market_cap_b,sc:s.score,ytd:s.ytd,ed:s.earnings_in,ab:s.above_ma200,ms:s.mom_score,mr:s.mom_rank,mb:s.mom_band,mt:s.mom_total}));
+  STOCKS=D.stocks.map(s=>({t:s.ticker,n:s.name,th:s.theme,p:s.price,mc:s.market_cap_b,sc:s.score,ytd:s.ytd,ed:s.earnings_in,ab:s.above_ma200,ms:s.mom_score,mr:s.mom_rank,mb:s.mom_band,mt:s.mom_total,vs:s.value_score,vb:s.value_band}));
   D.stocks.forEach(s=>DETAILS[s.ticker]=s.detail);
   THEMES=[...new Set(STOCKS.map(s=>s.th))];
   const m=D.market;
