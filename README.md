@@ -157,7 +157,8 @@ scripts/fetch_data.py   데이터 수집 + 순위 계산
 scripts/backtest.py     백테스트 (10년)
 scripts/longbt.py       백테스트 (26년)
 data.json               수집된 데이터
-history.json            일별 지표 누적 기록
+history.json            일별 지표 누적 기록 (최근 3년)
+archive/history-YYYY.json  3년이 지난 기록 (연도별 보관)
 .github/workflows/      자동 갱신 설정
 ```
 
