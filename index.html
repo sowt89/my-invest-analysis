@@ -148,7 +148,7 @@ svg text{font-family:inherit}
 <body>
 <div id="tip"></div>
 <header class="top"><div class="wrap"><div class="logo">나만의<br>분석</div><h1>나만의 투자분석</h1>
-<button onclick="toggleGuide(1)" title="사용법" style="margin-left:auto;background:var(--orange);border:none;border-radius:8px;padding:5px 11px;font-size:.8rem;font-weight:800;cursor:pointer;color:#fff;font-family:inherit">사용법</button>
+<button onclick="toggleGuide(1)" title="설명서" style="margin-left:auto;background:var(--orange);border:none;border-radius:8px;padding:5px 11px;font-size:.8rem;font-weight:800;cursor:pointer;color:#fff;font-family:inherit">설명서</button>
 <button id="live-cfg" onclick="setFinnKey()" title="실시간 시세 API 키 설정" style="margin-left:6px;background:none;border:1px solid var(--line);border-radius:8px;padding:4px 9px;font-size:.85rem;cursor:pointer;color:var(--ink2);font-family:inherit">⚙</button></div></header>
 
 <!-- ============ TAB 1 : 매수 종목 ============ -->
@@ -162,6 +162,11 @@ svg text{font-family:inherit}
 
   <div class="card" style="border:2px solid var(--orange);margin-top:16px">
     <div class="card-b" style="padding:14px 14px 12px"><div id="mom-list"></div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">현재 시장 국면</div>
+    <div class="card-b" id="regime-box"></div>
   </div>
 
   <div class="card dark-card" style="padding-bottom:4px">
@@ -253,7 +258,7 @@ svg text{font-family:inherit}
 </main>
 
 <div id="guide"><div class="gwrap">
-  <div class="gtop"><h2>사용법</h2><button class="gclose" onclick="toggleGuide(0)">닫기</button></div>
+  <div class="gtop"><h2>설명서</h2><button class="gclose" onclick="toggleGuide(0)">닫기</button></div>
 
   <p class="lead">관심종목 40개 중 <b>최근 흐름이 가장 좋은 5종목</b>을 골라줍니다. 한 달에 한 번 그 목록이 바뀌면 갈아타는 방식입니다.</p>
 
@@ -275,12 +280,49 @@ svg text{font-family:inherit}
   </ul>
   <p>전체 순위는 <b>매수</b>(1~5위) · <b>관심</b>(6~15위) · <b>보류</b>(16위 이하)로 표시됩니다.</p>
 
-  <h3>순위는 어떻게 매기나</h3>
-  <table><tr><th>지표</th><th style="text-align:left">뜻</th></tr>
-    <tr><td><b>모멘텀</b></td><td style="text-align:left">최근 1개월을 뺀 1년 수익률<br><span style="color:var(--ink3);font-size:.78rem">꾸준히 오르고 있는가</span></td></tr>
-    <tr><td><b>200일선 이격도</b></td><td style="text-align:left">현재가가 200일 평균가보다 몇 % 위인가<br><span style="color:var(--ink3);font-size:.78rem">지금도 추세가 살아있는가</span></td></tr>
+  <h3>매수 종목 탭 — 모멘텀 순위</h3>
+  <p>두 지표를 반반씩 더해 점수를 매기고, 워치리스트 전체에서 순위를 냅니다.</p>
+  <table><tr><th>지표</th><th style="text-align:left">계산 방법</th></tr>
+    <tr><td><b>모멘텀</b></td><td style="text-align:left">최근 1개월을 뺀 1년 수익률<br><span style="color:var(--ink3);font-size:.78rem">지난달 급등의 되돌림 노이즈를 제거 (학계 표준 12-1 방식)</span></td></tr>
+    <tr><td><b>200일선 이격도</b></td><td style="text-align:left">(현재가 ÷ 200일 평균가 − 1) × 100<br><span style="color:var(--ink3);font-size:.78rem">지금도 추세가 살아있는가</span></td></tr>
   </table>
-  <p>두 숫자를 반반씩 더해 점수를 냅니다. <b>최근 1개월을 빼는 이유</b>는 지난달 급등한 주식이 이달에 되돌림을 맞는 경향이 있어서입니다. 그 노이즈를 빼면 꾸준히 오르는 종목만 남습니다.</p>
+  <p><b>판단 구간</b>: 1~5위 매수(백테스트 검증 구간) · 6~15위 관심 · 16위 이하 보류. 지수 ETF는 순위에서 제외됩니다.</p>
+
+  <h3>시장 국면 판단</h3>
+  <p>매수 종목 아래에 현재가 상승장·혼조·하락장 중 어디인지 표시됩니다. 26년 데이터로 검증한 두 조건의 조합입니다.</p>
+  <table><tr><th>국면</th><th style="text-align:left">조건</th><th>이후 3개월<br>손실 확률</th></tr>
+    <tr><td><b>상승장</b></td><td style="text-align:left">S&amp;P500이 200일선 위 + 시장 폭 55% 이상</td><td>27%</td></tr>
+    <tr><td><b>혼조</b></td><td style="text-align:left">두 조건이 엇갈림</td><td>42%</td></tr>
+    <tr><td><b>하락장</b></td><td style="text-align:left">S&amp;P500이 200일선 아래 + 시장 폭 45% 미만</td><td>42%</td></tr>
+  </table>
+  <p>시장 폭 = 워치리스트 중 자기 200일선 위에 있는 종목의 비중. 참고로 <b>VIX 30 이상(패닉)</b>은 역사적으로 이후 3개월 평균 +10.6%로 반등이 잦았던 구간이라 별도 표시됩니다.</p>
+
+  <h3>종목 진단 탭 — 3축 점수</h3>
+  <p>목적이 다른 세 관점으로 종목 상태를 진단합니다. 과거 재무 데이터를 재현할 수 없어 <b>백테스트로 검증되지 않은 참고 지표</b>입니다.</p>
+  <p><b>① 실적 점수 (-7 ~ +8)</b> — 장사가 잘되고 있는가</p>
+  <table><tr><th>지표</th><th>가점</th><th>감점</th></tr>
+    <tr><td>매출 성장 YoY</td><td>+10%↑ +1 · +25%↑ +2</td><td>역성장 -1 · -10%↓ -2</td></tr>
+    <tr><td>매출 3년 CAGR</td><td>+10%↑ +1 · +20%↑ +2</td><td>역성장 -1</td></tr>
+    <tr><td>어닝 서프라이즈</td><td>+10%↑ +1</td><td>미스 -1 · -10%↓ -2</td></tr>
+    <tr><td>예상 성장률</td><td>+10%↑ +1 · +20%↑ +2</td><td>역성장 -1</td></tr>
+    <tr><td>영업이익률 방향</td><td>+2%p↑ +1</td><td>-2%p↓ -1</td></tr>
+  </table>
+  <p><b>② 밸류 점수 (-5 ~ +6)</b> — 싸게 거래되는가</p>
+  <table><tr><th>지표</th><th>가점</th><th>감점</th></tr>
+    <tr><td>FWD PER 3년 괴리</td><td>-5%↓ +1 · -20%↓ +2</td><td>+10%↑ -1 · +30%↑ -2</td></tr>
+    <tr><td>PSR 5년 괴리</td><td>-20%↓ +1</td><td>+50%↑ -1</td></tr>
+    <tr><td>FCF 수익률</td><td>3%↑ +1 · 5%↑ +2</td><td>음수 -1</td></tr>
+    <tr><td>PEG</td><td>1 미만 +1</td><td>2.5 초과 -1</td></tr>
+  </table>
+  <p><b>③ 재무 점수 (-6 ~ +7)</b> — 회사가 튼튼한가</p>
+  <table><tr><th>지표</th><th>가점</th><th>감점</th></tr>
+    <tr><td>영업이익률</td><td>15%↑ +1 · 30%↑ +2</td><td>적자 -2</td></tr>
+    <tr><td>ROE</td><td>15%↑ +1 · 30%↑ +2</td><td>음수 -1</td></tr>
+    <tr><td>LT 부채비율</td><td>0.5 이하 +1</td><td>2 이상 -1</td></tr>
+    <tr><td>유동비율</td><td>1.5 이상 +1</td><td>1 미만 -1</td></tr>
+    <tr><td>FCF 마진</td><td>15%↑ +1</td><td>음수 -1</td></tr>
+  </table>
+  <p>칩 카드 기준: 실적 우수 +6↑ · 저평가 +3↑ · 재무 우량 +6↑. 결측 지표는 0점 처리됩니다.</p>
 
   <h3>왜 이 방식인가</h3>
   <p>여러 방식을 과거 데이터로 시험한 뒤 남은 하나입니다. <b>2000~2026년 26년</b>(닷컴버블·금융위기 포함) 검증 결과:</p>
@@ -510,6 +552,23 @@ function renderBoard(){
       + `<p style="font-size:.7rem;color:var(--ink3);line-height:1.5;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)">
          모멘텀 + 200일선 이격도 순위 · 26년 백테스트에서 4개 시대 모두 균등보유 대비 우위</p>`
     : '<span style="font-size:.83rem;color:var(--ink2)">모멘텀 데이터 없음 (샘플 데이터 표시 중)</span>';
+
+  /* 시장 국면 카드 */
+  const rg=MARKET.regime, rgc=rg==='상승장'?'#4c8f3a':rg==='하락장'?'#c4472e':'#b58612';
+  const chk=(ok,txt)=>`<div class="mrow"><span class="k">${txt}</span><span class="v" style="color:${ok==null?'var(--ink3)':ok?'#4c8f3a':'#c4472e'}">${ok==null?'—':ok?'긍정':'부정'}</span></div>`;
+  document.getElementById('regime-box').innerHTML = rg
+    ? `<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:8px">
+         <span style="font-size:1.5rem;font-weight:800;color:${rgc}">${rg}</span>
+         ${MARKET.panic?'<span class="gap-tag over" style="background:#f5ecd2;color:#b58612">VIX 30↑ 패닉 · 역사적으로 반등 잦음</span>':''}
+       </div>
+       ${chk(MARKET.trendAbove,'S&P500이 200일선 위')}
+       ${chk(MARKET.golden,'골든크로스 (50일선 > 200일선)')}
+       <div class="mrow"><span class="k">시장 폭 · 200일선 위 종목 비중</span><span class="v" style="color:${MARKET.breadth>=55?'#4c8f3a':MARKET.breadth<45?'#c4472e':'#b58612'}">${MARKET.breadth!=null?MARKET.breadth+'%':'—'}</span></div>
+       <p style="font-size:.72rem;color:var(--ink3);line-height:1.6;margin-top:9px">${
+         rg==='상승장'?'지수와 다수 종목이 함께 상승 추세입니다. 26년 통계상 이후 3개월 평균 +3.3%, 손실 확률 27% — 모멘텀 전략이 가장 잘 작동하는 구간입니다.'
+        :rg==='하락장'?'지수와 다수 종목이 하락 추세입니다. 26년 통계상 이후 3개월 손실 확률 42% — 모멘텀 순위는 "덜 떨어진 종목"을 고를 수 있으니 신규 진입에 신중하세요.'
+        :'지수와 개별 종목의 추세가 엇갈리는 전환 구간입니다. 26년 통계상 이후 3개월 손실 확률 42% — 순위 변동이 잦아질 수 있습니다.'}</p>`
+    : '<span style="font-size:.83rem;color:var(--ink2)">국면 데이터 없음 (샘플 데이터 표시 중)</span>';
 
   const top3=STOCKS.filter(s=>s.mr&&s.mr<=3).sort((a,b)=>a.mr-b.mr);
   const momTxt=top3.length?`모멘텀 상위는 ${top3.map(s=>s.t).join(', ')} 순입니다.`:'';
@@ -761,7 +820,7 @@ function applyLiveData(D){
   const m=D.market;
   MARKET={spy52:m.spy_dd_52w,spyPt:m.spy_pt||0,vix:m.vix,vixPt:m.vix_pt||0,
     fg:m.fear_greed,fgPt:m.fg_pt||0,fgLabel:m.fg_label,mood:m.mood||'중립',moodPt:0,
-    nasdaq:m.nasdaq,sp500:m.sp500,trendAbove:m.spy_ma200_above,trendAdj:m.trend_adj||0};
+    nasdaq:m.nasdaq,sp500:m.sp500,trendAbove:m.spy_ma200_above,trendAdj:m.trend_adj||0,regime:m.regime,breadth:m.breadth_pct,golden:m.spy_golden,panic:m.panic};
   META={updated:D.updated_at_kst,updatedUtc:D.updated_at,live:true};
   if(!STOCKS.some(x=>x.t===curTicker))curTicker=STOCKS[0].t;
 }
