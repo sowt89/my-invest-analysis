@@ -391,10 +391,16 @@ def fetch_stock(session, ticker, name, theme, market, hist):
         avg3y_px = sum(closes5[-min(157, len(closes5)):]) / min(157, len(closes5))
         avg5y_px = sum(closes5) / len(closes5)
 
-    above_ma200 = None
-    if h5 is not None and len(h5) >= 40:
-        ma200 = sum(float(x) for x in h5["Close"][-40:]) / 40   # 주봉 40주 ≈ 200거래일
+    # 주봉 종가 (미확정 당일 봉의 NaN 제외)
+    wk = [float(x) for x in h5["Close"] if x == x] if h5 is not None else []
+    above_ma200 = mom12_1 = ma200_dist = None
+    if len(wk) >= 40:
+        ma200 = sum(wk[-40:]) / 40            # 주봉 40주 ≈ 200거래일
         above_ma200 = price > ma200
+        ma200_dist = (price / ma200 - 1) * 100
+    if len(wk) >= 53:
+        # 12-1 모멘텀: 최근 1개월(4주) 제외한 12개월 수익률
+        mom12_1 = (wk[-5] / wk[-53] - 1) * 100
 
     rsi = vol_ch = None
     if hd is not None and len(hd) > 20:
@@ -447,6 +453,7 @@ def fetch_stock(session, ticker, name, theme, market, hist):
         "quickR": rnd(info.get("quickRatio"), 2),
         "ltDE": rnd((info.get("debtToEquity") or 0) / 100 or None, 2),
         "prices": prices, "priceDates": price_dates,
+        "mom12_1": rnd(mom12_1, 1), "ma200Dist": rnd(ma200_dist, 1),
     }
     # FWD PSR = 시총 / 당해연도 예상 매출 (아래 컨센서스에서 채움)
     d["fwdPsr"] = None
@@ -588,6 +595,8 @@ def fetch_stock(session, ticker, name, theme, market, hist):
     return {
         "ticker": ticker, "name": name, "theme": theme,
         "earnings_in": earnings_in, "above_ma200": above_ma200,
+        "mom_score": (rnd(0.5 * mom12_1 + 0.5 * ma200_dist, 1)
+                      if (mom12_1 is not None and ma200_dist is not None) else None),
         "price": rnd(price, 2),
         "market_cap_b": rnd(mcap / B, 1) if mcap else None,
         "ytd": rnd(ytd, 1),
@@ -621,6 +630,13 @@ def main():
     if len(stocks) < len(WATCHLIST) * 0.6:
         print(f"오류: 성공 종목이 {len(stocks)}개뿐이라 data.json을 갱신하지 않습니다.")
         sys.exit(1)
+
+    # 모멘텀 횡단면 순위 (1위가 가장 강함) — 지수 ETF는 제외
+    ranked = sorted([x for x in stocks if x.get("mom_score") is not None
+                     and x["theme"] != "지수 ETF"],
+                    key=lambda x: -x["mom_score"])
+    for i, x in enumerate(ranked):
+        x["mom_rank"] = i + 1
 
     now = datetime.now(timezone.utc)
     payload = {

@@ -148,6 +148,16 @@ svg text{font-family:inherit}
   </div>
 
   <div class="card">
+    <div class="card-h">모멘텀 상위 종목 · 월 1회 교체</div>
+    <div class="card-b">
+      <p style="font-size:.75rem;color:var(--ink2);line-height:1.6;margin-bottom:10px">
+        12-1 모멘텀과 200일선 이격도로 매긴 순위입니다. 26년(닷컴·금융위기 포함) 백테스트에서
+        4개 시대 모두 균등보유를 앞섰습니다. 한 달에 한 번 상위 종목으로 교체하는 방식입니다.</p>
+      <div id="mom-list"></div>
+    </div>
+  </div>
+
+  <div class="card">
     <div class="card-h">시장 타이밍 · 전 종목 공통</div>
     <div class="card-b" id="market-rows"></div>
   </div>
@@ -384,6 +394,13 @@ function renderBoard(){
     M.map(([k,v,p])=>`<div class="mrow"><span class="k">${k}</span><span class="v">${v}<span class="pt ${p>0?'up':p<0?'dn':'zr'}">${p===0?'0':sign(p)}</span></span></div>`).join('')
     +`<div class="mrow"><span class="k">현재 시장 상황</span><span class="v"><span class="badge neutral">${MARKET.mood}</span><span class="pt zr">0</span></span></div>`
     +(qqq?`<div class="mrow" style="cursor:pointer" onclick="openDetail('QQQ')"><span class="k">나스닥100 판단 (QQQ · TIGER 참고)</span><span class="v"><span class="sig ${bandCls(qqq.sc,qqq.ab)}" style="background:${bandCls(qqq.sc,qqq.ab)==='s-strong'?'#e6efdc':bandCls(qqq.sc,qqq.ab)==='s-buy'?'#eef3e6':bandCls(qqq.sc,qqq.ab)==='s-sell'?'#f5ecd2':'#ececea'};color:${bandCls(qqq.sc,qqq.ab)==='s-strong'?'#3f6f2b':bandCls(qqq.sc,qqq.ab)==='s-buy'?'#5b8f3d':bandCls(qqq.sc,qqq.ab)==='s-sell'?'#b58612':'#6b6b66'}"><span class="dot"></span>${band(qqq.sc,qqq.ab)} <b>${sign(qqq.sc)}</b></span></span></div>`:'');
+  const mom=STOCKS.filter(s=>s.mr).sort((a,b)=>a.mr-b.mr).slice(0,5);
+  document.getElementById('mom-list').innerHTML = mom.length
+    ? mom.map(s=>`<div class="mrow" style="cursor:pointer" onclick="openDetail('${s.t}')">
+        <span class="k"><b style="color:var(--orange)">${s.mr}</b> &nbsp;${s.t} <span style="color:var(--ink3);font-size:.78rem">${s.n}</span></span>
+        <span class="v">${fmt(s.ms,1)}<span class="pt zr" style="min-width:auto">점</span></span></div>`).join('')
+    : '<span style="font-size:.83rem;color:var(--ink2)">모멘텀 데이터 없음 (샘플 데이터 표시 중)</span>';
+
   const ft=document.getElementById('f-theme');
   ft.innerHTML='<option value="">테마 ▾</option>';
   THEMES.forEach(t=>ft.insertAdjacentHTML('beforeend',`<option>${t}</option>`));
@@ -456,6 +473,9 @@ function renderDetail(){
     ${kr('공매도 비율',fmt(d.shortR,2),d.shortpt)}
     ${kr('거래량 증가율',pct(d.volCh),d.volpt)}
     ${d.surprise!==undefined?kr('최근 어닝 서프라이즈',pct(d.surprise),d.surprisept):''}
+    ${s.ms!=null?kr('모멘텀 점수 <span style="color:var(--dk-ink3);font-weight:400">(전체 '+s.mr+'위)</span>',fmt(s.ms,1),undefined):''}
+    ${d.mom12_1!=null?kr('12-1 모멘텀',pct(d.mom12_1),undefined):''}
+    ${d.ma200Dist!=null?kr('200일선 이격도',pct(d.ma200Dist),undefined):''}
     ${pr.length>1?kr('52주 밴드 위치',fmt(((s.p-Math.min(...pr))/((Math.max(...pr)-Math.min(...pr))||1)*100))+'%',undefined):''}
   </div>
 
@@ -563,7 +583,7 @@ function go(t){
 function applyLiveData(D){
   if(!D||!Array.isArray(D.stocks)||!D.stocks.length||!D.market)throw new Error('bad data.json');
   DETAILS={};
-  STOCKS=D.stocks.map(s=>({t:s.ticker,n:s.name,th:s.theme,p:s.price,mc:s.market_cap_b,sc:s.score,ytd:s.ytd,ed:s.earnings_in,ab:s.above_ma200}));
+  STOCKS=D.stocks.map(s=>({t:s.ticker,n:s.name,th:s.theme,p:s.price,mc:s.market_cap_b,sc:s.score,ytd:s.ytd,ed:s.earnings_in,ab:s.above_ma200,ms:s.mom_score,mr:s.mom_rank}));
   D.stocks.forEach(s=>DETAILS[s.ticker]=s.detail);
   THEMES=[...new Set(STOCKS.map(s=>s.th))];
   const m=D.market;
