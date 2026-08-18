@@ -28,7 +28,12 @@ body.dark .badge.neutral{background:var(--hold-bg);color:var(--ink2)}
 body.dark .dark-card{border-color:var(--line)}
 body.dark #guide .gtop{background:rgba(19,20,22,.96)}
 body.dark #guide .lead{background:#3a2517;color:#f0b28a}
-body.dark #alerts .card-b{color:#f0b28a}
+.card.alert-card{background:#fff8e6;border-color:#f0d79a}
+.card.alert-card .card-b{color:#8a5a12}
+.card.alert-card b{color:#6b4409}
+body.dark .card.alert-card{background:#2e2413;border-color:#5c4a1f}
+body.dark .card.alert-card .card-b{color:#f2c96b}
+body.dark .card.alert-card b{color:#ffdd8a}
 body.dark #guide .warn{background:#2b211a}
 body.dark #guide .warn p{color:#d9b79a}
 body.dark #guide .gclose{color:var(--ink2)}
@@ -606,8 +611,8 @@ function renderBoard(){
     if(hrs>=24) al.push(`데이터가 <b>${Math.floor(hrs/24)}일 ${Math.floor(hrs%24)}시간</b> 갱신되지 않았습니다`);
   } else if(!META.live) al.push('실데이터 로드 실패 · 내장 샘플 표시 중');
   document.getElementById('alerts').innerHTML=al.map(t=>
-    `<div class="card" style="margin-top:14px;margin-bottom:0;border-left:3px solid var(--orange);background:var(--orange-soft)">
-       <div class="card-b" style="padding:11px 14px;font-size:.8rem;line-height:1.6;color:#8a3d13;word-break:keep-all">⚠ ${t}</div></div>`).join('');
+    `<div class="card alert-card" style="margin-top:14px;margin-bottom:0;border-left:3px solid #e3a52f">
+       <div class="card-b" style="padding:11px 14px;font-size:.82rem;line-height:1.65;word-break:keep-all">⚠ ${t}</div></div>`).join('');
 
   /* 시장 국면 카드 */
   const rg=MARKET.regime, rgc=rg==='상승장'?'#4c8f3a':rg==='하락장'?'#c4472e':'#b58612';
