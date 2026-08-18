@@ -177,22 +177,22 @@ svg text{font-family:inherit}
   <p class="foot-note" id="board-note">※ 모멘텀 = 최근 1개월을 제외한 1년 수익률과 200일선 이격도를 반반 합산한 값. 순위 1~5위 매수 · 6~15위 관심 · 16위↓ 보류. 26년 백테스트에서 4개 시대 모두 균등보유 대비 우위. 지수 ETF는 순위 제외.</p>
 </main>
 
-<!-- ============ TAB 2 : 참고 점수 ============ -->
+<!-- ============ TAB 2 : 종목 진단 ============ -->
 <main id="tab-score" class="wrap hidden">
   <section class="hero">
     <div class="kicker">참고 지표 · 예측력 미검증</div>
-    <h2>참고 점수</h2>
-    <p>종합 점수(11지표)와 밸류·재무 점수입니다. 백테스트로 예측력이 확인되지 않아 참고용이며, 매매 판단은 '매수 종목' 탭을 기준으로 하세요.</p>
+    <h2>종목 진단</h2>
+    <p>종합 점수(11지표)와 밸류·재무 점수로 종목 상태를 진단합니다. 예측력이 검증되지 않은 참고 정보이며, 매매 판단은 '매수 종목' 탭을 기준으로 하세요.</p>
   </section>
 
   <div class="card" style="margin-top:16px">
-    <div class="card-h">추천 종목 · 종합 점수 +4 이상</div>
+    <div class="card-h">추천 종목 · 종합 점수 +6 이상</div>
     <div class="card-b"><div class="chips" id="reco-chips"></div>
       <p style="font-size:.7rem;color:var(--ink3);line-height:1.5;margin-top:10px">종합 점수 기준 추천입니다. 예측력이 검증되지 않은 참고 지표이며, 매매 판단은 '매수 종목' 탭을 기준으로 하세요.</p></div>
   </div>
 
   <div class="card">
-    <div class="card-h">저평가·우량 종목 · 밸류 점수 +4 이상</div>
+    <div class="card-h">저평가·우량 종목 · 밸류 점수 +5 이상</div>
     <div class="card-b"><div class="chips" id="value-chips"></div></div>
   </div>
 
@@ -216,7 +216,7 @@ svg text{font-family:inherit}
       <table class="sig-table"><thead><tr><th>종목</th><th style="text-align:right">종합</th><th style="text-align:right">밸류</th><th style="text-align:right">밸류 구간</th></tr></thead><tbody id="score-body"></tbody></table>
     </div>
   </div>
-  <p class="foot-note">※ <b>종합 점수</b> = 12개월 수익률·낙폭·RSI·공매도·거래량·FWD PER 괴리·어닝 서프라이즈 + 시장 타이밍 3지표 + 200일선 추세 보정. 하락한 종목일수록 높아지는 역발상 설계로, 정보계수(IC) 측정에서 음의 예측력이 나왔습니다.<br>※ <b>밸류 점수</b> = FWD PER 괴리·영업이익률·ROE·부채비율·FCF 수익률. 과거 재무 데이터를 재현할 수 없어 백테스트 검증이 불가능합니다.</p>
+  <p class="foot-note">※ <b>종합 점수</b> (이론 범위 -15 ~ +18) = 12개월 수익률·낙폭·RSI·공매도·거래량·FWD PER 괴리·어닝 서프라이즈 + 시장 타이밍 3지표 + 200일선 추세 보정. 하락한 종목일수록 높아지는 역발상 설계로, 정보계수(IC) 측정에서 음의 예측력이 나왔습니다.<br>※ <b>밸류 점수</b> (이론 범위 -6 ~ +8) = FWD PER 괴리·영업이익률·ROE·부채비율·FCF 수익률. 과거 재무 데이터를 재현할 수 없어 백테스트 검증이 불가능합니다.</p>
 </main>
 
 <!-- ============ TAB 2 : 종목 상세 ============ -->
@@ -303,7 +303,7 @@ svg text{font-family:inherit}
 
 <nav class="nav"><div class="wrap">
   <button id="nb-board" class="on" onclick="go('board')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg>매수 종목</button>
-  <button id="nb-score" onclick="go('score')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 12 6 12 9 5 14 19 17 12 22 12"/></svg>참고 점수</button>
+  <button id="nb-score" onclick="go('score')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 12 6 12 9 5 14 19 17 12 22 12"/></svg>종목 진단</button>
   <button id="nb-detail" onclick="go('detail')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>종목 상세</button>
   <button id="nb-compare" onclick="go('compare')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="20" x2="6" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="18" y1="20" x2="18" y2="14"/></svg>밸류 비교</button>
 </div></nav>
@@ -531,14 +531,14 @@ function renderBoard(){
 /* ================= 매매 점수 탭 RENDER ================= */
 function renderScore(){
   /* 추천 칩 — 종합 점수 +4 이상, 밸류 점수 +4 이상 */
-  const strong=STOCKS.filter(x=>x.sc!=null&&x.sc>=4).sort((a,b)=>b.sc-a.sc);
+  const strong=STOCKS.filter(x=>x.sc!=null&&x.sc>=6).sort((a,b)=>b.sc-a.sc);
   document.getElementById('reco-chips').innerHTML=strong.length
     ?strong.map(x=>`<span class="chip" style="cursor:pointer" onclick="openDetail('${x.t}')">${x.t} <small>${sign(x.sc)}</small></span>`).join('')
-    :'<span style="font-size:.83rem;color:var(--ink2)">현재 종합 점수 +4 이상 종목이 없습니다.</span>';
-  const valgood=STOCKS.filter(x=>x.vs!=null&&x.vs>=4).sort((a,b)=>b.vs-a.vs);
+    :'<span style="font-size:.83rem;color:var(--ink2)">현재 종합 점수 +6 이상 종목이 없습니다.</span>';
+  const valgood=STOCKS.filter(x=>x.vs!=null&&x.vs>=5).sort((a,b)=>b.vs-a.vs);
   document.getElementById('value-chips').innerHTML=valgood.length
     ?valgood.map(x=>`<span class="chip" style="cursor:pointer" onclick="openDetail('${x.t}')">${x.t} <small>${sign(x.vs)}</small></span>`).join('')
-    :'<span style="font-size:.83rem;color:var(--ink2)">현재 밸류 점수 +4 이상 종목이 없습니다.</span>';
+    :'<span style="font-size:.83rem;color:var(--ink2)">현재 밸류 점수 +5 이상 종목이 없습니다.</span>';
 
   const st=document.getElementById('s-theme'), so=document.getElementById('s-sort');
   st.innerHTML='<option value="">테마 ▾</option>';
