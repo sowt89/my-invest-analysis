@@ -182,18 +182,25 @@ svg text{font-family:inherit}
   <section class="hero">
     <div class="kicker">참고 지표 · 예측력 미검증</div>
     <h2>종목 진단</h2>
-    <p>종합 점수(11지표)와 밸류·재무 점수로 종목 상태를 진단합니다. 예측력이 검증되지 않은 참고 정보이며, 매매 판단은 '매수 종목' 탭을 기준으로 하세요.</p>
+    <p>실적·밸류·재무 세 관점에서 종목 상태를 진단합니다. 예측력이 검증되지 않은 참고 정보이며, 매매 판단은 '매수 종목' 탭을 기준으로 하세요.</p>
   </section>
 
   <div class="card" style="margin-top:16px">
-    <div class="card-h">추천 종목 · 종합 점수 +6 이상</div>
-    <div class="card-b"><div class="chips" id="reco-chips"></div>
-      <p style="font-size:.7rem;color:var(--ink3);line-height:1.5;margin-top:10px">종합 점수 기준 추천입니다. 예측력이 검증되지 않은 참고 지표이며, 매매 판단은 '매수 종목' 탭을 기준으로 하세요.</p></div>
+    <div class="card-h">실적 우수 · 실적 점수 +6 이상</div>
+    <div class="card-b"><div class="chips" id="grow-chips"></div>
+      <p style="font-size:.7rem;color:var(--ink3);line-height:1.5;margin-top:10px">매출 성장(YoY·3년)·어닝 서프라이즈·예상 성장률·마진 방향 기준.</p></div>
   </div>
 
   <div class="card">
-    <div class="card-h">저평가·우량 종목 · 밸류 점수 +5 이상</div>
-    <div class="card-b"><div class="chips" id="value-chips"></div></div>
+    <div class="card-h">저평가 · 밸류 점수 +3 이상</div>
+    <div class="card-b"><div class="chips" id="value-chips"></div>
+      <p style="font-size:.7rem;color:var(--ink3);line-height:1.5;margin-top:10px">FWD PER 괴리·PSR 괴리·FCF 수익률·PEG 기준.</p></div>
+  </div>
+
+  <div class="card">
+    <div class="card-h">재무 우량 · 재무 점수 +6 이상</div>
+    <div class="card-b"><div class="chips" id="fin-chips"></div>
+      <p style="font-size:.7rem;color:var(--ink3);line-height:1.5;margin-top:10px">영업이익률·ROE·부채비율·유동비율·FCF 마진 기준.</p></div>
   </div>
 
   <div class="card dark-card">
@@ -210,13 +217,16 @@ svg text{font-family:inherit}
     <div class="card-h" style="padding-top:16px">종목별 점수</div>
     <div class="filters dark-sel" style="padding-left:16px">
       <select id="s-theme"><option value="">테마 ▾</option></select>
-      <select id="s-sort"><option value="score">종합 점수순</option><option value="value">밸류 점수순</option><option value="ticker">종목명순</option></select>
+      <select id="s-sort"><option value="grow">실적순</option><option value="value">밸류순</option><option value="fin">재무순</option><option value="ticker">종목명순</option></select>
     </div>
     <div class="card-b" style="padding:8px 8px 10px">
-      <table class="sig-table"><thead><tr><th>종목</th><th style="text-align:right">종합</th><th style="text-align:right">밸류</th><th style="text-align:right">밸류 구간</th></tr></thead><tbody id="score-body"></tbody></table>
+      <table class="sig-table"><thead><tr><th>종목</th><th style="text-align:right">실적</th><th style="text-align:right">밸류</th><th style="text-align:right">재무</th></tr></thead><tbody id="score-body"></tbody></table>
     </div>
   </div>
-  <p class="foot-note">※ <b>종합 점수</b> (이론 범위 -15 ~ +18) = 12개월 수익률·낙폭·RSI·공매도·거래량·FWD PER 괴리·어닝 서프라이즈 + 시장 타이밍 3지표 + 200일선 추세 보정. 하락한 종목일수록 높아지는 역발상 설계로, 정보계수(IC) 측정에서 음의 예측력이 나왔습니다.<br>※ <b>밸류 점수</b> (이론 범위 -6 ~ +8) = FWD PER 괴리·영업이익률·ROE·부채비율·FCF 수익률. 과거 재무 데이터를 재현할 수 없어 백테스트 검증이 불가능합니다.</p>
+  <p class="foot-note">※ 세 점수 모두 백테스트 검증이 불가능한 참고 지표입니다(과거 재무 데이터 재현 불가).<br>
+※ <b>실적 점수</b> (-7~+8) = 매출 YoY·3년 CAGR·어닝 서프라이즈·예상 성장률·영업이익률 방향<br>
+※ <b>밸류 점수</b> (-5~+6) = FWD PER 3년 괴리·PSR 5년 괴리·FCF 수익률·PEG<br>
+※ <b>재무 점수</b> (-6~+7) = 영업이익률·ROE·LT부채비율·유동비율·FCF 마진</p>
 </main>
 
 <!-- ============ TAB 2 : 종목 상세 ============ -->
@@ -258,7 +268,8 @@ svg text{font-family:inherit}
 
   <h3>화면 구성</h3>
   <ul>
-    <li><b>시그널 보드</b> — 매수 종목 5개, 시장 상황, 40종목 전체 순위</li>
+    <li><b>매수 종목</b> — 이번 달 살 5종목과 40종목 모멘텀 순위</li>
+    <li><b>종목 진단</b> — 실적·밸류·재무 세 관점의 참고 점수와 시장 상황</li>
     <li><b>종목 상세</b> — 주가 차트, 밸류에이션, 실적, 현금흐름, 애널리스트 전망</li>
     <li><b>밸류 비교</b> — 40종목 지표를 표로 비교</li>
   </ul>
@@ -530,15 +541,14 @@ function renderBoard(){
 
 /* ================= 매매 점수 탭 RENDER ================= */
 function renderScore(){
-  /* 추천 칩 — 종합 점수 +4 이상, 밸류 점수 +4 이상 */
-  const strong=STOCKS.filter(x=>x.sc!=null&&x.sc>=6).sort((a,b)=>b.sc-a.sc);
-  document.getElementById('reco-chips').innerHTML=strong.length
-    ?strong.map(x=>`<span class="chip" style="cursor:pointer" onclick="openDetail('${x.t}')">${x.t} <small>${sign(x.sc)}</small></span>`).join('')
-    :'<span style="font-size:.83rem;color:var(--ink2)">현재 종합 점수 +6 이상 종목이 없습니다.</span>';
-  const valgood=STOCKS.filter(x=>x.vs!=null&&x.vs>=5).sort((a,b)=>b.vs-a.vs);
-  document.getElementById('value-chips').innerHTML=valgood.length
-    ?valgood.map(x=>`<span class="chip" style="cursor:pointer" onclick="openDetail('${x.t}')">${x.t} <small>${sign(x.vs)}</small></span>`).join('')
-    :'<span style="font-size:.83rem;color:var(--ink2)">현재 밸류 점수 +5 이상 종목이 없습니다.</span>';
+  /* 축별 상위 칩 — 실적 +6 / 밸류 +3 / 재무 +6 */
+  const chip=(id,key,th)=>{
+    const L=STOCKS.filter(x=>x[key]!=null&&x[key]>=th).sort((a,b)=>b[key]-a[key]);
+    document.getElementById(id).innerHTML=L.length
+      ?L.map(x=>`<span class="chip" style="cursor:pointer" onclick="openDetail('${x.t}')">${x.t} <small>${sign(x[key])}</small></span>`).join('')
+      :`<span style="font-size:.83rem;color:var(--ink2)">해당 종목이 없습니다.</span>`;
+  };
+  chip('grow-chips','gs',6); chip('value-chips','vs',3); chip('fin-chips','fs',6);
 
   const st=document.getElementById('s-theme'), so=document.getElementById('s-sort');
   st.innerHTML='<option value="">테마 ▾</option>';
@@ -547,16 +557,16 @@ function renderScore(){
   const scol=v=>v==null?'#9d9ea5':v>=4?'#9fd07f':v>=1?'#c6d9a3':v>=-5?'#9d9ea5':'#e3c05a';
   function draw(){
     const th=st.value, sort=so.value;
+    const col=(v,hi)=>v==null?'#9d9ea5':v>=hi?'#9fd07f':v>=1?'#c6d9a3':v>=-2?'#9d9ea5':'#e3c05a';
     let list=STOCKS.filter(x=>!th||x.th===th);
-    list.sort(sort==='value'?(a,b)=>(b.vs??-99)-(a.vs??-99)
-            :sort==='ticker'?(a,b)=>a.t.localeCompare(b.t)
-            :(a,b)=>(b.sc??-99)-(a.sc??-99));
+    const key=sort==='value'?'vs':sort==='fin'?'fs':sort==='ticker'?null:'gs';
+    list.sort(key?(a,b)=>(b[key]??-99)-(a[key]??-99):(a,b)=>a.t.localeCompare(b.t));
     document.getElementById('score-body').innerHTML=list.map(x=>`
       <tr style="cursor:pointer" onclick="openDetail('${x.t}')">
         <td class="tk">${x.t}<small>${x.n}</small></td>
-        <td style="text-align:right;font-weight:800;color:${scol(x.sc)}">${x.sc!=null?sign(x.sc):'—'}</td>
-        <td style="text-align:right;font-weight:800;color:${vcol(x.vs)}">${x.vs!=null?sign(x.vs):'—'}</td>
-        <td style="text-align:right;font-size:.78rem;color:var(--dk-ink2)">${x.vb||'—'}</td></tr>`).join('');
+        <td style="text-align:right;font-weight:800;color:${col(x.gs,6)}">${x.gs!=null?sign(x.gs):'—'}</td>
+        <td style="text-align:right;font-weight:800;color:${col(x.vs,3)}">${x.vs!=null?sign(x.vs):'—'}</td>
+        <td style="text-align:right;font-weight:800;color:${col(x.fs,6)}">${x.fs!=null?sign(x.fs):'—'}</td></tr>`).join('');
   }
   st.onchange=draw; so.onchange=draw; draw();
 }
@@ -625,12 +635,11 @@ function renderDetail(){
     ${pr.length>1?kr('52주 밴드 위치',fmt(((s.p-Math.min(...pr))/((Math.max(...pr)-Math.min(...pr))||1)*100))+'%',undefined):''}
   </div>
 
-  ${s.vs!=null?`<div class="d-card"><div class="d-h">밸류·재무 점수 ${sign(s.vs)} · ${s.vb}
+  ${s.gs!=null||s.vs!=null||s.fs!=null?`<div class="d-card"><div class="d-h">종목 진단
     <span style="font-weight:400;color:var(--dk-ink3)">(참고 · 백테스트 미검증)</span></div>
-    <p style="font-size:.75rem;color:var(--dk-ink3);line-height:1.6;margin-bottom:8px">모멘텀과 반대 성격의 지표입니다. 싸고 재무가 튼튼한지를 봅니다. 과거 재무 데이터를 재현할 수 없어 예측력은 검증하지 못했습니다.</p>
-    ${[['밸류에이션','valuation'],['영업이익률','margin'],['ROE','roe'],['부채','debt'],['FCF 수익률','fcf']].map(([k,key])=>{
-      const v=d.valuePts?d.valuePts[key]:null;
-      return v==null?'':`<div class="krow"><span class="k">${k}</span><span class="v" style="color:${v>0?'#9fd07f':v<0?'#e58f6a':'#6a6b70'}">${v>0?'+':''}${v}</span></div>`}).join('')}
+    ${kr('실적 점수 <span style="color:var(--dk-ink3);font-weight:400">(성장·서프라이즈·마진 방향)</span>',s.gs!=null?sign(s.gs):'—',undefined)}
+    ${kr('밸류 점수 <span style="color:var(--dk-ink3);font-weight:400">(PER·PSR 괴리, FCF, PEG)</span>',s.vs!=null?sign(s.vs):'—',undefined)}
+    ${kr('재무 점수 <span style="color:var(--dk-ink3);font-weight:400">(마진·ROE·부채·유동성)</span>',s.fs!=null?sign(s.fs):'—',undefined)}
   </div>`:''}
 
   <div class="d-card"><div class="d-h">주가 추이 · 최근 1년</div>
@@ -746,7 +755,7 @@ function go(t){
 function applyLiveData(D){
   if(!D||!Array.isArray(D.stocks)||!D.stocks.length||!D.market)throw new Error('bad data.json');
   DETAILS={};
-  STOCKS=D.stocks.map(s=>({t:s.ticker,n:s.name,th:s.theme,p:s.price,mc:s.market_cap_b,sc:s.score,ytd:s.ytd,ed:s.earnings_in,ab:s.above_ma200,ms:s.mom_score,mr:s.mom_rank,mb:s.mom_band,mt:s.mom_total,vs:s.value_score,vb:s.value_band}));
+  STOCKS=D.stocks.map(s=>({t:s.ticker,n:s.name,th:s.theme,p:s.price,mc:s.market_cap_b,sc:s.score,ytd:s.ytd,ed:s.earnings_in,ab:s.above_ma200,ms:s.mom_score,mr:s.mom_rank,mb:s.mom_band,mt:s.mom_total,gs:s.grow_score,vs:s.val_score,fs:s.fin_score}));
   D.stocks.forEach(s=>DETAILS[s.ticker]=s.detail);
   THEMES=[...new Set(STOCKS.map(s=>s.th))];
   const m=D.market;
