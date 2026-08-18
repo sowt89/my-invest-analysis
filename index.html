@@ -392,7 +392,7 @@ function renderBoard(){
     document.getElementById('sig-body').innerHTML=STOCKS
       .filter(s=>(!th||s.th===th)&&(!bd||band(s.sc,s.ab)===bd))
       .map(s=>`<tr style="cursor:pointer" onclick="openDetail('${s.t}')">
-        <td class="tk">${s.t}${s.rk>=3?` <span title="매도 위험 신호 ${s.rk}/5" style="color:#e3c05a;font-size:.7rem;font-weight:800">⚠${s.rk}</span>`:''}${s.ed!=null&&s.ed<=7?` <span style="background:#33261455;color:#e3c05a;font-size:.62rem;font-weight:800;border-radius:5px;padding:1px 5px;vertical-align:1px">실적 D-${s.ed}</span>`:''}<small>${s.n}</small></td>
+        <td class="tk">${s.t}${s.ed!=null&&s.ed<=7?` <span style="background:#33261455;color:#e3c05a;font-size:.62rem;font-weight:800;border-radius:5px;padding:1px 5px;vertical-align:1px">실적 D-${s.ed}</span>`:''}<small>${s.n}</small></td>
         <td class="theme-cell">${s.th}</td>
         <td style="text-align:right"><span class="sig ${bandCls(s.sc,s.ab)}"><span class="dot"></span>${band(s.sc,s.ab)} <b>${sign(s.sc)}</b></span></td></tr>`).join('');
   }
@@ -458,12 +458,6 @@ function renderDetail(){
     ${d.surprise!==undefined?kr('최근 어닝 서프라이즈',pct(d.surprise),d.surprisept):''}
     ${pr.length>1?kr('52주 밴드 위치',fmt(((s.p-Math.min(...pr))/((Math.max(...pr)-Math.min(...pr))||1)*100))+'%',undefined):''}
   </div>
-
-  ${Array.isArray(d.risk)?`<div class="d-card"><div class="d-h">매도 위험 신호 · ${d.risk.length}/5</div>
-    <p style="font-size:.76rem;color:var(--dk-ink3);line-height:1.6;margin-bottom:10px">추세 이탈 신호입니다. 점수에는 반영되지 않으며(백테스트상 자동 매도는 성과를 낮춤), 보유 판단 참고용입니다.</p>
-    ${['200일선 이탈','데드크로스','고점 대비 -20%','50일선 이탈','시장 대비 부진'].map(k=>{const on=d.risk.includes(k);
-      return `<div class="krow"><span class="k">${k}</span><span class="v" style="color:${on?'#e58f6a':'#6a6b70'}">${on?'⚠ 해당':'정상'}</span></div>`}).join('')}
-  </div>`:''}
 
   <div class="d-card"><div class="d-h">주가 추이 · 최근 1년</div>
     <div style="font-weight:800;font-size:1.1rem;margin-bottom:4px">$${fmt(s.p,2)}</div>
@@ -569,7 +563,7 @@ function go(t){
 function applyLiveData(D){
   if(!D||!Array.isArray(D.stocks)||!D.stocks.length||!D.market)throw new Error('bad data.json');
   DETAILS={};
-  STOCKS=D.stocks.map(s=>({t:s.ticker,n:s.name,th:s.theme,p:s.price,mc:s.market_cap_b,sc:s.score,ytd:s.ytd,ed:s.earnings_in,ab:s.above_ma200,rk:s.risk_count}));
+  STOCKS=D.stocks.map(s=>({t:s.ticker,n:s.name,th:s.theme,p:s.price,mc:s.market_cap_b,sc:s.score,ytd:s.ytd,ed:s.earnings_in,ab:s.above_ma200}));
   D.stocks.forEach(s=>DETAILS[s.ticker]=s.detail);
   THEMES=[...new Set(STOCKS.map(s=>s.th))];
   const m=D.market;
