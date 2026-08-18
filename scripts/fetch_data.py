@@ -246,6 +246,31 @@ def pt_surprise(v):     # 10) 최근 분기 어닝 서프라이즈 %
     return 0
 
 
+def value_score(d):
+    """밸류·재무 점수 (-8 ~ +8). 저평가·고수익성·건전재무일수록 높다.
+    ※ 과거 재무 데이터를 재현할 수 없어 백테스트로 검증되지 않은 참고 지표."""
+    pts = {}
+    g = d.get("gap")
+    pts["valuation"] = 0 if g is None else (2 if g <= -20 else 1 if g <= -5 else
+                                            -2 if g >= 30 else -1 if g >= 10 else 0)
+    op = d.get("op")
+    pts["margin"] = 0 if op is None else (2 if op >= 30 else 1 if op >= 15 else -1 if op < 0 else 0)
+    roe = d.get("roe")
+    pts["roe"] = 0 if roe is None else (2 if roe >= 30 else 1 if roe >= 15 else -1 if roe < 0 else 0)
+    de = d.get("ltDE")
+    pts["debt"] = 0 if de is None else (1 if de <= 0.5 else -1 if de >= 2 else 0)
+    fcf = d.get("fcfY")
+    pts["fcf"] = 0 if fcf is None else (1 if fcf >= 4 else -1 if fcf < 0 else 0)
+    return sum(pts.values()), pts
+
+
+def value_band(v):
+    if v >= 4: return "저평가·우량"
+    if v >= 1: return "양호"
+    if v >= -2: return "보통"
+    return "고평가·주의"
+
+
 def band(score, above_ma200=False):
     """백테스트(38종목×63조합) 기반 구간.
     매도는 점수 -6 이하 + 종목이 자기 200일선 아래일 때만 (추세 존중)."""
@@ -590,6 +615,10 @@ def fetch_stock(session, ticker, name, theme, market, hist):
         "surprise": rnd(surprise, 1), "earningsDate": earnings_date,
     })
 
+    vscore, vpts = value_score(d)
+    d["valueScore"] = vscore
+    d["valuePts"] = vpts
+
     bd = band(score, bool(above_ma200))
     gap_txt = ""
     if d["gap"] is not None:
@@ -604,6 +633,7 @@ def fetch_stock(session, ticker, name, theme, market, hist):
     return {
         "ticker": ticker, "name": name, "theme": theme,
         "earnings_in": earnings_in, "above_ma200": above_ma200,
+        "value_score": vscore, "value_band": value_band(vscore),
         "mom_score": (rnd(0.5 * mom12_1 + 0.5 * ma200_dist, 1)
                       if (mom12_1 is not None and ma200_dist is not None) else None),
         "price": rnd(price, 2),
