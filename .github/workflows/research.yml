@@ -1,0 +1,24 @@
+name: Research (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      script:
+        description: "실행할 스크립트 (scripts/ 하위)"
+        required: true
+        default: "sec_probe.py"
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install yfinance requests curl_cffi
+      - run: python "scripts/${{ inputs.script }}"
