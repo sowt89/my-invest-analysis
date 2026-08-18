@@ -292,6 +292,12 @@ def fetch_market(session):
         print(f"  ! SPY 수집 실패: {e}")
     out["spy_dd_52w"] = rnd(spy_dd, 1)
     out["spy_ma200_above"] = spy_above_ma200
+    out["spy_ret12"] = None
+    try:
+        if len(h) >= 250:
+            out["spy_ret12"] = rnd((closes[-1] / closes[-250] - 1) * 100, 1)
+    except Exception:
+        pass
 
     fg = fetch_fear_greed()
     out["fear_greed"] = rnd(fg, 0)
@@ -391,10 +397,12 @@ def fetch_stock(session, ticker, name, theme, market, hist):
         avg3y_px = sum(closes5[-min(157, len(closes5)):]) / min(157, len(closes5))
         avg5y_px = sum(closes5) / len(closes5)
 
-    above_ma200 = None
+    above_ma200 = ma200 = ma50 = None
     if h5 is not None and len(h5) >= 40:
         ma200 = sum(float(x) for x in h5["Close"][-40:]) / 40   # 주봉 40주 ≈ 200거래일
         above_ma200 = price > ma200
+    if hd is not None and len(hd) >= 50:
+        ma50 = sum(float(x) for x in hd["Close"][-50:]) / 50
 
     rsi = vol_ch = None
     if hd is not None and len(hd) > 20:
@@ -574,6 +582,15 @@ def fetch_stock(session, ticker, name, theme, market, hist):
         "surprise": rnd(surprise, 1), "earningsDate": earnings_date,
     })
 
+    risk = []
+    if ma200 and price < ma200: risk.append("200일선 이탈")
+    if ma50 and ma200 and ma50 < ma200: risk.append("데드크로스")
+    if d["dd"] is not None and d["dd"] <= -20: risk.append("고점 대비 -20%")
+    if ma50 and price < ma50: risk.append("50일선 이탈")
+    if (d["ret12"] is not None and market.get("spy_ret12") is not None
+            and d["ret12"] < market["spy_ret12"]): risk.append("시장 대비 부진")
+    d["risk"] = risk
+
     bd = band(score, bool(above_ma200))
     gap_txt = ""
     if d["gap"] is not None:
@@ -588,6 +605,7 @@ def fetch_stock(session, ticker, name, theme, market, hist):
     return {
         "ticker": ticker, "name": name, "theme": theme,
         "earnings_in": earnings_in, "above_ma200": above_ma200,
+        "risk_count": len(risk),
         "price": rnd(price, 2),
         "market_cap_b": rnd(mcap / B, 1) if mcap else None,
         "ytd": rnd(ytd, 1),
