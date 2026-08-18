@@ -218,7 +218,7 @@ svg text{font-family:inherit}
   </section>
 
   <div class="card" style="border:2px solid var(--orange);margin-top:16px">
-    <div class="card-h" style="padding:14px 16px 0">통합 점수 상위</div>
+    <div class="card-h" style="padding:14px 16px 0">추천 종목 · 3축 모두 +2 이상</div>
     <div class="card-b" style="padding:10px 14px 12px"><div id="total-top"></div></div>
   </div>
 
@@ -245,7 +245,7 @@ svg text{font-family:inherit}
   <p class="foot-note">※ <b>실적</b> (-7~+8) 매출 YoY · 3년 CAGR · 서프라이즈 · 예상 성장률 · 마진 방향<br>
 ※ <b>밸류</b> (-5~+6) FWD PER 괴리 · PSR 괴리 · FCF 수익률 · PEG<br>
 ※ <b>재무</b> (-6~+7) 영업이익률 · ROE · 부채비율 · 유동비율 · FCF 마진<br>
-※ <b>통합</b> (-18~+21) = 실적 + 밸류 + 재무 합산<br>※ 세 점수 모두 백테스트 검증 불가 (과거 재무 데이터 재현 불가)</p>
+※ <b>통합</b> (-18~+21) = 실적 + 밸류 + 재무 합산<br>※ <b>✓ 추천</b> = 세 점수가 모두 +2 이상 (합산만으로는 한 축의 약점이 가려짐)<br>※ 세 점수 모두 백테스트 검증 불가 (과거 재무 데이터 재현 불가)</p>
 </main>
 
 <!-- ============ TAB 2 : 종목 상세 ============ -->
@@ -345,7 +345,8 @@ svg text{font-family:inherit}
     <tr><td>FCF 마진</td><td class="num">15% → +1</td><td class="num">음수 → -1</td></tr>
   </table>
   <table><colgroup><col class="c-ind"><col></colgroup>
-    <tr><td>통합 점수</td><td>실적 + 밸류 + 재무 합산 (-18 ~ +21)<span class="sub">상단 카드는 통합 상위 6종목</span></td></tr>
+    <tr><td>통합 점수</td><td>실적 + 밸류 + 재무 합산 (-18 ~ +21)</td></tr>
+    <tr><td>✓ 추천</td><td>세 점수가 <b>모두 +2 이상</b>인 종목<span class="sub">합산만 보면 한 축의 약점이 가려짐<br>예: 실적 +8 · 밸류 -3 도 합산 상위</span></td></tr>
   </table>
   <p style="font-size:.78rem;color:var(--ink3)">결측 지표는 0점 처리</p>
 
@@ -652,26 +653,28 @@ function renderBoard(){
 
 /* ================= 매매 점수 탭 RENDER ================= */
 function renderScore(){
-  /* 통합 점수 상위 — 실적 + 밸류 + 재무 합산 */
+  /* 추천 — 실적·밸류·재무가 모두 +2 이상인 종목 (약점 없는 종목) */
+  const TH=2, pass=x=>x.gs!=null&&x.vs!=null&&x.fs!=null&&x.gs>=TH&&x.vs>=TH&&x.fs>=TH;
   const tcol=v=>v==null?'var(--ink3)':v>=8?'#4c8f3a':v>=4?'#6ea24e':v>=0?'var(--ink2)':'#c4472e';
-  const tot=STOCKS.filter(x=>x.ts!=null).sort((a,b)=>b.ts-a.ts).slice(0,6);
-  document.getElementById('total-top').innerHTML = tot.length
+  const rec=STOCKS.filter(pass).sort((a,b)=>b.ts-a.ts);
+  document.getElementById('total-top').innerHTML = rec.length
     ? `<div class="mrow" style="padding:5px 0;border-bottom:1px solid var(--line)">
          <span class="k" style="font-size:.7rem;color:var(--ink3)">종목</span>
          <span class="v" style="font-size:.7rem;color:var(--ink3);font-weight:600;gap:10px">
            <span style="min-width:30px;text-align:right">통합</span>
            <span style="min-width:66px;text-align:right">실적·밸류·재무</span></span></div>`
-      + tot.map((x,i)=>`<div class="mrow" style="cursor:pointer;padding:10px 0" onclick="openDetail('${x.t}')">
+      + rec.map(x=>`<div class="mrow" style="cursor:pointer;padding:10px 0" onclick="openDetail('${x.t}')">
         <span class="k" style="display:flex;align-items:center;gap:9px">
-          <b style="background:${i<3?'var(--orange)':'var(--ink3)'};color:#fff;width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.7rem;flex-shrink:0">${i+1}</b>
+          <b style="background:#4c8f3a;color:#fff;width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.7rem;flex-shrink:0">✓</b>
           <span><b style="color:var(--ink)">${x.t}</b>
           <small style="display:block;color:var(--ink3);font-size:.72rem">${x.n}</small></span></span>
         <span class="v" style="gap:10px">
           <b style="color:${tcol(x.ts)};font-size:1rem;min-width:30px;text-align:right">${sign(x.ts)}</b>
           <small style="color:var(--ink2);font-weight:600;min-width:66px;text-align:right">${sign(x.gs)} · ${sign(x.vs)} · ${sign(x.fs)}</small></span></div>`).join('')
       + `<p style="font-size:.7rem;color:var(--ink3);line-height:1.5;margin-top:9px;padding-top:9px;border-top:1px solid var(--line)">
-         통합 = 실적 + 밸류 + 재무 (범위 -18 ~ +21) · 참고용 측정</p>`
-    : '<span style="font-size:.83rem;color:var(--ink2)">데이터 없음 (샘플 표시 중)</span>';
+         세 점수 모두 +2 이상 · 약점 없는 종목만 통과 · 참고용 측정</p>`
+    : `<p style="font-size:.83rem;color:var(--ink2);line-height:1.6">세 점수가 모두 +2 이상인 종목이 없습니다.<br>
+       <span style="font-size:.74rem;color:var(--ink3)">아래 표에서 통합 점수 상위 종목을 확인하세요.</span></p>`;
 
   const st=document.getElementById('s-theme'), so=document.getElementById('s-sort');
   st.innerHTML='<option value="">테마 ▾</option>';
@@ -686,7 +689,7 @@ function renderScore(){
     list.sort(key?(a,b)=>(b[key]??-99)-(a[key]??-99):(a,b)=>a.t.localeCompare(b.t));
     document.getElementById('score-body').innerHTML=list.map(x=>`
       <tr style="cursor:pointer" onclick="openDetail('${x.t}')">
-        <td class="tk">${x.t}<small>${x.n}</small></td>
+        <td class="tk">${x.t}${pass(x)?' <span style="color:#4c8f3a;font-size:.72rem">✓</span>':''}<small>${x.n}</small></td>
         <td style="text-align:right;font-weight:800;color:${col(x.ts,8)}">${x.ts!=null?sign(x.ts):'—'}</td>
         <td style="text-align:right;font-weight:800;color:${col(x.gs,6)}">${x.gs!=null?sign(x.gs):'—'}</td>
         <td style="text-align:right;font-weight:800;color:${col(x.vs,3)}">${x.vs!=null?sign(x.vs):'—'}</td>
