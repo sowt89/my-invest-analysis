@@ -9,7 +9,7 @@ on:
         default: "sec_probe.py"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   run:
@@ -22,3 +22,13 @@ jobs:
           python-version: "3.12"
       - run: pip install yfinance requests curl_cffi
       - run: python "scripts/${{ inputs.script }}"
+
+      - name: Commit dataset if produced
+        run: |
+          if [ -n "$(git status --porcelain -- data)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add data
+            git commit -m "chore: SEC point-in-time 데이터셋 갱신"
+            git push
+          fi
