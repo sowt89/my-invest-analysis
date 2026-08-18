@@ -72,7 +72,8 @@ WATCHLIST = [
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT_PATH = os.path.join(_ROOT, "data.json")
 HIST_PATH = os.path.join(_ROOT, "history.json")
-HIST_DAYS = 1095  # 3년
+HIST_DAYS = 1095  # 3년 (초과분은 archive/history-YYYY.json으로 이관)
+ARCHIVE_DIR = os.path.join(_ROOT, "archive")
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/126.0 Safari/537.36")
 
@@ -402,6 +403,24 @@ def score_inputs(d):
     return {k: v for k, v in raw.items() if v is not None}
 
 
+def archive_old(rows):
+    """보관 기간이 지난 스냅샷을 삭제하지 않고 연도별 파일로 옮겨 연속성을 유지한다."""
+    if not rows:
+        return
+    os.makedirs(ARCHIVE_DIR, exist_ok=True)
+    for year in sorted({d[:4] for d in rows}):
+        path = os.path.join(ARCHIVE_DIR, f"history-{year}.json")
+        try:
+            with open(path, encoding="utf-8") as f:
+                cur = json.load(f)
+        except Exception:
+            cur = {}
+        cur.update({d: v for d, v in rows.items() if d[:4] == year})
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(dict(sorted(cur.items())), f, ensure_ascii=False, separators=(",", ":"))
+        print(f"  아카이브 {os.path.basename(path)}: {len(cur)}일")
+
+
 def save_history(hist, stocks):
     """오늘 첫 실행에만 스냅샷을 추가하고 3년 초과분은 제거."""
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -423,6 +442,7 @@ def save_history(hist, stocks):
         if snap:
             hist[today] = snap   # 같은 날 재수집 시 누락 필드(순위 등)를 채운다
     cutoff = (datetime.now(timezone.utc) - timedelta(days=HIST_DAYS)).strftime("%Y-%m-%d")
+    archive_old({d: v for d, v in hist.items() if d < cutoff})
     hist = {d: v for d, v in hist.items() if d >= cutoff}
     with open(HIST_PATH, "w", encoding="utf-8") as f:
         json.dump(dict(sorted(hist.items())), f, ensure_ascii=False, separators=(",", ":"))

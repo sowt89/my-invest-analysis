@@ -36,7 +36,7 @@ jobs:
         run: |
           # updated_at 타임스탬프만 바뀐 경우(장외·주말)는 커밋하지 않는다
           # (단, history.json에 새 스냅샷이 추가된 날 첫 실행은 커밋)
-          HIST_CHANGED=$(git status --porcelain -- history.json)
+          HIST_CHANGED=$(git status --porcelain -- history.json archive)
           if [ -z "$HIST_CHANGED" ] && git cat-file -e HEAD:data.json 2>/dev/null; then
             jq -S 'del(.updated_at,.updated_at_kst)' data.json > /tmp/new.json
             git show HEAD:data.json | jq -S 'del(.updated_at,.updated_at_kst)' > /tmp/old.json
@@ -47,6 +47,6 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data.json history.json
+          git add data.json history.json archive
           git commit -m "chore: update market data ($(date -u +'%Y-%m-%d %H:%M UTC'))"
           git push
