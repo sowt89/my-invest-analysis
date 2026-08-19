@@ -28,9 +28,10 @@ OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
 
 FLOW = {   # 기간 흐름값
     "rev": ["RevenueFromContractWithCustomerExcludingAssessedTax", "Revenues",
-            "SalesRevenueNet", "RevenueFromContractWithCustomerIncludingAssessedTax"],
+            "SalesRevenueNet", "RevenueFromContractWithCustomerIncludingAssessedTax",
+            "RegulatedAndUnregulatedOperatingRevenue"],
     "op": ["OperatingIncomeLoss"],
-    "ni": ["NetIncomeLoss"],
+    "ni": ["NetIncomeLoss", "ProfitLoss"],
     "cfo": ["NetCashProvidedByUsedInOperatingActivities",
             "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations"],
     "capex": ["PaymentsToAcquirePropertyPlantAndEquipment", "PaymentsToAcquireProductiveAssets"],
@@ -127,12 +128,31 @@ def ttm_at(q, cutoff, end=None):
     return sum(q[e][1] for e in last4), last4[-1]
 
 
+def richest(us, cands, unit_name="USD"):
+    """분기 데이터가 가장 많은 태그를 앞에 둔다.
+
+    회사마다 쓰는 태그가 다르고, 도중에 바꾸기도 한다.
+      · AVGO는 NetIncomeLoss를 2024년에 멈추고 ProfitLoss로 옮겼다.
+      · CEG는 전체 매출이 Revenues에 있고 계약매출 태그는 일부만 담는다.
+    고정 우선순위 대신 실제 분기 관측 수로 고르면 두 경우가 함께 해결된다.
+    """
+    def n(tag):
+        cnt = 0
+        for unit, recs in us.get(tag, {}).get("units", {}).items():
+            if unit != unit_name:
+                continue
+            cnt += sum(1 for r in recs if r.get("start") and r.get("end")
+                       and 80 <= days(r["start"], r["end"]) <= 100)
+        return cnt
+    return sorted(cands, key=lambda t: -n(t))
+
+
 def build(ticker, cik):
     facts = get(f"https://data.sec.gov/api/xbrl/companyfacts/CIK{cik:010d}.json")
     us = facts.get("facts", {}).get("us-gaap", {})
-    flows = {k: quarterly(collect(us, c, False)) for k, c in FLOW.items()}
+    flows = {k: quarterly(collect(us, richest(us, c), False)) for k, c in FLOW.items()}
     inst = {k: collect(us, c, True) for k, c in INSTANT.items()}
-    sh_dur = collect(us, SHARES_DURATION, False, "shares")
+    sh_dur = collect(us, richest(us, SHARES_DURATION, "shares"), False, "shares")
     shares = {e: v for (_, e), v in sh_dur.items()}
     if not shares:      # 가중평균이 없으면 표지값으로 대체 (클래스 누락 가능)
         shares = collect(facts.get("facts", {}).get("dei", {}), SHARES_INSTANT, True, "shares")

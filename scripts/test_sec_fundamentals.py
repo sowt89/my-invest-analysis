@@ -160,5 +160,14 @@ SF.get = lambda url: synth2
 rows2 = SF.build("TEST2", 1)
 check("표지값(900) 아닌 가중평균(1450) 채택", rows2[-1]["sh"] if rows2 else None, 1450.0)
 
+print("\n12) 회사가 태그를 바꾼 경우 — 분기 관측이 많은 쪽을 고른다")
+old_tag = quarters("NetIncomeLoss", 10)          # 8분기
+new_tag = {"ProfitLoss": {"units": {"USD":
+    quarters("ProfitLoss", 20)["ProfitLoss"]["units"]["USD"] * 2}}}   # 더 많은 관측
+merged = {**old_tag, **new_tag}
+order = SF.richest(merged, ["NetIncomeLoss", "ProfitLoss"])
+check("관측 많은 태그가 앞", order[0], "ProfitLoss")
+check("없는 태그는 뒤로", SF.richest(merged, ["없는태그", "NetIncomeLoss"])[0], "NetIncomeLoss")
+
 print("\n" + ("실패 " + str(FAIL) if FAIL else "전부 통과"))
 sys.exit(1 if FAIL else 0)
