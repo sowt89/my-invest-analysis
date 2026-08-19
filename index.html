@@ -325,7 +325,7 @@ svg text{font-family:inherit}
   <table><colgroup><col class="c-ind"><col class="c-half"><col class="c-half"></colgroup>
     <tr><th>지표</th><th class="num">가점</th><th class="num">감점</th></tr>
     <tr><td>FWD PER<br>3년 괴리</td><td class="num">-5% → +1<br>-20% → +2</td><td class="num">+10% → -1<br>+30% → -2</td></tr>
-    <tr><td>PSR<br>5년 괴리</td><td class="num">-20% → +1</td><td class="num">+50% → -1</td></tr>
+    <tr><td>PSR 5년 괴리<span class="sub">SEC 원본 실측</span></td><td class="num">-20% → +1</td><td class="num">+50% → -1</td></tr>
     <tr><td>FCF 수익률</td><td class="num">3% → +1<br>5% → +2</td><td class="num">음수 → -1</td></tr>
     <tr><td>PEG</td><td class="num">1 미만 → +1</td><td class="num">2.5 초과 → -1</td></tr>
   </table>
@@ -343,7 +343,9 @@ svg text{font-family:inherit}
     <tr><td>통합 점수</td><td>실적 + 밸류 + 재무 합산 (-18 ~ +21)</td></tr>
     <tr><td>상단 카드</td><td>세 점수가 <b>모두 +2 이상</b>인 종목<span class="sub">합산만 보면 한 축의 약점이 가려짐<br>추천이 아니라 선별 조건</span></td></tr>
   </table>
-  <p style="font-size:.78rem;color:var(--ink3)">결측 지표는 0점 처리<br>3년 평균 PER · 5년 평균 PSR은 누적 실측이 쌓이기 전까지 현재 실적을 과거 주가에 대입한 근사값이라, 고성장 종목은 실제보다 고평가로 계산됩니다.</p>
+  <p style="font-size:.78rem;color:var(--ink3)">결측 지표는 0점 처리<br>
+  5년 평균 PSR은 SEC 원본 재무제표로 계산합니다 — 각 시점의 주가 × 당시 발행주식수 ÷ 당시 매출.<br>
+  3년 평균 FWD PER은 아직 근사값입니다. 예상 실적(컨센서스)의 과거값을 구할 수 없어, 현재 예상 실적을 과거 주가에 대입합니다. 이 방식은 고성장 종목을 실제보다 고평가로 계산합니다. 매일 실측이 누적되면 점차 대체됩니다.</p>
 
   <h3>4. 검증 근거</h3>
   <p>2000~2026년 26년 · 닷컴버블 · 금융위기 포함</p>
