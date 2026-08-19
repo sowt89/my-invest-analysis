@@ -23,8 +23,9 @@ from datetime import datetime, timezone
 import yfinance as yf
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from fetch_data import (compute_rsi, pt_ret12, pt_drawdown, pt_rsi, pt_volume,
-                        pt_spy, pt_vix, pt_fg, band, make_session)
+from fetch_data import compute_rsi, make_session
+from legacy_score import (pt_ret12, pt_drawdown, pt_rsi, pt_volume,
+                          pt_spy, pt_vix, pt_fg, band)
 
 LOT = 5_000_000          # 1회 투입액 (원, 환율 무시)
 YEARS = 10
