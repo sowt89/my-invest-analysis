@@ -35,6 +35,11 @@ FLOW = {   # 기간 흐름값
             "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations"],
     "capex": ["PaymentsToAcquirePropertyPlantAndEquipment", "PaymentsToAcquireProductiveAssets"],
 }
+SHARES = {   # 발행주식수 (dei 우선, 없으면 us-gaap)
+    "dei": ["EntityCommonStockSharesOutstanding"],
+    "us-gaap": ["CommonStockSharesOutstanding",
+                "WeightedAverageNumberOfDilutedSharesOutstanding"],
+}
 INSTANT = {  # 시점 잔액
     "eq": ["StockholdersEquity",
            "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"],
@@ -54,12 +59,12 @@ def days(a, b):
     return (date.fromisoformat(b) - date.fromisoformat(a)).days
 
 
-def collect(us, cands, instant):
+def collect(us, cands, instant, unit_name="USD"):
     """{기간키: (값, 최초제출일)}. 최초 제출값만 남긴다."""
     out = {}
     for tag in cands:                       # 앞선 태그를 우선하되, 빈 구간은 뒤 태그로 보완
         for unit, recs in us.get(tag, {}).get("units", {}).items():
-            if unit != "USD":
+            if unit != unit_name:
                 continue
             for r in recs:
                 f, e = r.get("filed"), r.get("end")
@@ -120,6 +125,9 @@ def build(ticker, cik):
     us = facts.get("facts", {}).get("us-gaap", {})
     flows = {k: quarterly(collect(us, c, False)) for k, c in FLOW.items()}
     inst = {k: collect(us, c, True) for k, c in INSTANT.items()}
+    shares = collect(facts.get("facts", {}).get("dei", {}), SHARES["dei"], True, "shares")
+    if not shares:
+        shares = collect(us, SHARES["us-gaap"], True, "shares")
 
     filings = sorted({f for d in list(flows.values()) + list(inst.values())
                       for (_, f) in d.values()})
@@ -135,6 +143,9 @@ def build(ticker, cik):
         for k, d in inst.items():
             picks = [(e, v) for e, (v, ff) in d.items() if ff <= f and e <= rend]
             row[k] = max(picks)[1] if picks else None
+        # 발행주식수는 표지에 기재돼 결산일보다 늦을 수 있으므로 제출일 기준으로만 자른다
+        sp = [(e, v) for e, (v, ff) in shares.items() if ff <= f]
+        row["sh"] = max(sp)[1] if sp else None
         # 성장률용 과거 TTM (같은 시점에 이미 제출돼 있던 값만)
         for label, back in (("revTtmPrev", 340), ("revTtm3y", 1080)):
             past = (date.fromisoformat(rend).toordinal() - back)
@@ -167,7 +178,8 @@ def main():
         cov = lambda k: sum(1 for r in rows if r.get(k) is not None)
         print(f"  {t:6s} {len(rows):3d}분기  {rows[0]['filed'] if rows else '-'}~"
               f"{rows[-1]['filed'] if rows else '-'}  "
-              f"op {cov('opTtm')} eq {cov('eq')} ltd {cov('ltd')} fcf {cov('fcfTtm')}")
+              f"op {cov('opTtm')} eq {cov('eq')} ltd {cov('ltd')} fcf {cov('fcfTtm')} "
+              f"sh {cov('sh')}")
         time.sleep(0.12)
 
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
