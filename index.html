@@ -263,7 +263,7 @@ svg text{font-family:inherit}
       </tr></thead><tbody id="cmp-body"></tbody></table>
     </div>
   </div>
-  <p class="foot-note">※ 괴리 = FWD PER의 3년 평균 대비 이격<br>※ 음수(초록) = 과거 평균보다 저평가</p>
+  <p class="foot-note">※ 괴리 = FWD PER의 3년 평균 대비 이격<br>※ 음수(초록) = 과거 평균보다 저평가<br>※ 3년 평균은 근사값 — 고성장 종목은 실제보다 고평가로 계산됨</p>
 </main>
 
 <div id="guide"><div class="gwrap">
@@ -466,7 +466,7 @@ function detail(s){
   const r=rng(s.t);
   if(s.t==='NVDA')return{
     ret12:-19.7,dd:-22.4,rsi:38.0,shortR:0.37,volCh:41.7,
-    fwdPer:14.9,avgFwdPer:19.2,psr:18.16,fwdPsr:14.2,avgPsr:28.96,evEbitda:23.65,peg:0.85,fcfY:19.20,
+    fwdPer:14.9,avgFwdPer:19.2,psr:18.16,fwdPsr:14.2,avgPsr:28.96,psrSrc:'sec',evEbitda:23.65,peg:0.85,fcfY:19.20,
     roa:53.1,roe:111.3,gross:74.1,op:62.4,profit:55.7,fcfM:43.0,curR:3.44,quickR:2.93,ltDE:0.07,
     qRev:[26.0,28.4,30.0,32.5,35.1,39.3,44.1,46.7],qOp:[16.9,18.6,19.7,21.9,23.3,25.6,29.8,31.5],
     yrs:['FY22','FY23','FY24','FY25','FY26E'],yRev:[26.9,27.0,60.9,130.5,216.0],yOcf:[9.1,5.6,28.1,64.1,102.8],yCapex:[-0.98,-1.8,-1.1,-3.2,-6.1],
@@ -482,7 +482,7 @@ function detail(s){
   const yOcf=yRev.map(v=>g(v*(op/100)*1.1)),yCapex=yRev.map(v=>g(-v*(0.04+r()*0.1)));
   return{
     ret12:g(-40+r()*80),dd:g(-(5+r()*45)),rsi:g(25+r()*50),shortR:g(r()*4)/1,volCh:g(-20+r()*80),
-    fwdPer,avgFwdPer:avg,psr:g(1+r()*20),fwdPsr:g(1+r()*15),avgPsr:g(2+r()*25),evEbitda:g(8+r()*30),peg:g(0.4+r()*2.5),fcfY:g(r()*20),
+    fwdPer,avgFwdPer:avg,psr:g(1+r()*20),fwdPsr:g(1+r()*15),avgPsr:g(2+r()*25),psrSrc:'proxy',evEbitda:g(8+r()*30),peg:g(0.4+r()*2.5),fcfY:g(r()*20),
     roa:g(r()*30),roe:g(r()*60),gross,op,profit,fcfM:g(profit*(0.6+r()*0.8)),curR:g(0.8+r()*3),quickR:g(0.6+r()*2.5),ltDE:g(r()*1.5),
     qRev,qOp,yrs:['FY22','FY23','FY24','FY25','FY26E'],yRev,yOcf,yCapex,
     revG:[g(-10+r()*60),g(-5+r()*70),g(r()*80)],
@@ -782,10 +782,10 @@ function renderDetail(){
   <p class="sec-sub">3년 평균 대비 이격</p>
   <div class="d-card">
     ${kr('FWD PER',d.fwdPer==null?'—':fmt(d.fwdPer)+(gap==null?'':`<span class="gap-tag ${gap<0?'':'over'}">${gap<0?'3Y 평균 대비 저평가':'3Y 평균 대비 고평가'} ${pct(gap)}</span>`),undefined)}
-    ${kr('3Y 평균 FWD PER',fmt(d.avgFwdPer),undefined)}
+    ${kr('3Y 평균 FWD PER <span style="color:var(--dk-ink3);font-weight:400">(근사값 · 컨센서스 과거값 없음)</span>',fmt(d.avgFwdPer),undefined)}
     ${kr('PSR',fmt(d.psr,2),undefined)}
     ${kr('FWD PSR',fmt(d.fwdPsr,2),undefined)}
-    ${kr('5Y 평균 PSR',fmt(d.avgPsr,2),undefined)}
+    ${kr('5Y 평균 PSR <span style="color:var(--dk-ink3);font-weight:400">('+(d.psrSrc==='sec'?'SEC 원본 실측':'근사값')+')</span>',fmt(d.avgPsr,2),undefined)}
     ${kr('EV/EBITDA',fmt(d.evEbitda,2),undefined)}
     ${kr('PEG',fmt(d.peg,2),undefined)}
     ${kr('FCF 수익률',fmt(d.fcfY,2)+'%',undefined)}
