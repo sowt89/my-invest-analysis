@@ -132,8 +132,9 @@ def build(ticker, cik):
     if not shares:
         shares = collect(us, SHARES["us-gaap"], True, "shares")
 
-    filings = sorted({f for d in list(flows.values()) + list(inst.values())
-                      for (_, f) in d.values()})
+    # 분기값은 (시작일, 값, 제출일), 잔액은 (값, 제출일) — 제출일은 항상 마지막 원소
+    filings = sorted({v[-1] for d in list(flows.values()) + list(inst.values())
+                      for v in d.values()})
     rows, seen = [], set()
     for f in filings:
         rev, rend = ttm_at(flows["rev"], f)
@@ -185,10 +186,13 @@ def main():
               f"sh {cov('sh')}")
         time.sleep(0.12)
 
+    n = sum(len(v) for v in out.values())
+    if n < 1000:
+        raise SystemExit(f"레코드 {n}개 — 정상 범위(1000+) 미달이라 저장하지 않는다. "
+                         f"실패: {fails}")
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(out, f, separators=(",", ":"))
-    n = sum(len(v) for v in out.values())
     print(f"\n{len(out)}종목 · 분기 레코드 {n}개 · {os.path.getsize(OUT)//1024}KB"
           + (f" · 실패 {fails}" if fails else ""))
     early = sorted(r["filed"] for v in out.values() for r in v)
