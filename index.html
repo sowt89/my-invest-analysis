@@ -23,7 +23,6 @@ body.dark .nav{background:rgba(19,20,22,.95)}
 body.dark .nav button{color:#75756f}
 body.dark .nav button.on{color:var(--orange)}
 body.dark select{background-color:var(--card);border-color:var(--line);color:var(--ink)}
-body.dark .chip small{color:#a9c76f}
 body.dark .badge.neutral{background:var(--hold-bg);color:var(--ink2)}
 body.dark .dark-card{border-color:var(--line)}
 body.dark #guide .gtop{background:rgba(19,20,22,.96)}
@@ -57,10 +56,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretend
 .card-b{padding:12px 16px 16px}
 .dark-card{background:var(--dk);border-color:#0c0d0e;color:var(--dk-ink)}
 .dark-card .card-h{color:var(--dk-ink2)}
-/* chips */
-.chips{display:flex;flex-wrap:wrap;gap:8px}
-.chip{display:inline-flex;align-items:center;gap:5px;background:var(--buy-bg);color:var(--buy-ink);border-radius:999px;padding:7px 13px;font-weight:800;font-size:.86rem}
-.chip small{font-weight:800;color:#5b8f3d}
 /* market rows */
 .mrow{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:.86rem}
 .mrow:last-child{border-bottom:none}
@@ -218,12 +213,12 @@ svg text{font-family:inherit}
   </section>
 
   <div class="card" style="border:2px solid var(--orange);margin-top:16px">
-    <div class="card-h" style="padding:14px 16px 0">추천 종목 · 3축 모두 +2 이상</div>
+    <div class="card-h" style="padding:14px 16px 0">3축 모두 +2 이상</div>
     <div class="card-b" style="padding:10px 14px 12px"><div id="total-top"></div></div>
   </div>
 
   <div class="card dark-card">
-    <div class="card-h">오늘 판단</div>
+    <div class="card-h">시장 요약</div>
     <div class="card-b"><p id="today-summary" style="font-size:.85rem;line-height:1.7;color:#d6d5cf"></p></div>
   </div>
 
@@ -245,7 +240,7 @@ svg text{font-family:inherit}
   <p class="foot-note">※ <b>실적</b> (-7~+8) 매출 YoY · 3년 CAGR · 서프라이즈 · 예상 성장률 · 마진 방향<br>
 ※ <b>밸류</b> (-5~+6) FWD PER 괴리 · PSR 괴리 · FCF 수익률 · PEG<br>
 ※ <b>재무</b> (-6~+7) 영업이익률 · ROE · 부채비율 · 유동비율 · FCF 마진<br>
-※ <b>통합</b> (-18~+21) = 실적 + 밸류 + 재무 합산<br>※ <b>✓ 추천</b> = 세 점수가 모두 +2 이상 (합산만으로는 한 축의 약점이 가려짐)<br>※ 실적·재무 점수는 2010~2026 검증 결과 <b>예측력 확인되지 않음</b> · 밸류 점수는 검증 불가 (컨센서스 과거값 없음)</p>
+※ <b>통합</b> (-18~+21) = 실적 + 밸류 + 재무 합산<br>※ 위 카드 = 세 점수가 모두 +2 이상인 종목 (합산만 보면 한 축의 약점이 가려짐)<br>※ 실적·재무 점수는 2010~2026 검증 결과 <b>예측력 확인되지 않음</b> · 밸류 점수는 검증 불가 (컨센서스 과거값 없음)</p>
 </main>
 
 <!-- ============ TAB 2 : 종목 상세 ============ -->
@@ -256,7 +251,7 @@ svg text{font-family:inherit}
   <section class="hero">
     <div class="kicker">관심종목 밸류에이션</div>
     <h2>밸류 비교</h2>
-    <p>40종목 지표 한눈에 비교<br>초록 = 기준 충족, 주황 = 미달</p>
+    <p>전 종목 지표 한눈에 비교<br>초록 = 기준 충족, 주황 = 미달</p>
   </section>
   <div class="card dark-card" style="padding-bottom:4px">
     <div class="card-h" style="padding-top:16px;display:flex;justify-content:space-between;align-items:center">밸류에이션 비교
@@ -274,14 +269,14 @@ svg text{font-family:inherit}
 <div id="guide"><div class="gwrap">
   <div class="gtop"><h2>설명서</h2><button class="gclose" onclick="toggleGuide(0)">닫기</button></div>
 
-  <p class="lead">관심종목 40개를 매일 자동 분석해 <b>모멘텀 상위 5종목</b>과 <b>실적·밸류·재무 진단</b>을 보여줍니다.</p>
+  <p class="lead">관심종목 39개를 매일 자동 분석해 <b>모멘텀 상위 5종목</b>과 <b>실적·밸류·재무 진단</b>을 보여줍니다.</p>
 
   <h3>화면 구성</h3>
   <table><colgroup><col class="c-ind"><col></colgroup>
-    <tr><td>매수 종목</td><td>모멘텀 상위 5종목 · 시장 국면 · 40종목 순위</td></tr>
+    <tr><td>매수 종목</td><td>모멘텀 상위 5종목 · 시장 국면 · 전 종목 순위</td></tr>
     <tr><td>종목 진단</td><td>실적 · 밸류 · 재무 3축 점수</td></tr>
     <tr><td>종목 상세</td><td>주가 차트 · 재무 · 현금흐름 · 컨센서스</td></tr>
-    <tr><td>밸류 비교</td><td>40종목 밸류에이션 표</td></tr>
+    <tr><td>밸류 비교</td><td>전 종목 밸류에이션 표</td></tr>
   </table>
 
   <h3>1. 모멘텀 순위</h3>
@@ -316,7 +311,7 @@ svg text{font-family:inherit}
   <h3>3. 종목 진단</h3>
   <p><b>참고를 위한 측정입니다.</b> SEC 원본 재무제표로 2010~2026년을 검증한 결과, 실적·재무 점수의 예측력은 확인되지 않았습니다(구간·종목 범위에 따라 부호가 뒤집힘). 밸류 점수는 컨센서스 과거값이 없어 검증 자체가 불가합니다. 매매 판단은 모멘텀 순위 기준.</p>
 
-  <p style="margin-bottom:2px"><b>실적 점수</b> (-7 ~ +8) · 칩 기준 +6↑</p>
+  <p style="margin-bottom:2px"><b>실적 점수</b> (-7 ~ +8)</p>
   <table><colgroup><col class="c-ind"><col class="c-half"><col class="c-half"></colgroup>
     <tr><th>지표</th><th class="num">가점</th><th class="num">감점</th></tr>
     <tr><td>매출 YoY</td><td class="num">+10% → +1<br>+25% → +2</td><td class="num">역성장 → -1<br>-10% → -2</td></tr>
@@ -326,7 +321,7 @@ svg text{font-family:inherit}
     <tr><td>영업이익률<br>방향</td><td class="num">+2%p → +1</td><td class="num">-2%p → -1</td></tr>
   </table>
 
-  <p style="margin-bottom:2px"><b>밸류 점수</b> (-5 ~ +6) · 칩 기준 +3↑</p>
+  <p style="margin-bottom:2px"><b>밸류 점수</b> (-5 ~ +6)</p>
   <table><colgroup><col class="c-ind"><col class="c-half"><col class="c-half"></colgroup>
     <tr><th>지표</th><th class="num">가점</th><th class="num">감점</th></tr>
     <tr><td>FWD PER<br>3년 괴리</td><td class="num">-5% → +1<br>-20% → +2</td><td class="num">+10% → -1<br>+30% → -2</td></tr>
@@ -335,20 +330,20 @@ svg text{font-family:inherit}
     <tr><td>PEG</td><td class="num">1 미만 → +1</td><td class="num">2.5 초과 → -1</td></tr>
   </table>
 
-  <p style="margin-bottom:2px"><b>재무 점수</b> (-6 ~ +7) · 칩 기준 +6↑</p>
+  <p style="margin-bottom:2px"><b>재무 점수</b> (-6 ~ +7)</p>
   <table><colgroup><col class="c-ind"><col class="c-half"><col class="c-half"></colgroup>
     <tr><th>지표</th><th class="num">가점</th><th class="num">감점</th></tr>
     <tr><td>영업이익률</td><td class="num">15% → +1<br>30% → +2</td><td class="num">적자 → -2</td></tr>
     <tr><td>ROE</td><td class="num">15% → +1<br>30% → +2</td><td class="num">음수 → -1</td></tr>
-    <tr><td>LT 부채비율</td><td class="num">0.5 이하 → +1</td><td class="num">2 이상 → -1</td></tr>
+    <tr><td>부채비율<br>(총부채÷자본)</td><td class="num">0.5 이하 → +1</td><td class="num">2 이상 → -1</td></tr>
     <tr><td>유동비율</td><td class="num">1.5 이상 → +1</td><td class="num">1 미만 → -1</td></tr>
     <tr><td>FCF 마진</td><td class="num">15% → +1</td><td class="num">음수 → -1</td></tr>
   </table>
   <table><colgroup><col class="c-ind"><col></colgroup>
     <tr><td>통합 점수</td><td>실적 + 밸류 + 재무 합산 (-18 ~ +21)</td></tr>
-    <tr><td>✓ 추천</td><td>세 점수가 <b>모두 +2 이상</b>인 종목<span class="sub">합산만 보면 한 축의 약점이 가려짐<br>예: 실적 +8 · 밸류 -3 도 합산 상위</span></td></tr>
+    <tr><td>상단 카드</td><td>세 점수가 <b>모두 +2 이상</b>인 종목<span class="sub">합산만 보면 한 축의 약점이 가려짐<br>추천이 아니라 선별 조건</span></td></tr>
   </table>
-  <p style="font-size:.78rem;color:var(--ink3)">결측 지표는 0점 처리</p>
+  <p style="font-size:.78rem;color:var(--ink3)">결측 지표는 0점 처리<br>3년 평균 PER · 5년 평균 PSR은 누적 실측이 쌓이기 전까지 현재 실적을 과거 주가에 대입한 근사값이라, 고성장 종목은 실제보다 고평가로 계산됩니다.</p>
 
   <h3>4. 검증 근거</h3>
   <p>2000~2026년 26년 · 닷컴버블 · 금융위기 포함</p>
@@ -369,7 +364,7 @@ svg text{font-family:inherit}
   <div class="warn"><p><b>하락장에선 "덜 떨어진" 종목을 고름</b> · 상대 순위라 전부 하락 중이어도 5개를 채움</p></div>
   <div class="warn"><p><b>워치리스트가 성과를 좌우</b> · 부진 종목만 모인 풀에서는 오히려 손해</p></div>
   <div class="warn"><p><b>세금 부담</b> · 26년 시뮬레이션 세전 41억 → 세후 9.4억</p></div>
-  <div class="warn"><p><b>지수보다 낫다고 검증된 것 아님</b> · 검증 범위는 "같은 40종목 안에서의 선택"</p></div>
+  <div class="warn"><p><b>지수보다 낫다고 검증된 것 아님</b> · 검증 범위는 "같은 워치리스트 안에서의 선택"</p></div>
   <div class="warn"><p><b>급락 대응 불가</b> · 월 1회 점검 기준</p></div>
 
   <h3>6. 데이터</h3>
@@ -627,11 +622,12 @@ function renderBoard(){
     `<b style="color:#f0efeb">${MARKET.regime||MARKET.mood}</b> · SPY 52주 고점 대비 ${fmt(MARKET.spy52)}%<br>
      VIX ${fmt(MARKET.vix,2)} · Fear &amp; Greed ${fmt(MARKET.fg,0)} (${MARKET.fgLabel||'—'})<br>
      ${top3.length?`모멘텀 상위 — ${top3.map(s=>s.t).join(' · ')}`:''}`;
-  const M=[['SPY 52주 낙폭',fmt(MARKET.spy52)+'%',MARKET.spyPt],['VIX',fmt(MARKET.vix,2),MARKET.vixPt],['Fear & Greed',fmt(MARKET.fg,0),MARKET.fgPt]];
-  if(MARKET.trendAbove!=null)M.push(['SPY 200일선',MARKET.trendAbove?'위 · 상승':'아래 · 하락',MARKET.trendAdj]);
+  /* 값만 표시 — 여기 붙어 있던 가감점은 예측력이 음수로 측정된 역발상 점수의 구성요소였다 */
+  const M=[['SPY 52주 낙폭',fmt(MARKET.spy52)+'%'],['VIX',fmt(MARKET.vix,2)],['Fear & Greed',fmt(MARKET.fg,0)]];
+  if(MARKET.trendAbove!=null)M.push(['SPY 200일선',MARKET.trendAbove?'위 · 상승':'아래 · 하락']);
   const qqq=STOCKS.find(s=>s.t==='QQQ');
   document.getElementById('market-rows').innerHTML=
-    M.map(([k,v,p])=>`<div class="mrow"><span class="k">${k}</span><span class="v">${v}<span class="pt ${p>0?'up':p<0?'dn':'zr'}">${p===0?'0':sign(p)}</span></span></div>`).join('')
+    M.map(([k,v])=>`<div class="mrow"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('')
     +(qqq&&qqq.ms!=null?`<div class="mrow" style="cursor:pointer" onclick="openDetail('QQQ')"><span class="k">나스닥100 모멘텀 (QQQ)</span><span class="v">${fmt(qqq.ms,1)}<span class="pt ${qqq.ms>0?'up':'dn'}">${qqq.ms>0?'상승':'하락'}</span></span></div>`:'');
 
   const ft=document.getElementById('f-theme');
@@ -653,7 +649,7 @@ function renderBoard(){
 
 /* ================= 매매 점수 탭 RENDER ================= */
 function renderScore(){
-  /* 추천 — 실적·밸류·재무가 모두 +2 이상인 종목 (약점 없는 종목) */
+  /* 실적·밸류·재무가 모두 +2 이상인 종목 — 선별 조건일 뿐 추천이 아니다 */
   const TH=2, pass=x=>x.gs!=null&&x.vs!=null&&x.fs!=null&&x.gs>=TH&&x.vs>=TH&&x.fs>=TH;
   const tcol=v=>v==null?'var(--ink3)':v>=8?'#4c8f3a':v>=4?'#6ea24e':v>=0?'var(--ink2)':'#c4472e';
   const rec=STOCKS.filter(pass).sort((a,b)=>b.ts-a.ts);
@@ -665,14 +661,13 @@ function renderScore(){
            <span style="min-width:66px;text-align:right">실적·밸류·재무</span></span></div>`
       + rec.map(x=>`<div class="mrow" style="cursor:pointer;padding:10px 0" onclick="openDetail('${x.t}')">
         <span class="k" style="display:flex;align-items:center;gap:9px">
-          <b style="background:#4c8f3a;color:#fff;width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.7rem;flex-shrink:0">✓</b>
           <span><b style="color:var(--ink)">${x.t}</b>
           <small style="display:block;color:var(--ink3);font-size:.72rem">${x.n}</small></span></span>
         <span class="v" style="gap:10px">
           <b style="color:${tcol(x.ts)};font-size:1rem;min-width:30px;text-align:right">${sign(x.ts)}</b>
           <small style="color:var(--ink2);font-weight:600;min-width:66px;text-align:right">${sign(x.gs)} · ${sign(x.vs)} · ${sign(x.fs)}</small></span></div>`).join('')
       + `<p style="font-size:.7rem;color:var(--ink3);line-height:1.5;margin-top:9px;padding-top:9px;border-top:1px solid var(--line)">
-         세 점수 모두 +2 이상 · 약점 없는 종목만 통과 · 참고용 측정</p>`
+         세 점수 모두 +2 이상 · 참고용 측정이며 추천이 아닙니다</p>`
     : `<p style="font-size:.83rem;color:var(--ink2);line-height:1.6">세 점수가 모두 +2 이상인 종목이 없습니다.<br>
        <span style="font-size:.74rem;color:var(--ink3)">아래 표에서 통합 점수 상위 종목을 확인하세요.</span></p>`;
 
@@ -689,7 +684,7 @@ function renderScore(){
     list.sort(key?(a,b)=>(b[key]??-99)-(a[key]??-99):(a,b)=>a.t.localeCompare(b.t));
     document.getElementById('score-body').innerHTML=list.map(x=>`
       <tr style="cursor:pointer" onclick="openDetail('${x.t}')">
-        <td class="tk">${x.t}${pass(x)?' <span style="color:#4c8f3a;font-size:.72rem">✓</span>':''}<small>${x.n}</small></td>
+        <td class="tk">${x.t}<small>${x.n}</small></td>
         <td style="text-align:right;font-weight:800;color:${col(x.ts,8)}">${x.ts!=null?sign(x.ts):'—'}</td>
         <td style="text-align:right;font-weight:800;color:${col(x.gs,6)}">${x.gs!=null?sign(x.gs):'—'}</td>
         <td style="text-align:right;font-weight:800;color:${col(x.vs,3)}">${x.vs!=null?sign(x.vs):'—'}</td>
@@ -758,7 +753,7 @@ function renderDetail(){
     ${s.ms!=null?kr('모멘텀 점수 <span style="color:var(--dk-ink3);font-weight:400">('+(s.mr?s.mr+'위':'순위 제외')+')</span>',fmt(s.ms,1),undefined):''}
     ${d.mom12_1!=null?kr('모멘텀 <span style="color:var(--dk-ink3);font-weight:400">(최근 1개월 제외 1년 수익률)</span>',pct(d.mom12_1),undefined):''}
     ${d.ma200Dist!=null?kr('200일선 이격도',pct(d.ma200Dist),undefined):''}
-    ${kr('종합 점수 <span style="color:var(--dk-ink3);font-weight:400">(참고 · 예측력 미검증)</span>',sign(s.sc),undefined)}
+    ${kr('종합 점수 <span style="color:var(--dk-ink3);font-weight:400">(참고 · 검증 결과 예측력 음수)</span>',sign(s.sc),undefined)}
     ${pr.length>1?kr('52주 밴드 위치',fmt(((s.p-Math.min(...pr))/((Math.max(...pr)-Math.min(...pr))||1)*100))+'%',undefined):''}
   </div>
 
@@ -802,7 +797,7 @@ function renderDetail(){
     ${kr('FCF Margin',pct(d.fcfM),d.fcfM>=15?1:0)}
     ${kr('Current Ratio',fmt(d.curR,2),undefined)}
     ${kr('Quick Ratio',fmt(d.quickR,2),undefined)}
-    ${kr('LT Debt/Equity',fmt(d.ltDE,2),undefined)}
+    ${kr('부채비율 (D/E)',fmt(d.ltDE,2),undefined)}
   </div>
 
   <div class="sec-label"><span class="no">03</span><span class="t">실적</span></div>
