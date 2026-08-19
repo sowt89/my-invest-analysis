@@ -80,44 +80,47 @@ def collect(us, cands, instant, unit_name="USD"):
 
 
 def quarterly(flows):
-    """분기값을 만든다.
+    """분기값을 만든다. {분기종료일: (시작일, 값, 제출일)}
 
-    현금흐름표 등은 분기가 아니라 누적(YTD)으로 제출되므로
-    같은 회계연도 시작일을 공유하는 누적값의 차분으로 분기값을 역산한다.
+    분기 종료일을 키로 삼아 같은 분기가 중복 집계되지 않게 한다.
+    원래 분기값을 우선하고, 없으면 누적(YTD) 차분 → 연간-3분기 순으로 채운다.
+    현금흐름표 등은 분기가 아니라 회계연도 누적으로 제출되기 때문이다.
     """
-    q = {(s, e): v for (s, e), v in flows.items() if 80 <= days(s, e) <= 100}
+    q = {}
+    for (st, e), (val, filed) in flows.items():          # 1) 원래 분기값
+        if 80 <= days(st, e) <= 100:
+            q[e] = (st, val, filed)
 
-    by_start = {}
-    for (s, e), (val, filed) in flows.items():
-        by_start.setdefault(s, []).append((e, val, filed))
-    for s, lst in by_start.items():
+    by_start = {}                                        # 2) 누적값의 인접 차분
+    for (st, e), (val, filed) in flows.items():
+        by_start.setdefault(st, []).append((e, val, filed))
+    for st, lst in by_start.items():
         lst.sort()
         for (e0, v0, f0), (e1, v1, f1) in zip(lst, lst[1:]):
-            if 80 <= days(e0, e1) <= 100 and (e0, e1) not in q:
-                q[(e0, e1)] = (v1 - v0, max(f0, f1))
+            if 80 <= days(e0, e1) <= 100 and e1 not in q:
+                q[e1] = (e0, v1 - v0, max(f0, f1))
 
-    for (s, e), (val, filed) in flows.items():
-        if not 350 <= days(s, e) <= 380:
+    for (st, e), (val, filed) in flows.items():          # 3) 연간 - 3분기 = Q4
+        if not 350 <= days(st, e) <= 380 or e in q:
             continue
-        parts = [(qs, qe) for (qs, qe) in q if s <= qs and qe <= e]
-        if len(parts) == 3:                                  # Q1~Q3만 있으면 Q4 = 연간 - 3분기
-            last = max(qe for _, qe in parts)
-            got = sum(q[p][0] for p in parts)
-            fl = max(q[p][1] for p in parts)
-            q[(last, e)] = (val - got, max(filed, fl))
+        parts = [qe for qe, (qs, _, _) in q.items() if st <= qs and qe < e]
+        if len(parts) == 3:
+            got = sum(q[qe][1] for qe in parts)
+            fl = max(q[qe][2] for qe in parts)
+            q[e] = (max(parts), val - got, max(filed, fl))
     return q
 
 
 def ttm_at(q, cutoff, end=None):
     """cutoff 시점까지 제출된 분기값으로 TTM. end 지정 시 그 분기 종료일 기준."""
-    avail = sorted(((s, e) for (s, e), (_, f) in q.items() if f <= cutoff and (end is None or e <= end)),
-                   key=lambda k: k[1])
+    avail = sorted(e for e, (_, _, f) in q.items()
+                   if f <= cutoff and (end is None or e <= end))
     if len(avail) < 4:
         return None, None
     last4 = avail[-4:]
-    if days(last4[0][0], last4[-1][1]) > 400:                # 구멍 있는 4분기는 버린다
+    if days(q[last4[0]][0], last4[-1]) > 400:            # 구멍 있는 4분기는 버린다
         return None, None
-    return sum(q[k][0] for k in last4), last4[-1][1]
+    return sum(q[e][1] for e in last4), last4[-1]
 
 
 def build(ticker, cik):

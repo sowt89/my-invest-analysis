@@ -387,31 +387,34 @@ def load_pit():
         return {}
 
 
-def sec_avg_psr(rows, dates, closes, psr_now):
-    """과거 PSR 실측 평균 = 각 시점 주가 x 당시 발행주식수 / 당시 TTM 매출.
+def sec_multiple(rows, dates, closes, key, weeks=None, check_now=None):
+    """각 시점의 배수(주가 x 당시 발행주식수 / 당시 TTM 지표)를 실측 계산한다.
 
-    근사값(현재 매출을 과거 주가에 대입)과 달리 매출 성장이 반영된다.
-    현재 시점 재계산값이 야후의 PSR과 30% 넘게 어긋나면(주식 클래스 분리 등)
-    신뢰할 수 없다고 보고 None을 반환해 기존 근사값으로 되돌린다.
+    반환: (평균, 최신값). 산출 불가면 (None, None).
+    key="revTtm"이면 PSR, "niTtm"이면 PER.
+    적자 구간(분모 <= 0)은 배수가 의미를 잃으므로 제외한다.
+    check_now가 주어지면 최신 재계산값과 30% 넘게 어긋날 때 폐기한다
+    (다중 주식 클래스 등 주식수 집계 불일치 방어).
     """
-    usable = [r for r in rows if r.get("sh") and r.get("revTtm")]
+    usable = [r for r in rows if r.get("sh") and (r.get(key) or 0) > 0]
     if len(usable) < 8 or not dates:
-        return None
+        return None, None
+    if weeks:
+        dates, closes = dates[-weeks:], closes[-weeks:]
     vals, idx = [], 0
     for d, px in zip(dates, closes):
         while idx + 1 < len(usable) and usable[idx + 1]["filed"] <= d:
             idx += 1
         r = usable[idx]
         if r["filed"] <= d:
-            vals.append(px * r["sh"] / r["revTtm"])
+            vals.append(px * r["sh"] / r[key])
     if len(vals) < 20:
-        return None
-    if psr_now:
-        last = usable[-1]
-        check = closes[-1] * last["sh"] / last["revTtm"]
-        if abs(check / psr_now - 1) > 0.3:
-            return None
-    return sum(vals) / len(vals)
+        return None, None
+    last = usable[-1]
+    now = closes[-1] * last["sh"] / last[key]
+    if check_now and abs(now / check_now - 1) > 0.3:
+        return None, None
+    return sum(vals) / len(vals), now
 
 
 def fetch_stock(session, ticker, name, theme, market, hist, pit):
@@ -476,6 +479,7 @@ def fetch_stock(session, ticker, name, theme, market, hist, pit):
 
     # ---- 밸류에이션·퀄리티 (info)
     mcap = info.get("marketCap")
+    pit_rows = pit.get(ticker) or []
     fwd_per = info.get("forwardPE")
     fwd_per_negative = fwd_per is not None and fwd_per <= 0
     if fwd_per_negative:
@@ -488,11 +492,20 @@ def fetch_stock(session, ticker, name, theme, market, hist, pit):
         avg_fwd_per = h_w * h_avg + (1 - h_w) * proxy_avg
     else:
         avg_fwd_per = h_avg if h_avg is not None else proxy_avg
-    gap = ((fwd_per / avg_fwd_per - 1) * 100) if (fwd_per and avg_fwd_per) else None
+
+    # 밸류 점수용 PER 괴리는 SEC 원본 실측(주가 x 주식수 / TTM 순이익)으로 계산한다.
+    # FWD PER 프록시로 만든 괴리는 예상 EPS가 약분돼 "주가 / 3년 평균 주가"와
+    # 같아져 버려 밸류에이션을 재지 못한다.
+    trail_per_avg, trail_per = sec_multiple(pit_rows, price_dates_5y, closes5_all,
+                                            "niTtm", weeks=157,
+                                            check_now=info.get("trailingPE"))
+    gap = ((trail_per / trail_per_avg - 1) * 100) if (trail_per and trail_per_avg) else None
+    gap_src = "sec" if gap is not None else None
 
     psr = info.get("priceToSalesTrailing12Months")
     # 5년 평균 PSR: SEC 원본(주식수·매출) 실측을 우선하고, 불가하면 근사값으로 대체
-    avg_psr = sec_avg_psr(pit.get(ticker) or [], price_dates_5y, closes5_all, psr)
+    avg_psr, _ = sec_multiple(pit_rows, price_dates_5y, closes5_all, "revTtm",
+                              check_now=psr)
     psr_src = "sec" if avg_psr is not None else "proxy"
     if avg_psr is None:
         avg_psr = (psr * avg5y_px / price) if (psr and avg5y_px) else None
@@ -505,6 +518,8 @@ def fetch_stock(session, ticker, name, theme, market, hist, pit):
         "ret12": rnd(ret12, 1), "dd": rnd(dd, 1), "rsi": rnd(rsi, 1),
         "shortR": rnd(short_ratio, 2), "volCh": rnd(vol_ch, 1),
         "fwdPer": rnd(fwd_per, 1), "avgFwdPer": rnd(avg_fwd_per, 1),
+        "trailPer": rnd(trail_per, 1), "avgTrailPer": rnd(trail_per_avg, 1),
+        "gapSrc": gap_src,
         "psr": rnd(psr, 2), "avgPsr": rnd(avg_psr, 2), "psrSrc": psr_src,
         "evEbitda": rnd(info.get("enterpriseToEbitda"), 2),
         "peg": rnd(info.get("trailingPegRatio") or info.get("pegRatio"), 2),
