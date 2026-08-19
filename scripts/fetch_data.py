@@ -11,7 +11,8 @@ data.json으로 저장한다. QQQ 포함 40개 티커 중 지수 ETF는 순위�
   순위 구간은 상위 5 / 6~15위 / 16위↓ 로만 표시하며 매매 지시가 아니다.
 
 실적·밸류·재무 3축 점수는 참고 지표다. SEC 원본 재무제표로 2010~2026년을
-검증한 결과 실적·재무 점수의 예측력은 확인되지 않았다(scripts/fin_ic.py).
+검증한 결과 실적·재무 점수의 예측력은 확인되지 않았다
+(scripts/validate_axis_scores.py).
 역발상 10지표 종합 점수는 예측력이 음수로 측정돼 상세 탭 참고값으로만 남긴다.
 """
 
@@ -360,24 +361,6 @@ def save_history(hist, stocks):
     return hist
 
 
-def hist_avg_fwd_per(hist, ticker):
-    """누적 실측 평균과 (실측 기간/3년) 가중치를 반환."""
-    vals = []
-    for d, v in hist.items():
-        e = v.get(ticker)
-        if e is None:
-            continue
-        per = e if isinstance(e, (int, float)) else e.get("per")  # 구버전은 숫자, 신버전은 dict
-        if per is not None:
-            vals.append((d, per))
-    if not vals:
-        return None, 0.0
-    avg = sum(v for _, v in vals) / len(vals)
-    span = (datetime.now(timezone.utc)
-            - datetime.strptime(min(d for d, _ in vals), "%Y-%m-%d").replace(tzinfo=timezone.utc)).days
-    return avg, min(1.0, span / HIST_DAYS)
-
-
 def load_pit():
     """SEC 원본 재무 시계열(data/sec_pit.json). 없으면 빈 dict."""
     try:
@@ -417,7 +400,7 @@ def sec_multiple(rows, dates, closes, key, weeks=None, check_now=None):
     return sum(vals) / len(vals), now
 
 
-def fetch_stock(session, ticker, name, theme, market, hist, pit):
+def fetch_stock(session, ticker, name, theme, market, pit):
     tk = yf.Ticker(ticker, session=session)
     info = retry(lambda: tk.info, default={}) or {}
 
@@ -435,7 +418,7 @@ def fetch_stock(session, ticker, name, theme, market, hist, pit):
 
     prices, price_dates, price_dates_5y = [], [], []
     ret12 = dd = ytd = None
-    avg3y_px = avg5y_px = None
+    avg5y_px = None
     closes5_all = closes_of(h5)
     if len(closes5_all) > 5:
         closes5 = closes5_all
@@ -452,7 +435,6 @@ def fetch_stock(session, ticker, name, theme, market, hist, pit):
         ytd_base = next((c for d, c in zip(dates5, closes5) if d >= f"{year}-01-01"), None)
         if ytd_base:
             ytd = (price / ytd_base - 1) * 100
-        avg3y_px = sum(closes5[-min(157, len(closes5)):]) / min(157, len(closes5))
         avg5y_px = sum(closes5) / len(closes5)
 
     wk = closes5_all   # 주봉 종가 (미확정 봉 제외)
@@ -484,15 +466,6 @@ def fetch_stock(session, ticker, name, theme, market, hist, pit):
     fwd_per_negative = fwd_per is not None and fwd_per <= 0
     if fwd_per_negative:
         fwd_per = None  # 적자(예상 EPS 음수) → 결측 처리
-    # 3Y 평균 FWD PER: 일별 실측 누적(history.json)과 프록시(현재 예상 EPS 기준
-    # 과거 3년 평균 주가 환산)를 누적 기간 비중으로 혼합. 누적될수록 실측이 대체.
-    proxy_avg = (fwd_per * avg3y_px / price) if (fwd_per and avg3y_px) else None
-    h_avg, h_w = hist_avg_fwd_per(hist, ticker)
-    if h_avg is not None and proxy_avg is not None:
-        avg_fwd_per = h_w * h_avg + (1 - h_w) * proxy_avg
-    else:
-        avg_fwd_per = h_avg if h_avg is not None else proxy_avg
-
     # 밸류 점수용 PER 괴리는 SEC 원본 실측(주가 x 주식수 / TTM 순이익)으로 계산한다.
     # FWD PER 프록시로 만든 괴리는 예상 EPS가 약분돼 "주가 / 3년 평균 주가"와
     # 같아져 버려 밸류에이션을 재지 못한다.
@@ -500,7 +473,6 @@ def fetch_stock(session, ticker, name, theme, market, hist, pit):
                                             "niTtm", weeks=157,
                                             check_now=info.get("trailingPE"))
     gap = ((trail_per / trail_per_avg - 1) * 100) if (trail_per and trail_per_avg) else None
-    gap_src = "sec" if gap is not None else None
 
     psr = info.get("priceToSalesTrailing12Months")
     # 5년 평균 PSR: SEC 원본(주식수·매출) 실측을 우선하고, 불가하면 근사값으로 대체
@@ -517,9 +489,8 @@ def fetch_stock(session, ticker, name, theme, market, hist, pit):
     d = {
         "ret12": rnd(ret12, 1), "dd": rnd(dd, 1), "rsi": rnd(rsi, 1),
         "shortR": rnd(short_ratio, 2), "volCh": rnd(vol_ch, 1),
-        "fwdPer": rnd(fwd_per, 1), "avgFwdPer": rnd(avg_fwd_per, 1),
+        "fwdPer": rnd(fwd_per, 1),
         "trailPer": rnd(trail_per, 1), "avgTrailPer": rnd(trail_per_avg, 1),
-        "gapSrc": gap_src,
         "psr": rnd(psr, 2), "avgPsr": rnd(avg_psr, 2), "psrSrc": psr_src,
         "evEbitda": rnd(info.get("enterpriseToEbitda"), 2),
         "peg": rnd(info.get("trailingPegRatio") or info.get("pegRatio"), 2),
@@ -644,10 +615,9 @@ def fetch_stock(session, ticker, name, theme, market, hist, pit):
     d.update({"gap": rnd(gap, 1), "surprise": rnd(surprise, 1),
               "earningsDate": earnings_date})
 
-    gscore, gpts = growth_score(d)
-    vscore, vpts = valuation_score(d)
-    fscore, fpts = finance_score(d)
-    d["growPts"], d["valPts"], d["finPts"] = gpts, vpts, fpts
+    gscore = growth_score(d)[0]
+    vscore = valuation_score(d)[0]
+    fscore = finance_score(d)[0]
 
     if d["gap"] is not None:
         cmt = (f"{name}의 FWD PER은 3년 평균 대비 {abs(d['gap']):.1f}% "
@@ -687,7 +657,7 @@ def main():
     stocks, failed = [], []
     for i, (ticker, name, theme) in enumerate(WATCHLIST):
         try:
-            s = fetch_stock(session, ticker, name, theme, market, hist, pit)
+            s = fetch_stock(session, ticker, name, theme, market, pit)
             stocks.append(s)
             print(f"  [{i+1:2d}/{len(WATCHLIST)}] {ticker:6s} ${s['price']:>9.2f}  "
                   f"3축 {s['grow_score']:+d}/{s['val_score']:+d}/{s['fin_score']:+d}")

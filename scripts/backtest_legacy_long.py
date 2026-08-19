@@ -1,6 +1,10 @@
-"""장기(최대 25년) 백테스트 — 닷컴버블·금융위기 포함"""
+"""역발상 종합 점수 장기 백테스트 (최대 25년, 닷컴버블·금융위기 포함).
+
+이 방식은 예측력이 음수로 측정돼 서비스에서 제외됐다.
+같은 결론을 재현하기 위한 근거 스크립트로만 남긴다.
+"""
 import sys, os, math, pickle, statistics as st
-sys.path.insert(0,'/home/user/my-invest-analysis/scripts')
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from fetch_data import compute_rsi, make_session
 from legacy_score import (pt_ret12, pt_drawdown, pt_rsi, pt_volume,
                           pt_spy, pt_vix, pt_fg, band)
