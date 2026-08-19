@@ -238,7 +238,7 @@ svg text{font-family:inherit}
     </div>
   </div>
   <p class="foot-note">※ <b>실적</b> (-7~+8) 매출 YoY · 3년 CAGR · 서프라이즈 · 예상 성장률 · 마진 방향<br>
-※ <b>밸류</b> (-5~+6) FWD PER 괴리 · PSR 괴리 · FCF 수익률 · PEG<br>
+※ <b>밸류</b> (-5~+6) PER 괴리 · PSR 괴리 · FCF 수익률 · PEG<br>
 ※ <b>재무</b> (-6~+7) 영업이익률 · ROE · 부채비율 · 유동비율 · FCF 마진<br>
 ※ <b>통합</b> (-18~+21) = 실적 + 밸류 + 재무 합산<br>※ 위 카드 = 세 점수가 모두 +2 이상인 종목 (합산만 보면 한 축의 약점이 가려짐)<br>※ 실적·재무 점수는 2010~2026 검증 결과 <b>예측력 확인되지 않음</b> · 밸류 점수는 검증 불가 (컨센서스 과거값 없음)</p>
 </main>
@@ -263,7 +263,7 @@ svg text{font-family:inherit}
       </tr></thead><tbody id="cmp-body"></tbody></table>
     </div>
   </div>
-  <p class="foot-note">※ 괴리 = FWD PER의 3년 평균 대비 이격<br>※ 음수(초록) = 과거 평균보다 저평가<br>※ 3년 평균은 근사값 — 고성장 종목은 실제보다 고평가로 계산됨</p>
+  <p class="foot-note">※ 괴리 = 현재 PER의 3년 평균 대비 이격<br>※ 음수(초록) = 과거 평균보다 저평가<br>※ 3년 평균 PER은 SEC 원본 실측 · 적자 구간은 산출 제외</p>
 </main>
 
 <div id="guide"><div class="gwrap">
@@ -324,7 +324,7 @@ svg text{font-family:inherit}
   <p style="margin-bottom:2px"><b>밸류 점수</b> (-5 ~ +6)</p>
   <table><colgroup><col class="c-ind"><col class="c-half"><col class="c-half"></colgroup>
     <tr><th>지표</th><th class="num">가점</th><th class="num">감점</th></tr>
-    <tr><td>FWD PER<br>3년 괴리</td><td class="num">-5% → +1<br>-20% → +2</td><td class="num">+10% → -1<br>+30% → -2</td></tr>
+    <tr><td>PER 3년 괴리<span class="sub">SEC 원본 실측</span></td><td class="num">-5% → +1<br>-20% → +2</td><td class="num">+10% → -1<br>+30% → -2</td></tr>
     <tr><td>PSR 5년 괴리<span class="sub">SEC 원본 실측</span></td><td class="num">-20% → +1</td><td class="num">+50% → -1</td></tr>
     <tr><td>FCF 수익률</td><td class="num">3% → +1<br>5% → +2</td><td class="num">음수 → -1</td></tr>
     <tr><td>PEG</td><td class="num">1 미만 → +1</td><td class="num">2.5 초과 → -1</td></tr>
@@ -466,7 +466,7 @@ function detail(s){
   const r=rng(s.t);
   if(s.t==='NVDA')return{
     ret12:-19.7,dd:-22.4,rsi:38.0,shortR:0.37,volCh:41.7,
-    fwdPer:14.9,avgFwdPer:19.2,psr:18.16,fwdPsr:14.2,avgPsr:28.96,psrSrc:'sec',evEbitda:23.65,peg:0.85,fcfY:19.20,
+    fwdPer:14.9,avgFwdPer:19.2,trailPer:22.4,avgTrailPer:26.1,psr:18.16,fwdPsr:14.2,avgPsr:28.96,psrSrc:'sec',evEbitda:23.65,peg:0.85,fcfY:19.20,
     roa:53.1,roe:111.3,gross:74.1,op:62.4,profit:55.7,fcfM:43.0,curR:3.44,quickR:2.93,ltDE:0.07,
     qRev:[26.0,28.4,30.0,32.5,35.1,39.3,44.1,46.7],qOp:[16.9,18.6,19.7,21.9,23.3,25.6,29.8,31.5],
     yrs:['FY22','FY23','FY24','FY25','FY26E'],yRev:[26.9,27.0,60.9,130.5,216.0],yOcf:[9.1,5.6,28.1,64.1,102.8],yCapex:[-0.98,-1.8,-1.1,-3.2,-6.1],
@@ -482,7 +482,7 @@ function detail(s){
   const yOcf=yRev.map(v=>g(v*(op/100)*1.1)),yCapex=yRev.map(v=>g(-v*(0.04+r()*0.1)));
   return{
     ret12:g(-40+r()*80),dd:g(-(5+r()*45)),rsi:g(25+r()*50),shortR:g(r()*4)/1,volCh:g(-20+r()*80),
-    fwdPer,avgFwdPer:avg,psr:g(1+r()*20),fwdPsr:g(1+r()*15),avgPsr:g(2+r()*25),psrSrc:'proxy',evEbitda:g(8+r()*30),peg:g(0.4+r()*2.5),fcfY:g(r()*20),
+    fwdPer,avgFwdPer:avg,trailPer:g(fwdPer*1.3),avgTrailPer:g(avg*1.3),psr:g(1+r()*20),fwdPsr:g(1+r()*15),avgPsr:g(2+r()*25),psrSrc:'proxy',evEbitda:g(8+r()*30),peg:g(0.4+r()*2.5),fcfY:g(r()*20),
     roa:g(r()*30),roe:g(r()*60),gross,op,profit,fcfM:g(profit*(0.6+r()*0.8)),curR:g(0.8+r()*3),quickR:g(0.6+r()*2.5),ltDE:g(r()*1.5),
     qRev,qOp,yrs:['FY22','FY23','FY24','FY25','FY26E'],yRev,yOcf,yCapex,
     revG:[g(-10+r()*60),g(-5+r()*70),g(r()*80)],
@@ -568,11 +568,9 @@ function multiLine(el,labels,seriesArr,colors,names,unit){
 </script>
 <script>
 /* ================= TAB 1 RENDER ================= */
-function gapOf(d){
-  if(d.gap!==undefined)return d.gap;
-  if(d.fwdPer==null||d.avgFwdPer==null)return null;
-  return Math.round((d.fwdPer/d.avgFwdPer-1)*1000)/10;
-}
+/* 괴리는 수집 단계에서 SEC 원본으로 계산된 값(d.gap)만 쓴다.
+   화면에서 FWD PER로 되계산하면 예상 EPS가 약분돼 주가 등락률이 되어버린다. */
+function gapOf(d){return d.gap!==undefined?d.gap:null}
 function renderBoard(){
   document.querySelector('#tab-board .kicker').textContent=`관심종목 ${STOCKS.length}개 · 테마 ${THEMES.length}개`;
 
@@ -781,8 +779,9 @@ function renderDetail(){
   <h3 class="sec-title">밸류에이션</h3>
   <p class="sec-sub">3년 평균 대비 이격</p>
   <div class="d-card">
-    ${kr('FWD PER',d.fwdPer==null?'—':fmt(d.fwdPer)+(gap==null?'':`<span class="gap-tag ${gap<0?'':'over'}">${gap<0?'3Y 평균 대비 저평가':'3Y 평균 대비 고평가'} ${pct(gap)}</span>`),undefined)}
-    ${kr('3Y 평균 FWD PER <span style="color:var(--dk-ink3);font-weight:400">(근사값 · 컨센서스 과거값 없음)</span>',fmt(d.avgFwdPer),undefined)}
+    ${kr('PER <span style="color:var(--dk-ink3);font-weight:400">(최근 4분기)</span>',d.trailPer==null?'—':fmt(d.trailPer)+(gap==null?'':`<span class="gap-tag ${gap<0?'':'over'}">${gap<0?'3Y 평균 대비 저평가':'3Y 평균 대비 고평가'} ${pct(gap)}</span>`),undefined)}
+    ${kr('3Y 평균 PER <span style="color:var(--dk-ink3);font-weight:400">(SEC 원본 실측)</span>',fmt(d.avgTrailPer),undefined)}
+    ${kr('FWD PER <span style="color:var(--dk-ink3);font-weight:400">(참고 · 점수 미반영)</span>',fmt(d.fwdPer),undefined)}
     ${kr('PSR',fmt(d.psr,2),undefined)}
     ${kr('FWD PSR',fmt(d.fwdPsr,2),undefined)}
     ${kr('5Y 평균 PSR <span style="color:var(--dk-ink3);font-weight:400">('+(d.psrSrc==='sec'?'SEC 원본 실측':'근사값')+')</span>',fmt(d.avgPsr,2),undefined)}
@@ -843,7 +842,7 @@ function renderDetail(){
     <div class="legend"><span><i style="background:var(--c1)"></i>예상 매출</span></div>
     <div class="chart-box" id="est-chart"></div>
   </div>
-  <p class="foot-note" style="color:#6a6b70">${META.live?`※ yfinance · ${META.updated} KST 업데이트<br>※ 3Y 평균 FWD PER은 일별 실측 누적 + 환산 프록시 혼합`:'※ 샘플 데이터 · 실데이터 로드 실패'}</p>`;
+  <p class="foot-note" style="color:#6a6b70">${META.live?`※ yfinance · ${META.updated} KST 업데이트<br>※ 3Y 평균 PER · 5Y 평균 PSR은 SEC 원본 재무제표 실측`:'※ 샘플 데이터 · 실데이터 로드 실패'}</p>`;
   const c1=getComputedStyle(document.documentElement).getPropertyValue('--c1').trim();
   const c2=getComputedStyle(document.documentElement).getPropertyValue('--c2').trim();
   const c3=getComputedStyle(document.documentElement).getPropertyValue('--c3').trim();
