@@ -2,15 +2,17 @@
 """나만의 투자분석 — 실데이터 수집 스크립트.
 
 yfinance로 워치리스트 39종목의 시세·1년 주가·재무·마진·컨센서스와
-시장지표(^VIX, ^IXIC, ^GSPC, SPY 52주 낙폭, CNN Fear & Greed)를 수집하고
-10개 지표(종목 7 + 시장 타이밍 3) 룰 기반 종합 점수를 계산해 data.json으로 저장한다.
-시장 감점은 SPY 200일선 위(상승 추세)일 때 절반으로 완화된다(추세 보정).
+시장지표(^VIX, ^IXIC, ^GSPC, SPY 52주 낙폭, CNN Fear & Greed)를 수집해
+data.json으로 저장한다. QQQ 포함 40개 티커 중 지수 ETF는 순위에서 제외한다.
 
 매매 판단은 모멘텀 횡단면 순위(모멘텀 + 200일선 이격도)를 기준으로 한다.
 모멘텀 = 최근 1개월을 제외한 12개월 수익률(12-1 모멘텀, 단기 반전 효과 제거).
 26년 백테스트에서 4개 시대 모두 균등보유를 앞선 유일한 방식이다.
-  상위 1~5위 = 매수 / 6~15위 = 관심 / 16위 이하 = 보류
-기존 10지표 종합 점수는 예측력이 검증되지 않아 상세 탭 참고 정보로만 유지한다.
+  순위 구간은 상위 5 / 6~15위 / 16위↓ 로만 표시하며 매매 지시가 아니다.
+
+실적·밸류·재무 3축 점수는 참고 지표다. SEC 원본 재무제표로 2010~2026년을
+검증한 결과 실적·재무 점수의 예측력은 확인되지 않았다(scripts/fin_ic.py).
+역발상 10지표 종합 점수는 예측력이 음수로 측정돼 상세 탭 참고값으로만 남긴다.
 """
 
 import json
@@ -517,7 +519,9 @@ def fetch_stock(session, ticker, name, theme, market, hist):
     rsi = vol_ch = None
     if len(hd_closes) > 20:
         rsi = compute_rsi(hd_closes)
-        vols = [float(x) for x in hd["Volume"]]
+        # 종가가 유효한 봉만 사용 — 미확정 당일 봉의 부분 거래량이 섞이면
+        # 최근 20일 평균이 과소평가돼 거래량 급증을 놓친다
+        vols = [float(v) for c, v in zip(hd["Close"], hd["Volume"]) if c == c and v == v]
         if len(vols) >= 40:
             recent = vols[-20:]
             prior = vols[-80:-20] if len(vols) >= 80 else vols[:-20]
@@ -562,7 +566,7 @@ def fetch_stock(session, ticker, name, theme, market, hist):
         "fcfM": rnd(pct100(fcf / total_rev) if (fcf and total_rev) else None, 1),
         "curR": rnd(info.get("currentRatio"), 2),
         "quickR": rnd(info.get("quickRatio"), 2),
-        "ltDE": rnd((info.get("debtToEquity") or 0) / 100 or None, 2),
+        "ltDE": rnd((info.get("debtToEquity") or 0) / 100 or None, 2),  # yfinance debtToEquity = 총부채/자기자본
         "prices": prices, "priceDates": price_dates,
         "mom12_1": rnd(mom12_1, 1), "ma200Dist": rnd(ma200_dist, 1),
     }
@@ -628,9 +632,10 @@ def fetch_stock(session, ticker, name, theme, market, hist):
                 d["est"].append({
                     "y": f"FY{(cur_year + i) % 100}E",
                     "rev": rnd(rev_avg / B, 1),
-                    "g": rnd((r.get("growth") or 0) * 100, 1),
+                    "g": rnd(r.get("growth") * 100, 1) if r.get("growth") is not None else None,
                     "eps": rnd(e.get("avg"), 2) if e is not None else None,
-                    "epsG": rnd((e.get("growth") or 0) * 100, 1) if e is not None else None,
+                    "epsG": (rnd(e.get("growth") * 100, 1)
+                             if (e is not None and e.get("growth") is not None) else None),
                 })
             if d["est"] and mcap:
                 fwd_rev = d["est"][0]["rev"]
@@ -704,9 +709,8 @@ def fetch_stock(session, ticker, name, theme, market, hist):
                    f"{'저평가' if d['gap'] < 0 else '고평가'} 구간입니다.")
     elif d["fwdPer"] is None:
         gap_txt = " 예상 EPS가 음수(적자)라 FWD PER 지표는 0점으로 처리했습니다."
-    cmt = (f"{name}은(는) 종목 지표 7개와 시장 타이밍 3개(200일선 추세 보정 포함)를 합산한 종합 점수 "
-           f"{score:+d}점으로 '{bd}' 구간입니다.{gap_txt} "
-           f"룰 기반 판단이므로 실적 발표·가이던스 등 개별 이벤트는 별도 확인이 필요합니다.")
+    cmt = (f"{name}의 참고 종합 점수는 {score:+d}점입니다.{gap_txt} "
+           f"이 점수는 검증에서 예측력이 음수로 측정돼 매매 판단에 쓰지 않습니다.")
 
     return {
         "ticker": ticker, "name": name, "theme": theme,

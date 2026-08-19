@@ -12,6 +12,10 @@ data/sec_pit.json의 as-reported 재무제표로, 각 시점에 **실제로 공�
   랜덤   : 같은 절차를 점수 섞어서 반복 — 대조군.
 
 채점은 scripts/fetch_data.py의 함수를 그대로 사용한다.
+
+주의: 부채비율은 실서비스가 yfinance의 총부채/자본을 쓰는 반면 여기서는
+SEC의 장기부채/자본을 쓴다. 과거 총부채를 point-in-time으로 복원하기
+어려워 생긴 차이이며, 재무 점수 5개 지표 중 1개에만 영향을 준다.
 """
 
 import json
