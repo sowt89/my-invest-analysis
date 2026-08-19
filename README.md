@@ -44,7 +44,17 @@
 ### 종목 진단
 실적 · 밸류 · 재무 3축 점수. **참고를 위한 측정**입니다.
 
-SEC 원본 재무제표(point-in-time)로 2010~2026년을 검증한 결과 실적·재무 점수의 예측력은 확인되지 않았습니다 — 구간과 종목 범위에 따라 상관의 부호가 뒤집힙니다. 밸류 점수는 컨센서스 과거값을 구할 수 없어 검증이 불가능합니다. 검증 절차는 `scripts/fin_ic.py` 참고.
+SEC 원본 재무제표(point-in-time)로 2010~2026년, 월 175회 관측으로 검증했습니다. IC는 점수와 이후 12개월 수익률의 순위상관입니다.
+
+| 점수 | IC | 결과 |
+|---|---:|---|
+| 실적 | +0.01 | 예측력 없음 (구간마다 부호 반전) |
+| 재무 | -0.06 | 예측력 없음 (종목 범위 바꾸면 부호 반전) |
+| 밸류 | **-0.10** | **역방향** — 2016년 이후 일관되게 음수 |
+
+랜덤 대조군 IC는 0.00으로 측정 절차 자체는 정상입니다. 밸류 점수가 음수라는 것은 "싸 보이는 종목이 오히려 덜 올랐다"는 뜻인데, 이 워치리스트가 성장주 중심이라 일반적인 결론으로 확대할 수는 없습니다.
+
+검증 절차는 `scripts/validate_axis_scores.py` 참고.
 
 > **평균 PER·PSR은 SEC 원본 재무제표로 계산합니다.** 각 시점의 주가 × 당시 발행주식수 ÷ 당시 이익(또는 매출)이라, 이익·매출이 성장한 종목의 과거 밸류에이션이 왜곡되지 않습니다. 적자 구간은 PER이 성립하지 않아 산출에서 제외됩니다.
 >
@@ -160,10 +170,13 @@ GitHub Actions가 자동으로 수집해 `data.json`에 저장하고, 화면은 
 ```
 index.html              화면 전체 (단일 파일)
 scripts/fetch_data.py   데이터 수집 + 순위 계산
-scripts/backtest.py     백테스트 (10년)
-scripts/longbt.py       백테스트 (26년)
-scripts/sec_fundamentals.py  SEC 원본 재무제표 수집 (point-in-time)
-scripts/fin_ic.py       재무·실적 점수 예측력 검증
+scripts/backtest_legacy.py       역발상 점수 백테스트 (10년, 근거 재현용)
+scripts/backtest_legacy_long.py  같은 방식 장기 검증 (25년)
+scripts/sec_fundamentals.py      SEC 원본 재무제표 수집 (point-in-time)
+scripts/validate_axis_scores.py  실적·재무 점수 예측력 검증
+scripts/test_sec_fundamentals.py 수집 로직 테스트 (네트워크 불필요)
+scripts/legacy_score.py          폐기된 역발상 점수 (백테스트 전용)
+scripts/sec_tag_report.py        XBRL 태그 가용성 진단
 data.json               수집된 데이터
 history.json            일별 지표 누적 기록 (최근 3년)
 archive/history-YYYY.json  3년이 지난 기록 (연도별 보관)

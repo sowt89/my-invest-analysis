@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""시그널 백테스트 — 단일 종목, 임계값 지정 가능.
+"""역발상 종합 점수 백테스트 — 단일 종목, 임계값 지정 가능.
 
-사용: python3 scripts/backtest.py [티커] [매수임계값] [매도임계값]
-      python3 scripts/backtest.py NVDA 4 -6
+이 방식은 예측력이 음수로 측정돼 서비스에서 제외됐다(근거 재현용).
+
+사용: python3 scripts/backtest_legacy.py [티커] [매수임계값] [매도임계값]
+      python3 scripts/backtest_legacy.py NVDA 4 -6
 
 매수: 매수 임계값 이상 최초 도달 시 500만원 신규 투입 (연속 지속 시 추가 매수 없음)
 매도: 매도 임계값 이하 + 종목이 200일선 아래일 때 전량 청산

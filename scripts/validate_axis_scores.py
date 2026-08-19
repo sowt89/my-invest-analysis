@@ -29,7 +29,8 @@ from datetime import date
 import yfinance as yf
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from fetch_data import WATCHLIST, finance_score, growth_score, make_session
+from fetch_data import (WATCHLIST, finance_score, growth_score,
+                        valuation_score, make_session)
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PIT = os.path.join(_ROOT, "data", "sec_pit.json")
@@ -67,6 +68,55 @@ def price_at(series, ym):
     """해당 월 이하의 마지막 종가."""
     ks = [d for d in series if d[:7] <= ym]
     return series[max(ks)] if ks else None
+
+
+def multiples(rows, months, series):
+    """월별 PER·PSR·FCF수익률을 실측 계산한다. {월: {...}}
+
+    각 월에 대해 그 시점까지 제출된 최신 재무만 쓴다(미래 정보 차단).
+    적자 구간은 PER이 성립하지 않아 제외한다.
+    """
+    out, idx = {}, 0
+    usable = [r for r in rows if r.get("sh")]
+    if not usable:
+        return out
+    for ym in months:
+        px = price_at(series, ym[:7])
+        if px is None:
+            continue
+        while idx + 1 < len(usable) and usable[idx + 1]["filed"] <= ym:
+            idx += 1
+        r = usable[idx]
+        if r["filed"] > ym:
+            continue
+        mcap = px * r["sh"]
+        out[ym] = {
+            "per": mcap / r["niTtm"] if (r.get("niTtm") or 0) > 0 else None,
+            "psr": mcap / r["revTtm"] if (r.get("revTtm") or 0) > 0 else None,
+            "fcfY": r["fcfTtm"] / mcap * 100 if r.get("fcfTtm") is not None else None,
+        }
+    return out
+
+
+def value_score_at(mult, months, i):
+    """밸류 점수 (-5~+6). PER 3년 괴리 · PSR 5년 괴리 · FCF 수익률.
+    PEG는 컨센서스가 필요해 결측(0점) 처리한다."""
+    cur = mult.get(months[i])
+    if not cur:
+        return None
+    def gap(key, back):
+        now = cur.get(key)
+        hist = [mult[m][key] for m in months[max(0, i - back):i]
+                if m in mult and mult[m].get(key)]
+        if not now or len(hist) < back // 2:
+            return None
+        return (now / (sum(hist) / len(hist)) - 1) * 100
+    d = {"gap": gap("per", 36), "psr": 1, "avgPsr": None,
+         "fcfY": cur.get("fcfY"), "peg": None}
+    pg = gap("psr", 60)
+    if pg is not None:                       # valuation_score는 psr/avgPsr 비율을 본다
+        d["psr"], d["avgPsr"] = 1 + pg / 100, 1
+    return valuation_score(d)[0]
 
 
 def scores_at(rows, asof):
@@ -148,7 +198,8 @@ def run(tickers, px, months, rows, label):
     print(f"\n{'='*62}\n{label} · {len(tickers)}종목\n{'='*62}")
     for hz in HORIZONS:
         print(f"■ {hz}개월 선행수익률")
-        for idx, name in ((0, "재무 점수"), (1, "실적 점수(3/5지표)")):
+        for idx, name in ((0, "재무 점수"), (1, "실적 점수(3/5지표)"),
+                          (2, "밸류 점수(3/4지표)")):
             for era, lo, hi in (("전체", "2010", "2027"), ("2010~2015", "2010", "2016"),
                                 ("2016~2020", "2016", "2021"), ("2021~2026", "2021", "2027")):
                 ics, spreads = [], []
@@ -160,7 +211,7 @@ def run(tickers, px, months, rows, label):
                         s = rows.get((ym, t))
                         p0 = price_at(px.get(t, {}), ym[:7])
                         p1 = price_at(px.get(t, {}), months[i + hz][:7])
-                        if s and p0 and p1:
+                        if s and p0 and p1 and s[idx] is not None:
                             pairs.append((s[idx], (p1 / p0 - 1) * 100))
                     if len(pairs) < 10:
                         continue
@@ -200,11 +251,12 @@ def main():
     months = month_ends("2010-06-30", "2026-08-31")
 
     rows = {}
-    for ym in months:
+    mults = {t: multiples(pit[t], months, px.get(t, {})) for t in tickers}
+    for i, ym in enumerate(months):
         for t in tickers:
             sc = scores_at(pit[t], ym)
             if sc:
-                rows[(ym, t)] = sc
+                rows[(ym, t)] = (sc[0], sc[1], value_score_at(mults[t], months, i))
     print(f"\n평가 구간 {months[0][:7]} ~ {months[-1][:7]} · 관측 {len(rows)}건")
 
     run(tickers, px, months, rows, "전체 종목")

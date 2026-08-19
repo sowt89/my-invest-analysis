@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """특정 종목의 XBRL 태그 가용성 진단 (일회성 조사용).
 
-사용: python3 scripts/sec_diag.py            # 기본 대상
+사용: python3 scripts/sec_tag_report.py      # TARGETS 목록 대상
 개발 환경에서는 SEC 접속이 막혀 있어 Actions에서 실행한다.
 """
 
