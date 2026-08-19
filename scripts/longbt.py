@@ -1,8 +1,9 @@
 """장기(최대 25년) 백테스트 — 닷컴버블·금융위기 포함"""
 import sys, os, math, pickle, statistics as st
 sys.path.insert(0,'/home/user/my-invest-analysis/scripts')
-from fetch_data import (compute_rsi, pt_ret12, pt_drawdown, pt_rsi, pt_volume,
-                        pt_spy, pt_vix, pt_fg, band, make_session)
+from fetch_data import compute_rsi, make_session
+from legacy_score import (pt_ret12, pt_drawdown, pt_rsi, pt_volume,
+                          pt_spy, pt_vix, pt_fg, band)
 
 def load(symbols, period="max"):
     import yfinance as yf, time

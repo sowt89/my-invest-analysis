@@ -393,48 +393,48 @@ svg text{font-family:inherit}
 let DETAILS=null;           /* ticker -> 실데이터 상세 (data.json) */
 let META={updated:null,updatedUtc:null,live:false};
 let STOCKS=[
- {t:'NVDA',n:'NVIDIA',th:'매그니피센트7',p:190.01,mc:4602,sc:7,ytd:1.9},
- {t:'AAPL',n:'Apple',th:'매그니피센트7',p:338.19,mc:4967,sc:-3,ytd:12.4},
- {t:'MSFT',n:'Microsoft',th:'매그니피센트7',p:390.54,mc:2901,sc:6,ytd:-7.2},
- {t:'GOOGL',n:'Alphabet',th:'매그니피센트7',p:336.71,mc:4075,sc:-1,ytd:18.3},
- {t:'AMZN',n:'Amazon',th:'매그니피센트7',p:226.65,mc:2438,sc:6,ytd:-3.1},
- {t:'META',n:'Meta Platforms',th:'매그니피센트7',p:585.61,mc:1487,sc:4,ytd:-11.6},
- {t:'TSLA',n:'Tesla',th:'매그니피센트7',p:298.32,mc:1178,sc:9,ytd:-26.4},
- {t:'AVGO',n:'Broadcom',th:'반도체',p:370.32,mc:1762,sc:5,ytd:6.8},
- {t:'AMD',n:'AMD',th:'반도체',p:429.56,mc:700,sc:3,ytd:32.1},
- {t:'ARM',n:'Arm Holdings',th:'반도체',p:224.89,mc:239,sc:4,ytd:9.5},
- {t:'QCOM',n:'Qualcomm',th:'반도체',p:155.68,mc:164,sc:4,ytd:-8.4},
- {t:'ORCL',n:'Oracle',th:'SW 주식',p:117.77,mc:339,sc:9,ytd:-38.2},
- {t:'PLTR',n:'Palantir',th:'SW 주식',p:123.00,mc:282,sc:9,ytd:-34.9},
- {t:'NEE',n:'NextEra Energy',th:'전력',p:88.46,mc:184,sc:2,ytd:4.2},
- {t:'CEG',n:'Constellation Energy',th:'전력',p:257.95,mc:93,sc:7,ytd:-14.7},
- {t:'SMR',n:'NuScale Power',th:'전력',p:7.59,mc:2.3,sc:8,ytd:-52.1},
- {t:'NXT',n:'Nextracker',th:'전력',p:92.67,mc:14,sc:8,ytd:21.3},
- {t:'CVX',n:'Chevron',th:'전력',p:191.89,mc:382,sc:1,ytd:8.9},
- {t:'RKLB',n:'Rocket Lab',th:'우주',p:58.60,mc:34,sc:4,ytd:14.2},
- {t:'LUNR',n:'Intuitive Machines',th:'우주',p:11.39,mc:1.8,sc:2,ytd:-27.5},
- {t:'RDW',n:'Redwire',th:'우주',p:7.78,mc:1.9,sc:4,ytd:-49.3},
- {t:'IONQ',n:'IonQ',th:'양자',p:31.99,mc:12,sc:8,ytd:-24.6},
- {t:'INFQ',n:'Infleqtion',th:'양자',p:8.83,mc:1.9,sc:5,ytd:0},
- {t:'JOBY',n:'Joby Aviation',th:'드론',p:6.65,mc:6.5,sc:5,ytd:-19.8},
- {t:'PL',n:'Planet Labs',th:'우주',p:19.47,mc:6.5,sc:3,ytd:41.2},
- {t:'MU',n:'Micron Technology',th:'반도체',p:739.00,mc:835,sc:6,ytd:64.7},
- {t:'INTC',n:'Intel',th:'반도체',p:81.88,mc:412,sc:5,ytd:39.4},
- {t:'SNPS',n:'Synopsys',th:'반도체',p:373.69,mc:72,sc:8,ytd:-23.1},
- {t:'CDNS',n:'Cadence Design',th:'반도체',p:332.76,mc:92,sc:4,ytd:5.6},
- {t:'CRM',n:'Salesforce',th:'SW 주식',p:188.38,mc:154,sc:6,ytd:-28.9},
- {t:'SPCX',n:'SpaceX',th:'우주',p:112.55,mc:1472,sc:5,ytd:0},
- {t:'NFLX',n:'Netflix',th:'커뮤니케이션',p:73.63,mc:307,sc:8,ytd:-31.2},
- {t:'NKE',n:'Nike',th:'소비재',p:43.22,mc:64,sc:9,ytd:-41.5},
- {t:'DIS',n:'Walt Disney',th:'커뮤니케이션',p:98.46,mc:171,sc:6,ytd:-9.7},
- {t:'UBER',n:'Uber',th:'기술',p:71.20,mc:145,sc:6,ytd:-13.4},
- {t:'ISRG',n:'Intuitive Surgical',th:'헬스케어',p:353.10,mc:125,sc:9,ytd:-33.8},
- {t:'LMT',n:'Lockheed Martin',th:'산업재',p:569.40,mc:131,sc:4,ytd:11.9},
- {t:'COIN',n:'Coinbase',th:'금융',p:160.09,mc:42,sc:4,ytd:-36.1},
- {t:'BRK-B',n:'Berkshire Hathaway',th:'금융',p:509.47,mc:1099,sc:-1,ytd:7.3},
+ {t:'NVDA',n:'NVIDIA',th:'매그니피센트7',p:190.01,mc:4602,ytd:1.9},
+ {t:'AAPL',n:'Apple',th:'매그니피센트7',p:338.19,mc:4967,ytd:12.4},
+ {t:'MSFT',n:'Microsoft',th:'매그니피센트7',p:390.54,mc:2901,ytd:-7.2},
+ {t:'GOOGL',n:'Alphabet',th:'매그니피센트7',p:336.71,mc:4075,ytd:18.3},
+ {t:'AMZN',n:'Amazon',th:'매그니피센트7',p:226.65,mc:2438,ytd:-3.1},
+ {t:'META',n:'Meta Platforms',th:'매그니피센트7',p:585.61,mc:1487,ytd:-11.6},
+ {t:'TSLA',n:'Tesla',th:'매그니피센트7',p:298.32,mc:1178,ytd:-26.4},
+ {t:'AVGO',n:'Broadcom',th:'반도체',p:370.32,mc:1762,ytd:6.8},
+ {t:'AMD',n:'AMD',th:'반도체',p:429.56,mc:700,ytd:32.1},
+ {t:'ARM',n:'Arm Holdings',th:'반도체',p:224.89,mc:239,ytd:9.5},
+ {t:'QCOM',n:'Qualcomm',th:'반도체',p:155.68,mc:164,ytd:-8.4},
+ {t:'ORCL',n:'Oracle',th:'SW 주식',p:117.77,mc:339,ytd:-38.2},
+ {t:'PLTR',n:'Palantir',th:'SW 주식',p:123.00,mc:282,ytd:-34.9},
+ {t:'NEE',n:'NextEra Energy',th:'전력',p:88.46,mc:184,ytd:4.2},
+ {t:'CEG',n:'Constellation Energy',th:'전력',p:257.95,mc:93,ytd:-14.7},
+ {t:'SMR',n:'NuScale Power',th:'전력',p:7.59,mc:2.3,ytd:-52.1},
+ {t:'NXT',n:'Nextracker',th:'전력',p:92.67,mc:14,ytd:21.3},
+ {t:'CVX',n:'Chevron',th:'전력',p:191.89,mc:382,ytd:8.9},
+ {t:'RKLB',n:'Rocket Lab',th:'우주',p:58.60,mc:34,ytd:14.2},
+ {t:'LUNR',n:'Intuitive Machines',th:'우주',p:11.39,mc:1.8,ytd:-27.5},
+ {t:'RDW',n:'Redwire',th:'우주',p:7.78,mc:1.9,ytd:-49.3},
+ {t:'IONQ',n:'IonQ',th:'양자',p:31.99,mc:12,ytd:-24.6},
+ {t:'INFQ',n:'Infleqtion',th:'양자',p:8.83,mc:1.9,ytd:0},
+ {t:'JOBY',n:'Joby Aviation',th:'드론',p:6.65,mc:6.5,ytd:-19.8},
+ {t:'PL',n:'Planet Labs',th:'우주',p:19.47,mc:6.5,ytd:41.2},
+ {t:'MU',n:'Micron Technology',th:'반도체',p:739.00,mc:835,ytd:64.7},
+ {t:'INTC',n:'Intel',th:'반도체',p:81.88,mc:412,ytd:39.4},
+ {t:'SNPS',n:'Synopsys',th:'반도체',p:373.69,mc:72,ytd:-23.1},
+ {t:'CDNS',n:'Cadence Design',th:'반도체',p:332.76,mc:92,ytd:5.6},
+ {t:'CRM',n:'Salesforce',th:'SW 주식',p:188.38,mc:154,ytd:-28.9},
+ {t:'SPCX',n:'SpaceX',th:'우주',p:112.55,mc:1472,ytd:0},
+ {t:'NFLX',n:'Netflix',th:'커뮤니케이션',p:73.63,mc:307,ytd:-31.2},
+ {t:'NKE',n:'Nike',th:'소비재',p:43.22,mc:64,ytd:-41.5},
+ {t:'DIS',n:'Walt Disney',th:'커뮤니케이션',p:98.46,mc:171,ytd:-9.7},
+ {t:'UBER',n:'Uber',th:'기술',p:71.20,mc:145,ytd:-13.4},
+ {t:'ISRG',n:'Intuitive Surgical',th:'헬스케어',p:353.10,mc:125,ytd:-33.8},
+ {t:'LMT',n:'Lockheed Martin',th:'산업재',p:569.40,mc:131,ytd:11.9},
+ {t:'COIN',n:'Coinbase',th:'금융',p:160.09,mc:42,ytd:-36.1},
+ {t:'BRK-B',n:'Berkshire Hathaway',th:'금융',p:509.47,mc:1099,ytd:7.3},
 ];
 let THEMES=[...new Set(STOCKS.map(s=>s.th))];
-let MARKET={spy52:-4.1,spyPt:-1,vix:20.66,vixPt:1,fg:32,fgPt:0,fgLabel:'공포',mood:'중립',moodPt:0,nasdaq:24443,sp500:6728};
+let MARKET={spy52:-4.1,vix:20.66,fg:32,fgLabel:'공포',nasdaq:24443,sp500:6728};
 /* 순위 변동 배지 — 이전 기록 대비 */
 function rankDelta(s){
   if(!s.mr) return '';
@@ -463,7 +463,7 @@ function detail(s){
   if(DETAILS&&DETAILS[s.t])return DETAILS[s.t];
   const r=rng(s.t);
   if(s.t==='NVDA')return{
-    ret12:-19.7,ret12pt:2,dd:-22.4,ddpt:2,rsi:38.0,rsipt:2,shortR:0.37,shortpt:1,volCh:41.7,volpt:2,
+    ret12:-19.7,dd:-22.4,rsi:38.0,shortR:0.37,volCh:41.7,
     fwdPer:14.9,avgFwdPer:19.2,psr:18.16,fwdPsr:14.2,avgPsr:28.96,evEbitda:23.65,peg:0.85,fcfY:19.20,
     roa:53.1,roe:111.3,gross:74.1,op:62.4,profit:55.7,fcfM:43.0,curR:3.44,quickR:2.93,ltDE:0.07,
     qRev:[26.0,28.4,30.0,32.5,35.1,39.3,44.1,46.7],qOp:[16.9,18.6,19.7,21.9,23.3,25.6,29.8,31.5],
@@ -479,7 +479,7 @@ function detail(s){
   const yRev=[0.55,0.7,0.85,1,1.3].map(k=>g(base*4*k*(0.95+r()*0.1)));
   const yOcf=yRev.map(v=>g(v*(op/100)*1.1)),yCapex=yRev.map(v=>g(-v*(0.04+r()*0.1)));
   return{
-    ret12:g(-40+r()*80),ret12pt:s.sc>3?2:1,dd:g(-(5+r()*45)),ddpt:2,rsi:g(25+r()*50),rsipt:1,shortR:g(r()*4)/1,shortpt:1,volCh:g(-20+r()*80),volpt:1,
+    ret12:g(-40+r()*80),dd:g(-(5+r()*45)),rsi:g(25+r()*50),shortR:g(r()*4)/1,volCh:g(-20+r()*80),
     fwdPer,avgFwdPer:avg,psr:g(1+r()*20),fwdPsr:g(1+r()*15),avgPsr:g(2+r()*25),evEbitda:g(8+r()*30),peg:g(0.4+r()*2.5),fcfY:g(r()*20),
     roa:g(r()*30),roe:g(r()*60),gross,op,profit,fcfM:g(profit*(0.6+r()*0.8)),curR:g(0.8+r()*3),quickR:g(0.6+r()*2.5),ltDE:g(r()*1.5),
     qRev,qOp,yrs:['FY22','FY23','FY24','FY25','FY26E'],yRev,yOcf,yCapex,
@@ -619,10 +619,10 @@ function renderBoard(){
 
   const top3=STOCKS.filter(s=>s.mr&&s.mr<=3).sort((a,b)=>a.mr-b.mr);
   document.getElementById('today-summary').innerHTML=
-    `<b style="color:#f0efeb">${MARKET.regime||MARKET.mood}</b> · SPY 52주 고점 대비 ${fmt(MARKET.spy52)}%<br>
+    `<b style="color:#f0efeb">${MARKET.regime||'—'}</b> · SPY 52주 고점 대비 ${fmt(MARKET.spy52)}%<br>
      VIX ${fmt(MARKET.vix,2)} · Fear &amp; Greed ${fmt(MARKET.fg,0)} (${MARKET.fgLabel||'—'})<br>
      ${top3.length?`모멘텀 상위 — ${top3.map(s=>s.t).join(' · ')}`:''}`;
-  /* 값만 표시 — 여기 붙어 있던 가감점은 예측력이 음수로 측정된 역발상 점수의 구성요소였다 */
+  /* 값만 표시 — 역발상 가감점은 예측력이 음수로 확인돼 제거했다 */
   const M=[['SPY 52주 낙폭',fmt(MARKET.spy52)+'%'],['VIX',fmt(MARKET.vix,2)],['Fear & Greed',fmt(MARKET.fg,0)]];
   if(MARKET.trendAbove!=null)M.push(['SPY 200일선',MARKET.trendAbove?'위 · 상승':'아래 · 하락']);
   const qqq=STOCKS.find(s=>s.t==='QQQ');
@@ -744,16 +744,15 @@ function renderDetail(){
   </div>
 
   <div class="d-card"><div class="d-h">가격·수급 지표</div>
-    ${kr('12개월 수익률',pct(d.ret12),d.ret12pt)}
-    ${kr('고점 대비 낙폭',fmt(d.dd)+'%',d.ddpt)}
-    ${kr('RSI (14일)',fmt(d.rsi),d.rsipt)}
-    ${kr('공매도 비율',fmt(d.shortR,2),d.shortpt)}
-    ${kr('거래량 증가율',pct(d.volCh),d.volpt)}
-    ${d.surprise!==undefined?kr('최근 어닝 서프라이즈',pct(d.surprise),d.surprisept):''}
+    ${kr('12개월 수익률',pct(d.ret12),undefined)}
+    ${kr('고점 대비 낙폭',fmt(d.dd)+'%',undefined)}
+    ${kr('RSI (14일)',fmt(d.rsi),undefined)}
+    ${kr('공매도 비율',fmt(d.shortR,2),undefined)}
+    ${kr('거래량 증가율',pct(d.volCh),undefined)}
+    ${d.surprise!==undefined?kr('최근 어닝 서프라이즈',pct(d.surprise),undefined):''}
     ${s.ms!=null?kr('모멘텀 점수 <span style="color:var(--dk-ink3);font-weight:400">('+(s.mr?s.mr+'위':'순위 제외')+')</span>',fmt(s.ms,1),undefined):''}
     ${d.mom12_1!=null?kr('모멘텀 <span style="color:var(--dk-ink3);font-weight:400">(최근 1개월 제외 1년 수익률)</span>',pct(d.mom12_1),undefined):''}
     ${d.ma200Dist!=null?kr('200일선 이격도',pct(d.ma200Dist),undefined):''}
-    ${kr('종합 점수 <span style="color:var(--dk-ink3);font-weight:400">(참고 · 검증 결과 예측력 음수)</span>',sign(s.sc),undefined)}
     ${pr.length>1?kr('52주 밴드 위치',fmt(((s.p-Math.min(...pr))/((Math.max(...pr)-Math.min(...pr))||1)*100))+'%',undefined):''}
   </div>
 
@@ -772,15 +771,15 @@ function renderDetail(){
   <div class="d-card"><div class="d-h">시장 환경</div>
     ${kr('NASDAQ',fmt(MARKET.nasdaq,0),undefined)}
     ${kr('S&P500',fmt(MARKET.sp500,0),undefined)}
-    ${kr('VIX',fmt(MARKET.vix,2)+' · '+(MARKET.vix>=24?'경계':MARKET.vix<=14?'안정':'보통'),MARKET.vixPt)}
-    ${kr('Fear & Greed',fmt(MARKET.fg,0)+' · '+(MARKET.fgLabel||'—'),MARKET.fgPt)}
+    ${kr('VIX',fmt(MARKET.vix,2)+' · '+(MARKET.vix>=24?'경계':MARKET.vix<=14?'안정':'보통'),undefined)}
+    ${kr('Fear & Greed',fmt(MARKET.fg,0)+' · '+(MARKET.fgLabel||'—'),undefined)}
   </div>
 
   <div class="sec-label"><span class="no">02</span><span class="t">밸류에이션 · 퀄리티</span></div>
   <h3 class="sec-title">밸류에이션</h3>
   <p class="sec-sub">3년 평균 대비 이격</p>
   <div class="d-card">
-    ${kr('FWD PER',d.fwdPer==null?'— <span class="gap-tag over">결측 → 0점</span>':fmt(d.fwdPer)+(gap==null?'':`<span class="gap-tag ${gap<0?'':'over'}">${gap<0?'3Y 평균 대비 저평가':'3Y 평균 대비 고평가'} ${pct(gap)}</span>`),d.valpt)}
+    ${kr('FWD PER',d.fwdPer==null?'—':fmt(d.fwdPer)+(gap==null?'':`<span class="gap-tag ${gap<0?'':'over'}">${gap<0?'3Y 평균 대비 저평가':'3Y 평균 대비 고평가'} ${pct(gap)}</span>`),undefined)}
     ${kr('3Y 평균 FWD PER',fmt(d.avgFwdPer),undefined)}
     ${kr('PSR',fmt(d.psr,2),undefined)}
     ${kr('FWD PSR',fmt(d.fwdPsr,2),undefined)}
@@ -890,13 +889,12 @@ function go(t){
 function applyLiveData(D){
   if(!D||!Array.isArray(D.stocks)||!D.stocks.length||!D.market)throw new Error('bad data.json');
   DETAILS={};
-  STOCKS=D.stocks.map(s=>({t:s.ticker,n:s.name,th:s.theme,p:s.price,mc:s.market_cap_b,sc:s.score,ytd:s.ytd,ed:s.earnings_in,ab:s.above_ma200,ms:s.mom_score,mr:s.mom_rank,mb:s.mom_band,mt:s.mom_total,gs:s.grow_score,vs:s.val_score,fs:s.fin_score,ts:s.total_score,pr:s.prev_rank}));
+  STOCKS=D.stocks.map(s=>({t:s.ticker,n:s.name,th:s.theme,p:s.price,mc:s.market_cap_b,ytd:s.ytd,ed:s.earnings_in,ab:s.above_ma200,ms:s.mom_score,mr:s.mom_rank,mb:s.mom_band,mt:s.mom_total,gs:s.grow_score,vs:s.val_score,fs:s.fin_score,ts:s.total_score,pr:s.prev_rank}));
   D.stocks.forEach(s=>DETAILS[s.ticker]=s.detail);
   THEMES=[...new Set(STOCKS.map(s=>s.th))];
   const m=D.market;
-  MARKET={spy52:m.spy_dd_52w,spyPt:m.spy_pt||0,vix:m.vix,vixPt:m.vix_pt||0,
-    fg:m.fear_greed,fgPt:m.fg_pt||0,fgLabel:m.fg_label,mood:m.mood||'중립',moodPt:0,
-    nasdaq:m.nasdaq,sp500:m.sp500,trendAbove:m.spy_ma200_above,trendAdj:m.trend_adj||0,regime:m.regime,breadth:m.breadth_pct,golden:m.spy_golden,panic:m.panic,topTheme:m.top5_theme,topThemeN:m.top5_theme_count};
+  MARKET={spy52:m.spy_dd_52w,vix:m.vix,fg:m.fear_greed,fgLabel:m.fg_label,
+    nasdaq:m.nasdaq,sp500:m.sp500,trendAbove:m.spy_ma200_above,regime:m.regime,breadth:m.breadth_pct,golden:m.spy_golden,panic:m.panic,topTheme:m.top5_theme,topThemeN:m.top5_theme_count};
   META={updated:D.updated_at_kst,updatedUtc:D.updated_at,live:true,compareDate:D.compare_date};
   if(!STOCKS.some(x=>x.t===curTicker))curTicker=STOCKS[0].t;
 }
@@ -985,6 +983,14 @@ function startLive(){
   liveTimer=setInterval(()=>{if(document.visibilityState==='visible')refreshQuotes(false)},60000);
 }
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshQuotes(false)});
+/* 폴백용 모멘텀 순위 — 실데이터가 없을 때 화면 구조를 그대로 보여주기 위한 샘플.
+   티커 시드 난수라 새로고침해도 같은 값이 나온다. */
+function rankSample(){
+  STOCKS.forEach(s=>{if(s.th!=='지수 ETF')s.ms=Math.round((rng(s.t)()*260-40)*10)/10});
+  const list=STOCKS.filter(s=>s.ms!=null).sort((a,b)=>b.ms-a.ms);
+  list.forEach((s,i)=>{s.mr=i+1;s.mt=list.length;
+    s.mb=s.mr<=5?'상위 5':s.mr<=15?'6~15위':'16위↓'});
+}
 (async function boot(){
   try{
     const r=await fetch('data.json',{cache:'no-store'});
@@ -993,6 +999,7 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
   }catch(e){
     console.warn('data.json 로드 실패, 샘플 데이터로 폴백:',e);
     META={updated:null,updatedUtc:null,live:false};
+    rankSample();
   }
   renderBoard();renderScore();renderCompare();
   if(!document.getElementById('tab-detail').classList.contains('hidden'))renderDetail();
