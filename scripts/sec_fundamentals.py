@@ -35,11 +35,13 @@ FLOW = {   # 기간 흐름값
             "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations"],
     "capex": ["PaymentsToAcquirePropertyPlantAndEquipment", "PaymentsToAcquireProductiveAssets"],
 }
-SHARES = {   # 발행주식수 (dei 우선, 없으면 us-gaap)
-    "dei": ["EntityCommonStockSharesOutstanding"],
-    "us-gaap": ["CommonStockSharesOutstanding",
-                "WeightedAverageNumberOfDilutedSharesOutstanding"],
-}
+# 발행주식수: dei 표지값은 주식 클래스별로 따로 기재돼 한 클래스만 잡힌다
+# (BRK-B는 A주만 잡혀 1500배, NKE는 B주만 잡혀 1.7배 어긋났다).
+# us-gaap 가중평균 희석주식수는 전 클래스 합산이므로 이쪽을 우선한다.
+SHARES_DURATION = ["WeightedAverageNumberOfDilutedSharesOutstanding",
+                   "WeightedAverageNumberOfSharesOutstandingBasic",
+                   "WeightedAverageNumberOfShareOutstandingBasicAndDiluted"]
+SHARES_INSTANT = ["EntityCommonStockSharesOutstanding"]
 INSTANT = {  # 시점 잔액
     "eq": ["StockholdersEquity",
            "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"],
@@ -120,6 +122,8 @@ def ttm_at(q, cutoff, end=None):
     last4 = avail[-4:]
     if days(q[last4[0]][0], last4[-1]) > 400:            # 구멍 있는 4분기는 버린다
         return None, None
+    if end and days(last4[-1], end) > 110:               # 최신 분기가 빠진 지표는 버린다
+        return None, None                                # (오래된 4분기 재사용 방지)
     return sum(q[e][1] for e in last4), last4[-1]
 
 
@@ -128,9 +132,10 @@ def build(ticker, cik):
     us = facts.get("facts", {}).get("us-gaap", {})
     flows = {k: quarterly(collect(us, c, False)) for k, c in FLOW.items()}
     inst = {k: collect(us, c, True) for k, c in INSTANT.items()}
-    shares = collect(facts.get("facts", {}).get("dei", {}), SHARES["dei"], True, "shares")
-    if not shares:
-        shares = collect(us, SHARES["us-gaap"], True, "shares")
+    sh_dur = collect(us, SHARES_DURATION, False, "shares")
+    shares = {e: v for (_, e), v in sh_dur.items()}
+    if not shares:      # 가중평균이 없으면 표지값으로 대체 (클래스 누락 가능)
+        shares = collect(facts.get("facts", {}).get("dei", {}), SHARES_INSTANT, True, "shares")
 
     # 분기값은 (시작일, 값, 제출일), 잔액은 (값, 제출일) — 제출일은 항상 마지막 원소
     filings = sorted({v[-1] for d in list(flows.values()) + list(inst.values())
