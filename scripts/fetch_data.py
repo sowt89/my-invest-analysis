@@ -74,6 +74,7 @@ WATCHLIST = [
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT_PATH = os.path.join(_ROOT, "data.json")
 HIST_PATH = os.path.join(_ROOT, "history.json")
+PIT_PATH = os.path.join(_ROOT, "data", "sec_pit.json")
 HIST_DAYS = 1095  # 3년 (초과분은 archive/history-YYYY.json으로 이관)
 ARCHIVE_DIR = os.path.join(_ROOT, "archive")
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -377,7 +378,43 @@ def hist_avg_fwd_per(hist, ticker):
     return avg, min(1.0, span / HIST_DAYS)
 
 
-def fetch_stock(session, ticker, name, theme, market, hist):
+def load_pit():
+    """SEC 원본 재무 시계열(data/sec_pit.json). 없으면 빈 dict."""
+    try:
+        with open(PIT_PATH, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def sec_avg_psr(rows, dates, closes, psr_now):
+    """과거 PSR 실측 평균 = 각 시점 주가 x 당시 발행주식수 / 당시 TTM 매출.
+
+    근사값(현재 매출을 과거 주가에 대입)과 달리 매출 성장이 반영된다.
+    현재 시점 재계산값이 야후의 PSR과 30% 넘게 어긋나면(주식 클래스 분리 등)
+    신뢰할 수 없다고 보고 None을 반환해 기존 근사값으로 되돌린다.
+    """
+    usable = [r for r in rows if r.get("sh") and r.get("revTtm")]
+    if len(usable) < 8 or not dates:
+        return None
+    vals, idx = [], 0
+    for d, px in zip(dates, closes):
+        while idx + 1 < len(usable) and usable[idx + 1]["filed"] <= d:
+            idx += 1
+        r = usable[idx]
+        if r["filed"] <= d:
+            vals.append(px * r["sh"] / r["revTtm"])
+    if len(vals) < 20:
+        return None
+    if psr_now:
+        last = usable[-1]
+        check = closes[-1] * last["sh"] / last["revTtm"]
+        if abs(check / psr_now - 1) > 0.3:
+            return None
+    return sum(vals) / len(vals)
+
+
+def fetch_stock(session, ticker, name, theme, market, hist, pit):
     tk = yf.Ticker(ticker, session=session)
     info = retry(lambda: tk.info, default={}) or {}
 
@@ -393,13 +430,14 @@ def fetch_stock(session, ticker, name, theme, market, hist):
         raise RuntimeError("가격 정보 없음")
     price = float(price)
 
-    prices, price_dates = [], []
+    prices, price_dates, price_dates_5y = [], [], []
     ret12 = dd = ytd = None
     avg3y_px = avg5y_px = None
     closes5_all = closes_of(h5)
     if len(closes5_all) > 5:
         closes5 = closes5_all
         dates5 = [d.strftime("%Y-%m-%d") for d, x in zip(h5.index, h5["Close"]) if x == x]
+        price_dates_5y = dates5
         n1y = min(53, len(closes5))
         prices = [rnd(x, 2) for x in closes5[-n1y:]]
         price_dates = dates5[-n1y:]
@@ -453,7 +491,11 @@ def fetch_stock(session, ticker, name, theme, market, hist):
     gap = ((fwd_per / avg_fwd_per - 1) * 100) if (fwd_per and avg_fwd_per) else None
 
     psr = info.get("priceToSalesTrailing12Months")
-    avg_psr = (psr * avg5y_px / price) if (psr and avg5y_px) else None
+    # 5년 평균 PSR: SEC 원본(주식수·매출) 실측을 우선하고, 불가하면 근사값으로 대체
+    avg_psr = sec_avg_psr(pit.get(ticker) or [], price_dates_5y, closes5_all, psr)
+    psr_src = "sec" if avg_psr is not None else "proxy"
+    if avg_psr is None:
+        avg_psr = (psr * avg5y_px / price) if (psr and avg5y_px) else None
     total_rev = info.get("totalRevenue")
     fcf = info.get("freeCashflow")
     short_ratio = info.get("shortRatio")
@@ -463,7 +505,7 @@ def fetch_stock(session, ticker, name, theme, market, hist):
         "ret12": rnd(ret12, 1), "dd": rnd(dd, 1), "rsi": rnd(rsi, 1),
         "shortR": rnd(short_ratio, 2), "volCh": rnd(vol_ch, 1),
         "fwdPer": rnd(fwd_per, 1), "avgFwdPer": rnd(avg_fwd_per, 1),
-        "psr": rnd(psr, 2), "avgPsr": rnd(avg_psr, 2),
+        "psr": rnd(psr, 2), "avgPsr": rnd(avg_psr, 2), "psrSrc": psr_src,
         "evEbitda": rnd(info.get("enterpriseToEbitda"), 2),
         "peg": rnd(info.get("trailingPegRatio") or info.get("pegRatio"), 2),
         "fcfY": rnd(pct100(fcf / mcap) if (fcf and mcap) else None, 2),
@@ -625,10 +667,12 @@ def main():
           f"F&G {market['fear_greed']}({market['fg_label']})")
 
     hist = load_history()
+    pit = load_pit()
+    print(f"SEC 원본 재무: {len(pit)}종목 (data/sec_pit.json)")
     stocks, failed = [], []
     for i, (ticker, name, theme) in enumerate(WATCHLIST):
         try:
-            s = fetch_stock(session, ticker, name, theme, market, hist)
+            s = fetch_stock(session, ticker, name, theme, market, hist, pit)
             stocks.append(s)
             print(f"  [{i+1:2d}/{len(WATCHLIST)}] {ticker:6s} ${s['price']:>9.2f}  "
                   f"3축 {s['grow_score']:+d}/{s['val_score']:+d}/{s['fin_score']:+d}")
