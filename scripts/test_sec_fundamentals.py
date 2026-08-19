@@ -139,5 +139,26 @@ if rows:
     check("제출일 순서", rows == sorted(rows, key=lambda x: x["filed"]), True)
     check("분기 종료일 중복 없음", len({x["end"] for x in rows}), len(rows))
 
+print("\n10) 최신 분기가 빠진 지표는 버린다 (오래된 4분기 재사용 방지)")
+f = facts("R", [rec("2023-01-01", "2023-03-31", 10, "2023-04-20"),
+                rec("2023-04-01", "2023-06-30", 10, "2023-07-20"),
+                rec("2023-07-01", "2023-09-30", 10, "2023-10-20"),
+                rec("2023-10-01", "2023-12-31", 10, "2024-01-20")])
+q = quarterly(collect(f, ["R"], False))
+check("같은 시점 기준이면 산출", ttm_at(q, "2024-02-01", "2023-12-31")[0], 40)
+check("1년 뒤 기준이면 폐기", ttm_at(q, "2025-02-01", "2024-12-31")[0], None)
+
+print("\n11) 주식수는 전 클래스 합산인 가중평균을 우선한다")
+synth2 = {"facts": {
+    "us-gaap": {**quarters("RevenueFromContractWithCustomerExcludingAssessedTax", 100),
+                **quarters("NetIncomeLoss", 15),
+                "WeightedAverageNumberOfDilutedSharesOutstanding": {"units": {"shares": [
+                    rec("2024-10-01", "2024-12-31", 1450, "2025-01-20")]}}},
+    "dei": {"EntityCommonStockSharesOutstanding": {"units": {"shares": [
+        {"end": "2024-12-31", "val": 900, "filed": "2025-01-20"}]}}}}}
+SF.get = lambda url: synth2
+rows2 = SF.build("TEST2", 1)
+check("표지값(900) 아닌 가중평균(1450) 채택", rows2[-1]["sh"] if rows2 else None, 1450.0)
+
 print("\n" + ("실패 " + str(FAIL) if FAIL else "전부 통과"))
 sys.exit(1 if FAIL else 0)
