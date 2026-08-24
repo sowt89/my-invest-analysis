@@ -174,7 +174,7 @@ svg text{font-family:inherit}
 <!-- ============ TAB 1 : 매수 종목 ============ -->
 <main id="tab-board" class="wrap">
   <section class="hero">
-    <div class="kicker">관심종목 39개 · 테마 13개</div>
+    <div class="kicker">관심종목 40개 · 테마 14개</div>
     <h2>이번 달 매수 종목</h2>
     <p>모멘텀 상위 5종목과 현재 시장 국면</p>
     <p id="data-status" style="margin-top:10px;font-size:.72rem;color:#ffd9c2;font-weight:700">데이터 로딩 중…</p>
@@ -269,7 +269,7 @@ svg text{font-family:inherit}
 <div id="guide"><div class="gwrap">
   <div class="gtop"><h2>설명서</h2><button class="gclose" onclick="toggleGuide(0)">닫기</button></div>
 
-  <p class="lead">관심종목 39개를 매일 자동 분석해 <b>모멘텀 상위 5종목</b>과 <b>실적·밸류·재무 진단</b>을 보여줍니다.</p>
+  <p class="lead">관심종목 40개를 매일 자동 분석해 <b>모멘텀 상위 5종목</b>과 <b>실적·밸류·재무 진단</b>을 보여줍니다.</p>
 
   <h3>화면 구성</h3>
   <table><colgroup><col class="c-ind"><col></colgroup>
@@ -582,7 +582,10 @@ function multiLine(el,labels,seriesArr,colors,names,unit){
    화면에서 FWD PER로 되계산하면 예상 EPS가 약분돼 주가 등락률이 되어버린다. */
 function gapOf(d){return d.gap!==undefined?d.gap:null}
 function renderBoard(){
-  document.querySelector('#tab-board .kicker').textContent=`관심종목 ${STOCKS.length}개 · 테마 ${THEMES.length}개`;
+  /* 지수 ETF(QQQ)는 참고용이라 관심종목 수에서 뺀다 */
+  const own=STOCKS.filter(s=>s.th!=='지수 ETF');
+  document.querySelector('#tab-board .kicker').textContent=
+    `관심종목 ${own.length}개 · 테마 ${new Set(own.map(s=>s.th)).size}개`;
 
   /* 최상단 — 이번 달 매수 종목 (모멘텀 상위 5) */
   const mom=STOCKS.filter(s=>s.mr).sort((a,b)=>a.mr-b.mr).slice(0,5);
