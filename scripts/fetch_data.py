@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """나만의 투자분석 — 실데이터 수집 스크립트.
 
-yfinance로 워치리스트 39종목의 시세·1년 주가·재무·마진·컨센서스와
+yfinance로 워치리스트 40종목의 시세·1년 주가·재무·마진·컨센서스와
 시장지표(^VIX, ^IXIC, ^GSPC, SPY 52주 낙폭, CNN Fear & Greed)를 수집해
 data.json으로 저장한다. QQQ 포함 40개 티커 중 지수 ETF는 순위에서 제외한다.
 
@@ -49,6 +49,7 @@ WATCHLIST = [
     ("SMR", "NuScale Power", "전력"),
     ("NXT", "Nextracker", "전력"),
     ("CVX", "Chevron", "전력"),
+    ("QS", "QuantumScape", "배터리"),
     ("RKLB", "Rocket Lab", "우주"),
     ("LUNR", "Intuitive Machines", "우주"),
     ("RDW", "Redwire", "우주"),
