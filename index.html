@@ -358,16 +358,24 @@ svg text{font-family:inherit}
   3년 평균 FWD PER은 아직 근사값입니다. 예상 실적(컨센서스)의 과거값을 구할 수 없어, 현재 예상 실적을 과거 주가에 대입합니다. 이 방식은 고성장 종목을 실제보다 고평가로 계산합니다. 매일 실측이 누적되면 점차 대체됩니다.</p>
 
   <h3>4. 검증 근거</h3>
-  <p>2000~2026년 26년 · 닷컴버블 · 금융위기 포함</p>
+  <p>2000~2026년 · 319개월 · 닷컴버블 · 금융위기 포함</p>
+  <table><colgroup><col><col style="width:24%"><col style="width:22%"></colgroup>
+    <tr><th>방식</th><th class="num">최종</th><th class="num">최대낙폭</th></tr>
+    <tr><td>모멘텀 상위 5종목</td><td class="num">2,106배</td><td class="num">-52%</td></tr>
+    <tr><td>전 종목 균등보유</td><td class="num">237배</td><td class="num">-46%</td></tr>
+    <tr><td>무작위 5종목 (대조군)</td><td class="num">230배</td><td class="num">-46%</td></tr>
+    <tr><td>QQQ 매수 후 보유</td><td class="num">9.4배</td><td class="num">-81%</td></tr>
+  </table>
+  <p style="margin-bottom:2px">시대별 균등보유 대비</p>
   <table><colgroup><col><col style="width:26%"></colgroup>
-    <tr><th>방식</th><th class="num">최종</th></tr>
-    <tr><td>모멘텀 상위 3종목</td><td class="num">576배</td></tr>
-    <tr><td>15종목 전부 보유</td><td class="num">116배</td></tr>
-    <tr><td>무작위 3종목 (대조군)</td><td class="num">65배</td></tr>
+    <tr><td>2000-2007 닷컴</td><td class="num" style="color:#e3c05a">0.86배 열위</td></tr>
+    <tr><td>2008-2013 금융위기</td><td class="num">1.76배</td></tr>
+    <tr><td>2014-2019 강세장</td><td class="num">1.58배</td></tr>
+    <tr><td>2020-2026 코로나 이후</td><td class="num">3.67배</td></tr>
   </table>
   <ul>
-    <li>무작위 대조군이 보유보다 낮음 → 집중 효과가 아닌 <b>선택 능력</b></li>
-    <li>4개 시대(닷컴 · 금융위기 · 강세장 · 코로나 이후) 모두 우위</li>
+    <li>무작위 대조군(230배)이 균등보유(237배)와 같음 → 집중 효과가 아닌 <b>선택 능력</b></li>
+    <li><b>닷컴 구간은 열위</b> — 당시 19종목 중에서만 선택 가능했던 점 감안 필요</li>
   </ul>
   <p style="font-size:.78rem;color:var(--ink3)">버린 방식: 역발상 점수 매수 · 점수 악화 시 매도 · 200일선 이탈 매도 · 신호 대기 적립 · 가중치 최적화 · 테마별 규칙</p>
 
@@ -457,7 +465,8 @@ function rankDelta(s){
 }
 
 /* 판단 = 모멘텀 횡단면 순위 (모멘텀[최근 1개월 제외 1년 수익률] + 200일선 이격도).
-   26년 백테스트에서 4개 시대 모두 균등보유를 앞선 유일한 방식.
+   26년 백테스트에서 4개 시대 중 3개 구간 우위 (닷컴 구간은 열위).
+   scripts/backtest_momentum.py로 재현 가능.
    순위 묶음 표시 — 1~5위 / 6~15위 / 16위↓ (매매 지시 아님) */
 function band(s){return s&&s.mb?s.mb:'—'}
 function bandCls(s){const b=band(s);return b==='상위 5'?'s-strong':b==='6~15위'?'s-buy':'s-hold'}
