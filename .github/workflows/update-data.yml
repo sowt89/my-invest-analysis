@@ -50,5 +50,16 @@ jobs:
           git add data.json history.json
           # archive/는 3년 지난 기록이 처음 생길 때까지 존재하지 않는다
           if [ -d archive ]; then git add archive; fi
-          git commit -m "chore: update market data ($(date -u +'%Y-%m-%d %H:%M UTC'))"
-          git push
+          MSG="chore: update market data ($(date -u +'%Y-%m-%d %H:%M UTC'))"
+          git commit -m "$MSG"
+          # 두 스케줄이 겹쳐 동시에 돌면 뒤늦은 push가 거부된다.
+          # 최신 main 위에 우리 결과를 다시 얹어 재시도한다 (생성 파일이라 나중 값이 맞다)
+          for i in 1 2 3; do
+            git push && exit 0
+            echo "push 거부 — 최신 main 위에 다시 얹어 재시도 ($i/3)"
+            git fetch origin main
+            git reset --soft origin/main
+            git commit -m "$MSG" || exit 0     # 차이가 없으면 이미 반영된 것
+          done
+          echo "3회 재시도 실패"
+          exit 1
