@@ -403,6 +403,45 @@ def sec_multiple(rows, dates, closes, key, weeks=None, check_now=None):
     return sum(vals) / len(vals), now
 
 
+def track_vs_bench(hist, bench="QQQ", top_n=5):
+    """축적 기록으로 전략과 지수의 실제 성과를 비교한다.
+
+    전략: 그날의 모멘텀 상위 N종목 균등보유. 월이 바뀌는 첫 기록에서만 교체한다.
+    지수: 첫날 매수 후 보유.
+    거래비용·세금은 반영하지 않는다. 백테스트가 아니라 실제 축적 기록이다.
+    """
+    days = sorted(hist)
+    if len(days) < 2:
+        return None
+    px = lambda d, t: (hist[d].get(t) or {}).get("px")
+    held, month, sv, bv = [], None, 1.0, 1.0
+    for prev, cur in zip(days, days[1:]):
+        if held:                                   # 보유 중이면 하루 수익률 반영
+            rets = [px(cur, t) / px(prev, t) - 1 for t in held
+                    if px(cur, t) and px(prev, t)]
+            if rets:
+                sv *= 1 + sum(rets) / len(rets)
+        b0, b1 = px(prev, bench), px(cur, bench)
+        if b0 and b1:
+            bv *= b1 / b0
+        if cur[:7] != month:                       # 달이 바뀌면 교체
+            ranked = sorted((r["rank"], t) for t, r in hist[cur].items()
+                            if isinstance(r, dict) and r.get("rank") and r.get("px"))
+            if len(ranked) >= top_n:
+                held = [t for _, t in ranked[:top_n]]
+                month = cur[:7]
+        elif not held:                             # 첫날 편입
+            ranked = sorted((r["rank"], t) for t, r in hist[cur].items()
+                            if isinstance(r, dict) and r.get("rank") and r.get("px"))
+            if len(ranked) >= top_n:
+                held = [t for _, t in ranked[:top_n]]
+                month = cur[:7]
+    return {"start": days[0], "days": len(days),
+            "strategy_pct": rnd((sv - 1) * 100, 2),
+            "bench": bench, "bench_pct": rnd((bv - 1) * 100, 2),
+            "holding": held}
+
+
 def fetch_stock(session, ticker, name, theme, market, pit):
     tk = yf.Ticker(ticker, session=session)
     info = retry(lambda: tk.info, default={}) or {}
@@ -736,10 +775,15 @@ def main():
             prev = rec.get("rank") if isinstance(rec, dict) else None
             s["prev_rank"] = prev
 
-    with open(OUT_PATH, "w", encoding="utf-8") as f:
-        json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
     hist = save_history(hist, stocks)
     print(f"FWD PER 히스토리: {len(hist)}일 누적 (history.json)")
+    track = track_vs_bench(hist)
+    if track:
+        market["track"] = track
+        print(f"추적 {track['days']}일: 전략 {track['strategy_pct']:+.2f}% / "
+              f"{track['bench']} {track['bench_pct']:+.2f}%")
+    with open(OUT_PATH, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
     size = os.path.getsize(OUT_PATH)
     print(f"저장 완료: {OUT_PATH} ({size/1024:.0f} KB, 종목 {len(stocks)}개, 실패 {failed})")
 

@@ -191,6 +191,11 @@ svg text{font-family:inherit}
     <div class="card-b" id="regime-box"></div>
   </div>
 
+  <div class="card" id="track-card" style="display:none">
+    <div class="card-h">전략 vs QQQ · 실제 기록</div>
+    <div class="card-b" id="track-box"></div>
+  </div>
+
   <div class="card dark-card" style="padding-bottom:4px">
     <div class="card-h" style="padding-top:16px">모멘텀 순위 · 전 종목</div>
     <div class="filters dark-sel" style="padding-left:16px">
@@ -273,7 +278,7 @@ svg text{font-family:inherit}
 
   <h3>화면 구성</h3>
   <table><colgroup><col class="c-ind"><col></colgroup>
-    <tr><td>매수 종목</td><td>모멘텀 상위 5종목 · 시장 국면 · 전 종목 순위</td></tr>
+    <tr><td>매수 종목</td><td>모멘텀 상위 5종목 · 시장 국면 · 전략 vs QQQ 기록 · 전 종목 순위</td></tr>
     <tr><td>종목 진단</td><td>실적 · 밸류 · 재무 3축 점수</td></tr>
     <tr><td>종목 상세</td><td>주가 차트 · 재무 · 현금흐름 · 컨센서스</td></tr>
     <tr><td>밸류 비교</td><td>전 종목 밸류에이션 표</td></tr>
@@ -297,7 +302,16 @@ svg text{font-family:inherit}
     <tr><td>⚠ 배너</td><td>섹터 쏠림(5종목 중 3개 이상 같은 테마) · 데이터 24시간 이상 미갱신</td></tr>
   </table>
 
-  <h3>2. 시장 국면</h3>
+  <h3>2. 전략 vs QQQ 기록</h3>
+  <p>백테스트가 아니라 <b>오늘부터 쌓는 실제 기록</b>입니다. 매일 상위 5종목의 주가를 저장해 균등보유 수익률을 계산하고, 같은 기간 QQQ와 비교합니다.</p>
+  <table><colgroup><col class="c-ind"><col></colgroup>
+    <tr><td>교체 시점</td><td>달이 바뀌는 첫 기록</td></tr>
+    <tr><td>미반영</td><td>거래비용 · 세금 · 환율</td></tr>
+    <tr><td>판단 가능 시점</td><td>최소 1년 이상 누적 후</td></tr>
+  </table>
+  <p style="font-size:.78rem;color:var(--ink3)">백테스트는 이미 살아남은 종목으로 계산해 부풀려져 있습니다. 이 기록은 그 편향이 없는 유일한 성과 자료가 됩니다.</p>
+
+  <h3>3. 시장 국면</h3>
   <p>매수 종목 아래에 표시. 26년 데이터(주간 1,327표본) 검증 기준입니다.</p>
   <table><colgroup><col style="width:22%"><col><col style="width:22%"></colgroup>
     <tr><th>국면</th><th>조건</th><th class="num">3개월<br>손실확률</th></tr>
@@ -308,7 +322,7 @@ svg text{font-family:inherit}
   <p><b>시장 폭</b> = 자기 200일선 위에 있는 종목 비중<br>
      <b>VIX 30↑</b> = 패닉 구간 · 이후 3개월 평균 +10.6%로 반등 잦음</p>
 
-  <h3>3. 종목 진단</h3>
+  <h3>4. 종목 진단</h3>
   <p><b>참고를 위한 측정입니다. 매매 판단은 모멘텀 순위 기준입니다.</b></p>
   <p>SEC 원본 재무제표로 2010~2026년을 검증한 결과입니다. IC는 점수와 이후 12개월 수익률의 순위상관 — 양수면 점수가 높을수록 더 올랐다는 뜻입니다. 12개월 구간이 겹치지 않도록 연 1회씩, 독립 관측 15회로 측정했습니다.</p>
   <table><colgroup><col class="c-ind"><col style="width:26%"><col></colgroup>
@@ -357,7 +371,7 @@ svg text{font-family:inherit}
   5년 평균 PSR은 SEC 원본 재무제표로 계산합니다 — 각 시점의 주가 × 당시 발행주식수 ÷ 당시 매출.<br>
   3년 평균 FWD PER은 아직 근사값입니다. 예상 실적(컨센서스)의 과거값을 구할 수 없어, 현재 예상 실적을 과거 주가에 대입합니다. 이 방식은 고성장 종목을 실제보다 고평가로 계산합니다. 매일 실측이 누적되면 점차 대체됩니다.</p>
 
-  <h3>4. 검증 근거</h3>
+  <h3>5. 검증 근거</h3>
   <p>2000~2026년 · 319개월 · 닷컴버블 · 금융위기 포함</p>
   <table><colgroup><col><col style="width:24%"><col style="width:22%"></colgroup>
     <tr><th>방식</th><th class="num">최종</th><th class="num">최대낙폭</th></tr>
@@ -379,7 +393,7 @@ svg text{font-family:inherit}
   </ul>
   <p style="font-size:.78rem;color:var(--ink3)">버린 방식: 역발상 점수 매수 · 점수 악화 시 매도 · 200일선 이탈 매도 · 신호 대기 적립 · 가중치 최적화 · 테마별 규칙</p>
 
-  <h3>5. 한계</h3>
+  <h3>6. 한계</h3>
   <div class="warn"><p><b>최대 낙폭 -50%</b> · 26년 중 두 번 반토막. 견딜 수 있는 금액만.</p></div>
   <div class="warn"><p><b>하락장에선 "덜 떨어진" 종목을 고름</b> · 상대 순위라 전부 하락 중이어도 5개를 채움</p></div>
   <div class="warn"><p><b>워치리스트가 성과를 좌우</b> · 부진 종목만 모인 풀에서는 오히려 손해</p></div>
@@ -387,7 +401,7 @@ svg text{font-family:inherit}
   <div class="warn"><p><b>지수보다 낫다고 검증된 것 아님</b> · 검증 범위는 "같은 워치리스트 안에서의 선택"</p></div>
   <div class="warn"><p><b>급락 대응 불가</b> · 월 1회 점검 기준</p></div>
 
-  <h3>6. 데이터</h3>
+  <h3>7. 데이터</h3>
   <table><colgroup><col><col style="width:34%"></colgroup>
     <tr><th>출처</th><th class="num">갱신</th></tr>
     <tr><td>Yahoo Finance<span class="sub">시세 · 재무 · 실적 · 컨센서스</span></td><td class="num">장중 30분</td></tr>
@@ -639,6 +653,7 @@ function renderBoard(){
         :'지수와 개별 종목의 추세가 엇갈리는 전환 구간<br>순위 변동이 잦아질 수 있음'}</p>`
     : '<span style="font-size:.83rem;color:var(--ink2)">국면 데이터 없음 (샘플 데이터 표시 중)</span>';
 
+  renderTrack();
   const top3=STOCKS.filter(s=>s.mr&&s.mr<=3).sort((a,b)=>a.mr-b.mr);
   document.getElementById('today-summary').innerHTML=
     `<b style="color:#f0efeb">${MARKET.regime||'—'}</b> · SPY 52주 고점 대비 ${fmt(MARKET.spy52)}%<br>
@@ -667,6 +682,25 @@ function renderBoard(){
         <td style="text-align:right"><span class="sig ${bandCls(s)}"><span class="dot"></span>${band(s)}</span></td></tr>`).join('');
   }
   ft.onchange=draw;document.getElementById('f-band').onchange=draw;draw();
+}
+
+/* 전략과 지수의 실제 성과 비교 — 백테스트가 아니라 기록이 쌓인 만큼만 보여준다 */
+function renderTrack(){
+  const t=MARKET.track, card=document.getElementById('track-card');
+  if(!t||!t.days){card.style.display='none';return}
+  card.style.display='';
+  const diff=t.strategy_pct-t.bench_pct;
+  const col=v=>v>=0?'#4c8f3a':'#c4472e';
+  const row=(k,v)=>`<div class="mrow"><span class="k">${k}</span>
+    <span class="v" style="color:${col(v)}">${v>=0?'+':''}${fmt(v,2)}%</span></div>`;
+  document.getElementById('track-box').innerHTML=
+    row('모멘텀 상위 5',t.strategy_pct)+row(t.bench,t.bench_pct)+
+    `<div class="mrow"><span class="k">차이</span>
+      <span class="v" style="color:${col(diff)}">${diff>=0?'+':''}${fmt(diff,2)}%p</span></div>
+     <p style="font-size:.72rem;color:var(--ink3);line-height:1.5;margin-top:9px">
+       ${t.start} 기록 시작 · ${t.days}일 경과 · 월 1회 교체 기준<br>
+       ${t.days<250?'<b>표본이 적어 판단 근거로 쓸 수 없습니다.</b> 최소 1년 이상 쌓여야 의미가 생깁니다.':''}
+       거래비용·세금 미반영</p>`;
 }
 
 /* ================= 매매 점수 탭 RENDER ================= */
@@ -917,7 +951,7 @@ function applyLiveData(D){
   THEMES=[...new Set(STOCKS.map(s=>s.th))];
   const m=D.market;
   MARKET={spy52:m.spy_dd_52w,vix:m.vix,fg:m.fear_greed,fgLabel:m.fg_label,
-    nasdaq:m.nasdaq,sp500:m.sp500,trendAbove:m.spy_ma200_above,regime:m.regime,breadth:m.breadth_pct,golden:m.spy_golden,panic:m.panic,topTheme:m.top5_theme,topThemeN:m.top5_theme_count};
+    nasdaq:m.nasdaq,sp500:m.sp500,trendAbove:m.spy_ma200_above,regime:m.regime,track:m.track,breadth:m.breadth_pct,golden:m.spy_golden,panic:m.panic,topTheme:m.top5_theme,topThemeN:m.top5_theme_count};
   META={updated:D.updated_at_kst,updatedUtc:D.updated_at,live:true,compareDate:D.compare_date};
   if(!STOCKS.some(x=>x.t===curTicker))curTicker=STOCKS[0].t;
 }
