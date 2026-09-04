@@ -167,7 +167,8 @@ svg text{font-family:inherit}
 <body>
 <div id="tip"></div>
 <header class="top"><div class="wrap"><div class="logo">나만의<br>분석</div><h1>나만의 투자분석</h1>
-<button id="theme-btn" onclick="toggleTheme()" title="라이트/다크 전환" style="margin-left:auto;background:none;border:1px solid var(--line);border-radius:8px;padding:4px 9px;font-size:.85rem;cursor:pointer;font-family:inherit">🌙</button>
+<button id="mkt-btn" onclick="toggleMarket()" title="한국/미국 시장 전환" style="margin-left:auto;background:var(--buy-bg,#eef4e6);border:1px solid var(--line);border-radius:8px;padding:4px 10px;font-size:.8rem;font-weight:800;cursor:pointer;color:var(--ink);font-family:inherit">🇺🇸 미국</button>
+<button id="theme-btn" onclick="toggleTheme()" title="라이트/다크 전환" style="margin-left:6px;background:none;border:1px solid var(--line);border-radius:8px;padding:4px 9px;font-size:.85rem;cursor:pointer;font-family:inherit">🌙</button>
 <button onclick="toggleGuide(1)" title="설명서" style="margin-left:6px;background:var(--orange);border:none;border-radius:8px;padding:5px 11px;font-size:.8rem;font-weight:800;cursor:pointer;color:#fff;font-family:inherit">설명서</button>
 <button id="live-cfg" onclick="setFinnKey()" title="실시간 시세 API 키 설정" style="margin-left:6px;background:none;border:1px solid var(--line);border-radius:8px;padding:4px 9px;font-size:.85rem;cursor:pointer;color:var(--ink2);font-family:inherit">⚙</button></div></header>
 
@@ -192,7 +193,7 @@ svg text{font-family:inherit}
   </div>
 
   <div class="card" id="track-card" style="display:none">
-    <div class="card-h">전략 vs QQQ · 실제 기록</div>
+    <div class="card-h" id="track-title">전략 vs 지수 · 실제 기록</div>
     <div class="card-b" id="track-box"></div>
   </div>
 
@@ -274,7 +275,14 @@ svg text{font-family:inherit}
 <div id="guide"><div class="gwrap">
   <div class="gtop"><h2>설명서</h2><button class="gclose" onclick="toggleGuide(0)">닫기</button></div>
 
-  <p class="lead">관심종목 40개를 매일 자동 분석해 <b>모멘텀 상위 5종목</b>과 <b>실적·밸류·재무 진단</b>을 보여줍니다.</p>
+  <p class="lead">관심종목을 매일 자동 분석해 <b>모멘텀 상위 5종목</b>과 <b>실적·밸류·재무 진단</b>을 보여줍니다. 우측 상단 버튼으로 <b>미국·한국 시장</b>을 전환합니다.</p>
+
+  <h3>시장 전환</h3>
+  <table><colgroup><col class="c-ind"><col></colgroup>
+    <tr><td>🇺🇸 미국</td><td>40종목 + QQQ<span class="sub">실시간 시세 · SEC 원본 재무로 PER·PSR 실측</span></td></tr>
+    <tr><td>🇰🇷 한국</td><td>41종목 + KODEX 200<span class="sub">30분 간격 시세 · PER·PSR은 근사값</span></td></tr>
+  </table>
+  <p style="font-size:.78rem;color:var(--ink3)">순위 규칙과 점수 계산은 두 시장이 동일합니다. 한국은 변동성지수(VKOSPI)와 공포·탐욕 지수가 없어 원/달러 환율로 대체하며, 검증(백테스트)은 미국 종목으로만 수행했습니다.</p>
 
   <h3>화면 구성</h3>
   <table><colgroup><col class="c-ind"><col></colgroup>
@@ -487,7 +495,21 @@ function bandCls(s){const b=band(s);return b==='상위 5'?'s-strong':b==='6~15�
 const fmt=(x,d=1)=>x==null||isNaN(x)?'—':x.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
 const sign=x=>x==null||isNaN(x)?'—':(x>0?'+':'')+x;
 const pct=(x,d=1)=>x==null||isNaN(x)?'—':(x>0?'+':'')+fmt(x,d)+'%';
-const mc=v=>v==null||isNaN(v)?'—':v>=1000?fmt(v,0).replace(/\.0$/,'')+'B':v+'B';
+/* 종목 표기 — 미국은 티커가 이름 구실을 하지만 한국 종목코드는 아니다 */
+const symMain=x=>CUR==='₩'?x.n:x.t;
+const symSub =x=>CUR==='₩'?x.t.replace(/\.(KS|KQ)$/,''):x.n;
+/* 통화·금액 단위 — 시장에 따라 달라진다 (미국 $ / 한국 원) */
+let CUR='$', DIV=1, UNIT='B';
+function setMarketUnits(m){
+  const kr = m==='kr';
+  CUR = kr?'₩':'$'; DIV = kr?1000:1; UNIT = kr?'조원':'B';
+}
+/* 주가 */
+const won=v=>v==null||isNaN(v)?'—':CUR==='₩'?'₩'+fmt(v,0):'$'+fmt(v,2);
+/* 재무 금액 (수집 단위는 10억) */
+const amt=v=>v==null||isNaN(v)?'—':CUR==='₩'?fmt(v/DIV,1)+UNIT:'$'+fmt(v,1)+UNIT;
+const mc=v=>v==null||isNaN(v)?'—':CUR==='₩'?fmt(v/DIV,0)+UNIT
+  :v>=1000?fmt(v,0).replace(/\.0$/,'')+'B':v+'B';
 
 /* seeded rng per ticker */
 function rng(seed){let h=0;for(const c of seed)h=(h*31+c.charCodeAt(0))>>>0;return()=>{h^=h<<13;h>>>=0;h^=h>>17;h^=h<<5;h>>>=0;return h/4294967295}}
@@ -616,9 +638,9 @@ function renderBoard(){
     ? mom.map(s=>`<div class="mrow" style="cursor:pointer;padding:11px 0" onclick="openDetail('${s.t}')">
         <span class="k" style="display:flex;align-items:center;gap:10px">
           <b style="background:var(--orange);color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.75rem;flex-shrink:0">${s.mr}</b>
-          <span><b style="font-size:1rem;color:var(--ink)">${s.t}</b>
-          <small style="display:block;color:var(--ink3);font-size:.72rem">${s.n}</small></span></span>
-        <span class="v" style="text-align:right"><span style="font-size:.95rem">$${fmt(s.p,2)}</span>
+          <span><b style="font-size:1rem;color:var(--ink)">${symMain(s)}</b>
+          <small style="display:block;color:var(--ink3);font-size:.72rem">${symSub(s)}</small></span></span>
+        <span class="v" style="text-align:right"><span style="font-size:.95rem">${won(s.p)}</span>
         <small style="display:block;color:var(--ink2);font-weight:600;font-size:.72rem">모멘텀 ${fmt(s.ms,1)} ${rankDelta(s)}</small></span></div>`).join('')
       + `<p style="font-size:.7rem;color:var(--ink3);line-height:1.5;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)">
          모멘텀 + 200일선 이격도 순위</p>`
@@ -660,12 +682,19 @@ function renderBoard(){
      VIX ${fmt(MARKET.vix,2)} · Fear &amp; Greed ${fmt(MARKET.fg,0)} (${MARKET.fgLabel||'—'})<br>
      ${top3.length?`모멘텀 상위 — ${top3.map(s=>s.t).join(' · ')}`:''}`;
   /* 값만 표시 — 역발상 가감점은 예측력이 음수로 확인돼 제거했다 */
-  const M=[['SPY 52주 낙폭',fmt(MARKET.spy52)+'%'],['VIX',fmt(MARKET.vix,2)],['Fear & Greed',fmt(MARKET.fg,0)]];
-  if(MARKET.trendAbove!=null)M.push(['SPY 200일선',MARKET.trendAbove?'위 · 상승':'아래 · 하락']);
-  const qqq=STOCKS.find(s=>s.t==='QQQ');
+  /* 시장별 지표 — 한국은 변동성지수·공포탐욕 지수가 없어 환율로 대체한다 */
+  const kr=MARKET.mkt==='kr';
+  const M = kr
+    ? [['KOSPI 52주 낙폭',fmt(MARKET.spy52)+'%'],['KOSPI',fmt(MARKET.kospi,0)],
+       ['KOSDAQ',fmt(MARKET.kosdaq,0)],['원/달러',fmt(MARKET.usdkrw,2)]]
+    : [['SPY 52주 낙폭',fmt(MARKET.spy52)+'%'],['VIX',fmt(MARKET.vix,2)],
+       ['Fear & Greed',fmt(MARKET.fg,0)]];
+  if(MARKET.trendAbove!=null)
+    M.push([(kr?'KOSPI':'SPY')+' 200일선',MARKET.trendAbove?'위 · 상승':'아래 · 하락']);
+  const bt=STOCKS.find(s=>s.th==='지수 ETF');
   document.getElementById('market-rows').innerHTML=
     M.map(([k,v])=>`<div class="mrow"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('')
-    +(qqq&&qqq.ms!=null?`<div class="mrow" style="cursor:pointer" onclick="openDetail('QQQ')"><span class="k">나스닥100 모멘텀 (QQQ)</span><span class="v">${fmt(qqq.ms,1)}<span class="pt ${qqq.ms>0?'up':'dn'}">${qqq.ms>0?'상승':'하락'}</span></span></div>`:'');
+    +(bt&&bt.ms!=null?`<div class="mrow" style="cursor:pointer" onclick="openDetail('${bt.t}')"><span class="k">${bt.n} 모멘텀</span><span class="v">${fmt(bt.ms,1)}<span class="pt ${bt.ms>0?'up':'dn'}">${bt.ms>0?'상승':'하락'}</span></span></div>`:'');
 
   const ft=document.getElementById('f-theme');
   ft.innerHTML='<option value="">테마 ▾</option>';
@@ -677,7 +706,7 @@ function renderBoard(){
       .sort((a,b)=>(a.mr||999)-(b.mr||999))
       .map(s=>`<tr style="cursor:pointer" onclick="openDetail('${s.t}')">
         <td style="color:${s.mr&&s.mr<=5?'#9fd07f':'var(--dk-ink3)'};font-weight:800;font-size:.8rem">${s.mr||'—'}<small style="display:block;font-weight:700">${rankDelta(s)}</small></td>
-        <td class="tk">${s.t}${s.ed!=null&&s.ed<=7?` <span style="background:#33261455;color:#e3c05a;font-size:.62rem;font-weight:800;border-radius:5px;padding:1px 5px;vertical-align:1px">실적 D-${s.ed}</span>`:''}<small>${s.n}</small></td>
+        <td class="tk">${symMain(s)}${s.ed!=null&&s.ed<=7?` <span style="background:#33261455;color:#e3c05a;font-size:.62rem;font-weight:800;border-radius:5px;padding:1px 5px;vertical-align:1px">실적 D-${s.ed}</span>`:''}<small>${symSub(s)}</small></td>
         <td style="text-align:right;font-weight:700;font-size:.8rem;color:var(--dk-ink2)">${s.ms!=null?fmt(s.ms,1):'—'}</td>
         <td style="text-align:right"><span class="sig ${bandCls(s)}"><span class="dot"></span>${band(s)}</span></td></tr>`).join('');
   }
@@ -689,6 +718,7 @@ function renderTrack(){
   const t=MARKET.track, card=document.getElementById('track-card');
   if(!t||!t.days){card.style.display='none';return}
   card.style.display='';
+  document.getElementById('track-title').textContent=`전략 vs ${t.bench} · 실제 기록`;
   const diff=t.strategy_pct-t.bench_pct;
   const col=v=>v>=0?'#4c8f3a':'#c4472e';
   const row=(k,v)=>`<div class="mrow"><span class="k">${k}</span>
@@ -717,7 +747,7 @@ function renderScore(){
            <span style="min-width:66px;text-align:right">실적·밸류·재무</span></span></div>`
       + rec.map(x=>`<div class="mrow" style="cursor:pointer;padding:10px 0" onclick="openDetail('${x.t}')">
         <span class="k" style="display:flex;align-items:center;gap:9px">
-          <span><b style="color:var(--ink)">${x.t}</b>
+          <span><b style="color:var(--ink)">${symMain(x)}</b>
           <small style="display:block;color:var(--ink3);font-size:.72rem">${x.n}</small></span></span>
         <span class="v" style="gap:10px">
           <b style="color:${tcol(x.ts)};font-size:1rem;min-width:30px;text-align:right">${sign(x.ts)}</b>
@@ -740,7 +770,7 @@ function renderScore(){
     list.sort(key?(a,b)=>(b[key]??-99)-(a[key]??-99):(a,b)=>a.t.localeCompare(b.t));
     document.getElementById('score-body').innerHTML=list.map(x=>`
       <tr style="cursor:pointer" onclick="openDetail('${x.t}')">
-        <td class="tk">${x.t}<small>${x.n}</small></td>
+        <td class="tk">${symMain(x)}<small>${symSub(x)}</small></td>
         <td style="text-align:right;font-weight:800;color:${col(x.ts,8)}">${x.ts!=null?sign(x.ts):'—'}</td>
         <td style="text-align:right;font-weight:800;color:${col(x.gs,6)}">${x.gs!=null?sign(x.gs):'—'}</td>
         <td style="text-align:right;font-weight:800;color:${col(x.vs,3)}">${x.vs!=null?sign(x.vs):'—'}</td>
@@ -760,8 +790,8 @@ function renderCompare(){
     document.getElementById('cmp-body').innerHTML=STOCKS.filter(s=>!th||s.th===th).map(s=>{
       const d=detail(s);const gap=gapOf(d);
       return `<tr onclick="openDetail('${s.t}')" style="cursor:pointer">
-      <td class="tk">${s.t}</td><td class="theme-cell">${s.th}</td>
-      <td>$${fmt(s.p,2)}</td><td>${mc(s.mc)}</td>
+      <td class="tk">${symMain(s)}</td><td class="theme-cell">${s.th}</td>
+      <td>${won(s.p)}</td><td>${mc(s.mc)}</td>
       <td>${d.fwdPer?fmt(d.fwdPer):'—'}</td><td>${fmt(d.psr,2)}</td><td>${fmt(d.evEbitda)}</td>
       <td>${d.gross==null?'<span class="hz">—</span>':h(fmt(d.gross)+'%',d.gross>=40)}</td><td>${d.op==null?'<span class="hz">—</span>':h(fmt(d.op)+'%',d.op>=20)}</td>
       <td>${d.profit==null?'<span class="hz">—</span>':h(fmt(d.profit)+'%',d.profit>=10)}</td><td>${gap==null?'<span class="hz">—</span>':h(pct(gap),gap<0)}</td></tr>`}).join('');
@@ -776,7 +806,7 @@ function renderDetail(){
   const s=STOCKS.find(x=>x.t===curTicker);const d=detail(s);
   const gap=gapOf(d);
   const root=document.getElementById('detail-root');
-  const opts=THEMES.map(th=>`<optgroup label="${th}">`+STOCKS.filter(x=>x.th===th).map(x=>`<option value="${x.t}" ${x.t===s.t?'selected':''}>${x.t} — ${x.n}</option>`).join('')+`</optgroup>`).join('');
+  const opts=THEMES.map(th=>`<optgroup label="${th}">`+STOCKS.filter(x=>x.th===th).map(x=>`<option value="${x.t}" ${x.t===s.t?'selected':''}>${symMain(x)} — ${symSub(x)}</option>`).join('')+`</optgroup>`).join('');
   const pr=priceSeries(s);
   const sum4=a=>{if(!a)return null;const t=a.slice(-4);return t.length===4&&t.every(v=>v!=null)?t.reduce((x,y)=>x+y,0):null};
   const ttmRev=sum4(d.qRev),ttmOp=sum4(d.qOp);
@@ -787,7 +817,7 @@ function renderDetail(){
   <div class="picker"><select id="tick-sel" onchange="curTicker=this.value;renderDetail()">${opts}</select></div>
   <div class="price-line"><span class="nm">${s.n} · ${s.th}</span></div>
   <div class="price-line"><span class="sig ${bandCls(s)}"><span class="dot"></span>${band(s)}${s.mr?` <b>${s.mr}위</b>`:''}</span>
-    <span class="big-price">$${fmt(s.p,2)}</span><span class="ytd" id="ytd-lbl" style="color:${s.ytd>=0?'#9fd07f':'#e58f6a'}">${pct(s.ytd)} YTD</span>${s.dp!=null?`<span class="ytd" id="day-chg" style="color:${s.dp>=0?'#9fd07f':'#e58f6a'}">${pct(s.dp)} 오늘</span>`:'<span class="ytd" id="day-chg"></span>'}${s.ed!=null&&s.ed<=14?`<span class="gap-tag over" title="${d.earningsDate||''}">실적 발표 D-${s.ed}${s.ed<=3?' · 변동성 주의':''}</span>`:''}</div>
+    <span class="big-price">${won(s.p)}</span><span class="ytd" id="ytd-lbl" style="color:${s.ytd>=0?'#9fd07f':'#e58f6a'}">${pct(s.ytd)} YTD</span>${s.dp!=null?`<span class="ytd" id="day-chg" style="color:${s.dp>=0?'#9fd07f':'#e58f6a'}">${pct(s.dp)} 오늘</span>`:'<span class="ytd" id="day-chg"></span>'}${s.ed!=null&&s.ed<=14?`<span class="gap-tag over" title="${d.earningsDate||''}">실적 발표 D-${s.ed}${s.ed<=3?' · 변동성 주의':''}</span>`:''}</div>
 
   <div class="sec-label"><span class="no">01</span><span class="t">판단</span></div>
   <h3 class="sec-title">종합 판단</h3>
@@ -820,15 +850,17 @@ function renderDetail(){
   </div>`:''}
 
   <div class="d-card"><div class="d-h">주가 추이 · 최근 1년</div>
-    <div style="font-weight:800;font-size:1.1rem;margin-bottom:4px">$${fmt(s.p,2)}</div>
+    <div style="font-weight:800;font-size:1.1rem;margin-bottom:4px">${won(s.p)}</div>
     <div class="chart-box" id="px-chart"></div>
   </div>
 
   <div class="d-card"><div class="d-h">시장 환경</div>
-    ${kr('NASDAQ',fmt(MARKET.nasdaq,0),undefined)}
-    ${kr('S&P500',fmt(MARKET.sp500,0),undefined)}
-    ${kr('VIX',fmt(MARKET.vix,2)+' · '+(MARKET.vix>=24?'경계':MARKET.vix<=14?'안정':'보통'),undefined)}
-    ${kr('Fear & Greed',fmt(MARKET.fg,0)+' · '+(MARKET.fgLabel||'—'),undefined)}
+    ${MARKET.mkt==='kr'
+      ? kr('KOSPI',fmt(MARKET.kospi,0),undefined)+kr('KOSDAQ',fmt(MARKET.kosdaq,0),undefined)
+        +kr('원/달러',fmt(MARKET.usdkrw,2),undefined)
+      : kr('NASDAQ',fmt(MARKET.nasdaq,0),undefined)+kr('S&P500',fmt(MARKET.sp500,0),undefined)
+        +kr('VIX',fmt(MARKET.vix,2)+' · '+(MARKET.vix>=24?'경계':MARKET.vix<=14?'안정':'보통'),undefined)
+        +kr('Fear & Greed',fmt(MARKET.fg,0)+' · '+(MARKET.fgLabel||'—'),undefined)}
   </div>
 
   <div class="sec-label"><span class="no">02</span><span class="t">밸류에이션 · 퀄리티</span></div>
@@ -873,16 +905,16 @@ function renderDetail(){
   </div>
   <div class="d-card"><div class="d-h">분기별 요약</div>
     <div class="scroll-x"><table class="fin-table"><thead><tr><th>항목</th><th>TTM</th><th>YoY</th><th>3Y CAGR</th></tr></thead><tbody>
-      <tr><td>매출</td><td>${ttmRev==null?'—':'$'+fmt(ttmRev,1)+'B'}</td><td class="grw ${(d.revG[1]??0)<0?'dn':''}">${pct(d.revG[1])}</td><td class="grw ${(d.revG[2]??0)<0?'dn':''}">${pct(d.revG[2])}</td></tr>
-      <tr><td>영업이익</td><td>${ttmOp==null?'—':'$'+fmt(ttmOp,1)+'B'}</td><td>—</td><td>—</td></tr>
+      <tr><td>매출</td><td>${amt(ttmRev)}</td><td class="grw ${(d.revG[1]??0)<0?'dn':''}">${pct(d.revG[1])}</td><td class="grw ${(d.revG[2]??0)<0?'dn':''}">${pct(d.revG[2])}</td></tr>
+      <tr><td>영업이익</td><td>${amt(ttmOp)}</td><td>—</td><td>—</td></tr>
       <tr><td>영업이익률</td><td>${d.op==null?'—':fmt(d.op)+'%'}</td><td>—</td><td>—</td></tr>
     </tbody></table></div>
   </div>
   ${fyOcf!=null?`<div class="d-card"><div class="d-h">현금흐름 (최근 회계연도 ${d.yrs[fyIdx]||''})</div>
     <div class="scroll-x"><table class="fin-table"><thead><tr><th>항목</th><th>금액</th><th>매출 대비</th></tr></thead><tbody>
-      <tr><td>영업현금흐름</td><td>$${fmt(fyOcf,1)}B</td><td>${fyRev?fmt(fyOcf/fyRev*100)+'%':'—'}</td></tr>
-      <tr><td>CAPEX</td><td class="grw dn">-$${fmt(Math.abs(fyCapex??0),1)}B</td><td>${fyRev&&fyCapex!=null?fmt(Math.abs(fyCapex)/fyRev*100)+'%':'—'}</td></tr>
-      <tr><td>잉여현금흐름(FCF)</td><td class="grw">${fyCapex!=null?'$'+fmt(fyOcf+fyCapex,1)+'B':'—'}</td><td>${fyRev&&fyCapex!=null?fmt((fyOcf+fyCapex)/fyRev*100)+'%':'—'}</td></tr>
+      <tr><td>영업현금흐름</td><td>${amt(fyOcf)}</td><td>${fyRev?fmt(fyOcf/fyRev*100)+'%':'—'}</td></tr>
+      <tr><td>CAPEX</td><td class="grw dn">-${amt(Math.abs(fyCapex??0))}</td><td>${fyRev&&fyCapex!=null?fmt(Math.abs(fyCapex)/fyRev*100)+'%':'—'}</td></tr>
+      <tr><td>잉여현금흐름(FCF)</td><td class="grw">${fyCapex!=null?amt(fyOcf+fyCapex):'—'}</td><td>${fyRev&&fyCapex!=null?fmt((fyOcf+fyCapex)/fyRev*100)+'%':'—'}</td></tr>
     </tbody></table></div>
   </div>`:''}
 
@@ -891,7 +923,7 @@ function renderDetail(){
   <p class="sec-sub">컨센서스 매출 · EPS 전망</p>
   <div class="d-card"><div class="d-h">컨센서스 전망</div>
     <div class="scroll-x"><table class="fin-table"><thead><tr><th>연도</th><th>매출</th><th>성장률</th><th>EPS</th><th>EPS 성장률</th></tr></thead><tbody>
-      ${d.est.length?d.est.map(e=>`<tr><td>${e.y}</td><td>${e.rev==null?'—':'$'+fmt(e.rev,0)+'B'}</td><td class="grw ${(e.g??0)<0?'dn':''}">${pct(e.g)}</td><td>${e.eps==null?'—':'$'+fmt(e.eps,2)}</td><td class="grw ${(e.epsG??0)<0?'dn':''}">${pct(e.epsG)}</td></tr>`).join(''):'<tr><td colspan="5">컨센서스 데이터 없음</td></tr>'}
+      ${d.est.length?d.est.map(e=>`<tr><td>${e.y}</td><td>${amt(e.rev)}</td><td class="grw ${(e.g??0)<0?'dn':''}">${pct(e.g)}</td><td>${e.eps==null?'—':won(e.eps)}</td><td class="grw ${(e.epsG??0)<0?'dn':''}">${pct(e.epsG)}</td></tr>`).join(''):'<tr><td colspan="5">컨센서스 데이터 없음</td></tr>'}
     </tbody></table></div>
   </div>
   <div class="d-card"><div class="d-h">예상 매출 기반 추이</div>
@@ -903,7 +935,7 @@ function renderDetail(){
   const c2=getComputedStyle(document.documentElement).getPropertyValue('--c2').trim();
   const c3=getComputedStyle(document.documentElement).getPropertyValue('--c3').trim();
   const pd=(DETAILS&&DETAILS[s.t]&&DETAILS[s.t].priceDates)||null;
-  if(pr.length>1)areaChart(document.getElementById('px-chart'),pr,c1,(i,v)=>`<b>${pd&&pd[i]?pd[i]:Math.round((pr.length-1-i)/(pr.length>60?21:4.3))+'개월 전'}</b><br>$${fmt(v,2)}`);
+  if(pr.length>1)areaChart(document.getElementById('px-chart'),pr,c1,(i,v)=>`<b>${pd&&pd[i]?pd[i]:Math.round((pr.length-1-i)/(pr.length>60?21:4.3))+'개월 전'}</b><br>${won(v)}`);
   const qLb=(d.qLabels&&d.qLabels.length?d.qLabels:['Q1','Q2','Q3','Q4','Q1','Q2','Q3','Q4']).slice(0,d.qRev?d.qRev.length:8);
   if(d.qRev&&d.qRev.length)barChart(document.getElementById('q-chart'),qLb,[d.qRev,d.qOp||[]],[c1,c2],['매출','영업이익'],'B');
   if(d.yRev&&d.yRev.length)barChart(document.getElementById('y-chart'),d.yrs,[d.yRev],[c1],['매출'],'B');
@@ -951,7 +983,7 @@ function applyLiveData(D){
   THEMES=[...new Set(STOCKS.map(s=>s.th))];
   const m=D.market;
   MARKET={spy52:m.spy_dd_52w,vix:m.vix,fg:m.fear_greed,fgLabel:m.fg_label,
-    nasdaq:m.nasdaq,sp500:m.sp500,trendAbove:m.spy_ma200_above,regime:m.regime,track:m.track,breadth:m.breadth_pct,golden:m.spy_golden,panic:m.panic,topTheme:m.top5_theme,topThemeN:m.top5_theme_count};
+    nasdaq:m.nasdaq,sp500:m.sp500,kospi:m.kospi,kosdaq:m.kosdaq,usdkrw:m.usdkrw,mkt:m.market||'us',liveQuote:m.live_quote,trendAbove:m.spy_ma200_above,regime:m.regime,track:m.track,breadth:m.breadth_pct,golden:m.spy_golden,panic:m.panic,topTheme:m.top5_theme,topThemeN:m.top5_theme_count};
   META={updated:D.updated_at_kst,updatedUtc:D.updated_at,live:true,compareDate:D.compare_date};
   if(!STOCKS.some(x=>x.t===curTicker))curTicker=STOCKS[0].t;
 }
@@ -1026,7 +1058,7 @@ function rerenderLive(){
   keep.forEach(([id,v])=>{const el=document.getElementById(id);if([...el.options].some(o=>o.value===v)){el.value=v;el.onchange&&el.onchange()}});
   const s=STOCKS.find(x=>x.t===curTicker);
   if(s){
-    const bp=document.querySelector('#tab-detail .big-price');if(bp)bp.textContent='$'+fmt(s.p,2);
+    const bp=document.querySelector('#tab-detail .big-price');if(bp)bp.textContent=won(s.p);
     const yl=document.getElementById('ytd-lbl');if(yl){yl.textContent=pct(s.ytd)+' YTD';yl.style.color=(s.ytd??0)>=0?'#9fd07f':'#e58f6a'}
     const dc=document.getElementById('day-chg');if(dc&&s.dp!=null){dc.textContent=pct(s.dp)+' 오늘';dc.style.color=s.dp>=0?'#9fd07f':'#e58f6a'}
   }
@@ -1035,11 +1067,15 @@ function rerenderLive(){
 function startLive(){
   if(liveTimer){clearInterval(liveTimer);liveTimer=null}
   updateStatus();
-  if(!finnKey())return;
+  /* 실시간 시세는 미국 종목만 — 한국 시장 지원 여부가 확인되지 않았다 */
+  const live = MARKET.liveQuote !== false;
+  document.getElementById('live-cfg').style.display = live?'':'none';
+  if(!live||!finnKey())return;
   refreshQuotes(true);
   liveTimer=setInterval(()=>{if(document.visibilityState==='visible')refreshQuotes(false)},60000);
 }
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshQuotes(false)});
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&MARKET.liveQuote!==false)refreshQuotes(false)});
 /* 폴백용 모멘텀 순위 — 실데이터가 없을 때 화면 구조를 그대로 보여주기 위한 샘플.
    티커 시드 난수라 새로고침해도 같은 값이 나온다. */
 function rankSample(){
@@ -1048,23 +1084,48 @@ function rankSample(){
   list.forEach((s,i)=>{s.mr=i+1;s.mt=list.length;
     s.mb=s.mr<=5?'상위 5':s.mr<=15?'6~15위':'16위↓'});
 }
-(async function boot(){
+/* ===== 시장 전환 (미국 / 한국) ===== */
+let MKT='us';
+function marketLabel(m){return m==='kr'?'🇰🇷 한국':'🇺🇸 미국'}
+function applyMarketBtn(){
+  const b=document.getElementById('mkt-btn');
+  if(b)b.textContent=marketLabel(MKT);
+}
+function toggleMarket(){
+  MKT = MKT==='kr'?'us':'kr';
+  try{localStorage.setItem('market',MKT)}catch(e){}
+  applyMarketBtn();
+  loadMarket();
+}
+async function loadMarket(){
+  setMarketUnits(MKT);
+  const file = MKT==='kr'?'data_kr.json':'data.json';
+  document.getElementById('data-status').textContent='데이터 로딩 중…';
   try{
-    const r=await fetch('data.json',{cache:'no-store'});
+    const r=await fetch(file,{cache:'no-store'});
     if(!r.ok)throw new Error('HTTP '+r.status);
     applyLiveData(await r.json());
   }catch(e){
-    console.warn('data.json 로드 실패, 샘플 데이터로 폴백:',e);
+    console.warn(file+' 로드 실패, 샘플 데이터로 폴백:',e);
     META={updated:null,updatedUtc:null,live:false};
     rankSample();
   }
   renderBoard();renderScore();renderCompare();
-  if(!document.getElementById('tab-detail').classList.contains('hidden'))renderDetail();
+  if(!document.getElementById('tab-detail').classList.contains('hidden')){
+    if(!STOCKS.find(x=>x.t===curTicker))curTicker=STOCKS[1]?STOCKS[1].t:STOCKS[0].t;
+    renderDetail();
+  }
+  startLive();
+}
+
+(async function boot(){
+  try{MKT=localStorage.getItem('market')||'us'}catch(e){}
+  applyMarketBtn();
   try{
     const k=new URLSearchParams(location.search).get('finnhub');
     if(k)localStorage.setItem('finnhub_key',k.trim());
   }catch(e){}
-  startLive(); /* updateStatus 포함 */
+  await loadMarket();   /* startLive 포함 */
 })();
 </script>
 </body>

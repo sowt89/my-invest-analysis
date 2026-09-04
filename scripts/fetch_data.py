@@ -75,8 +75,66 @@ WATCHLIST = [
     ("BRK-B", "Berkshire Hathaway", "금융"),
 ]
 
+# 한국 시장 워치리스트 (yfinance 코드: .KS 코스피 / .KQ 코스닥)
+WATCHLIST_KR = [
+    ("069500.KS", "KODEX 200", "지수 ETF"),
+    ("005930.KS", "삼성전자", "반도체"),
+    ("000660.KS", "SK하이닉스", "반도체"),
+    ("042700.KS", "한미반도체", "반도체"),
+    ("058470.KQ", "리노공업", "반도체"),
+    ("039030.KQ", "이오테크닉스", "반도체"),
+    ("000990.KS", "DB하이텍", "반도체"),
+    ("373220.KS", "LG에너지솔루션", "배터리"),
+    ("006400.KS", "삼성SDI", "배터리"),
+    ("247540.KQ", "에코프로비엠", "배터리"),
+    ("005490.KS", "POSCO홀딩스", "배터리"),
+    ("066970.KS", "엘앤에프", "배터리"),
+    ("005380.KS", "현대차", "자동차"),
+    ("000270.KS", "기아", "자동차"),
+    ("012330.KS", "현대모비스", "자동차"),
+    ("035420.KS", "NAVER", "인터넷"),
+    ("035720.KS", "카카오", "인터넷"),
+    ("259960.KS", "크래프톤", "게임"),
+    ("036570.KS", "엔씨소프트", "게임"),
+    ("207940.KS", "삼성바이오로직스", "바이오"),
+    ("068270.KS", "셀트리온", "바이오"),
+    ("196170.KQ", "알테오젠", "바이오"),
+    ("000100.KS", "유한양행", "바이오"),
+    ("012450.KS", "한화에어로스페이스", "방산"),
+    ("079550.KS", "LIG넥스원", "방산"),
+    ("064350.KS", "현대로템", "방산"),
+    ("047810.KS", "한국항공우주", "방산"),
+    ("009540.KS", "HD한국조선해양", "조선"),
+    ("010140.KS", "삼성중공업", "조선"),
+    ("042660.KS", "한화오션", "조선"),
+    ("034020.KS", "두산에너빌리티", "전력"),
+    ("015760.KS", "한국전력", "전력"),
+    ("051910.KS", "LG화학", "화학"),
+    ("011170.KS", "롯데케미칼", "화학"),
+    ("105560.KS", "KB금융", "금융"),
+    ("055550.KS", "신한지주", "금융"),
+    ("000810.KS", "삼성화재", "금융"),
+    ("090430.KS", "아모레퍼시픽", "소비재"),
+    ("097950.KS", "CJ제일제당", "소비재"),
+    ("352820.KS", "하이브", "엔터"),
+    ("028260.KS", "삼성물산", "지주"),
+    ("011200.KS", "HMM", "해운"),
+]
+
+# 시장별 설정 — 코드는 하나를 공유하고 이 표만 갈아끼운다
+MARKETS = {
+    "us": {"watchlist": WATCHLIST, "bench": "QQQ", "trend": "SPY",
+           "idx": [("nasdaq", "^IXIC"), ("sp500", "^GSPC")],
+           "fear_greed": True, "sec_pit": True, "live_quote": True,
+           "currency": "$", "out": "data.json", "hist": "history.json"},
+    "kr": {"watchlist": WATCHLIST_KR, "bench": "069500.KS", "trend": "^KS11",
+           "idx": [("kospi", "^KS11"), ("kosdaq", "^KQ11"), ("usdkrw", "KRW=X")],
+           "fear_greed": False, "sec_pit": False, "live_quote": False,
+           "currency": "₩", "out": "data_kr.json", "hist": "history_kr.json"},
+}
+
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT_PATH = os.path.join(_ROOT, "data.json")
+OUT_PATH = os.path.join(_ROOT, "data.json")      # main()에서 시장에 맞게 교체된다
 HIST_PATH = os.path.join(_ROOT, "history.json")
 PIT_PATH = os.path.join(_ROOT, "data", "sec_pit.json")
 HIST_DAYS = 1095  # 3년 (초과분은 archive/history-YYYY.json으로 이관)
@@ -258,36 +316,41 @@ def fetch_fear_greed():
         return None
 
 
-def fetch_market(session):
+def fetch_market(session, cfg):
+    """시장 지표. 지수 구성과 추세 기준 종목은 시장별 설정을 따른다.
+
+    한국은 변동성지수(VKOSPI)가 야후에 없고 공포·탐욕 지수도 미국 전용이라
+    해당 항목이 비고, 대신 원달러 환율을 지수 목록에 담는다.
+    """
     out = {}
     def last_close(sym, period="5d"):
         c = closes_of(yf.Ticker(sym, session=session).history(period=period, interval="1d"))
         return c[-1] if c else None
 
-    out["vix"] = rnd(retry(lambda: last_close("^VIX")), 2)
-    out["nasdaq"] = rnd(retry(lambda: last_close("^IXIC")), 0)
-    out["sp500"] = rnd(retry(lambda: last_close("^GSPC")), 0)
+    if cfg["fear_greed"]:
+        out["vix"] = rnd(retry(lambda: last_close("^VIX")), 2)
+    for key, sym in cfg["idx"]:
+        out[key] = rnd(retry(lambda: last_close(sym)), 2 if key == "usdkrw" else 0)
 
-    spy_dd = spy_above_ma200 = None
+    dd = above_ma200 = None
     try:
-        h = yf.Ticker("SPY", session=session).history(period="1y", interval="1d")
-        closes = closes_of(h)
+        closes = closes_of(yf.Ticker(cfg["trend"], session=session)
+                           .history(period="1y", interval="1d"))
         if closes:
-            hi = max(closes)
             cur = closes[-1]
-            spy_dd = (cur / hi - 1) * 100
+            dd = (cur / max(closes) - 1) * 100
             if len(closes) >= 200:
-                spy_above_ma200 = cur > sum(closes[-200:]) / 200
+                above_ma200 = cur > sum(closes[-200:]) / 200
                 out["spy_golden"] = (sum(closes[-50:]) / 50) > (sum(closes[-200:]) / 200)
     except Exception as e:
-        print(f"  ! SPY 수집 실패: {e}")
-    out["spy_dd_52w"] = rnd(spy_dd, 1)
-    out["spy_ma200_above"] = spy_above_ma200
+        print(f"  ! {cfg['trend']} 수집 실패: {e}")
+    out["spy_dd_52w"] = rnd(dd, 1)
+    out["spy_ma200_above"] = above_ma200
 
-    fg = fetch_fear_greed()
-    out["fear_greed"] = rnd(fg, 0)
-    out["fg_label"] = fg_label(fg)
-
+    if cfg["fear_greed"]:
+        fg = fetch_fear_greed()
+        out["fear_greed"] = rnd(fg, 0)
+        out["fg_label"] = fg_label(fg)
     return out
 
 
@@ -318,13 +381,13 @@ def score_inputs(d):
     return {k: v for k, v in raw.items() if v is not None}
 
 
-def archive_old(rows):
+def archive_old(rows, prefix="history"):
     """보관 기간이 지난 스냅샷을 삭제하지 않고 연도별 파일로 옮겨 연속성을 유지한다."""
     if not rows:
         return
     os.makedirs(ARCHIVE_DIR, exist_ok=True)
     for year in sorted({d[:4] for d in rows}):
-        path = os.path.join(ARCHIVE_DIR, f"history-{year}.json")
+        path = os.path.join(ARCHIVE_DIR, f"{prefix}-{year}.json")
         try:
             with open(path, encoding="utf-8") as f:
                 cur = json.load(f)
@@ -357,7 +420,8 @@ def save_history(hist, stocks):
         if snap:
             hist[today] = snap   # 같은 날 재수집 시 누락 필드(순위 등)를 채운다
     cutoff = (datetime.now(timezone.utc) - timedelta(days=HIST_DAYS)).strftime("%Y-%m-%d")
-    archive_old({d: v for d, v in hist.items() if d < cutoff})
+    archive_old({d: v for d, v in hist.items() if d < cutoff},
+                os.path.splitext(os.path.basename(HIST_PATH))[0])
     hist = {d: v for d, v in hist.items() if d >= cutoff}
     with open(HIST_PATH, "w", encoding="utf-8") as f:
         json.dump(dict(sorted(hist.items())), f, ensure_ascii=False, separators=(",", ":"))
@@ -687,29 +751,43 @@ def fetch_stock(session, ticker, name, theme, market, pit):
 
 # ---------------------------------------------------------------- main
 def main():
+    global OUT_PATH, HIST_PATH
+    mkt = sys.argv[1] if len(sys.argv) > 1 else "us"
+    if mkt not in MARKETS:
+        raise SystemExit(f"알 수 없는 시장: {mkt} (us | kr)")
+    cfg = MARKETS[mkt]
+    watchlist = cfg["watchlist"]
+    OUT_PATH = os.path.join(_ROOT, cfg["out"])
+    HIST_PATH = os.path.join(_ROOT, cfg["hist"])
+    print(f"시장: {mkt.upper()} · {len(watchlist)}종목 → {cfg['out']}")
+
     session = make_session()
     print("시장지표 수집…")
-    market = fetch_market(session)
-    print(f"  VIX {market['vix']} / SPY 52주 {market['spy_dd_52w']}% / "
-          f"F&G {market['fear_greed']}({market['fg_label']})")
+    market = fetch_market(session, cfg)
+    market["market"] = mkt
+    market["currency"] = cfg["currency"]
+    market["live_quote"] = cfg["live_quote"]
+    print(f"  추세기준 {cfg['trend']} 52주 {market['spy_dd_52w']}% · "
+          f"200일선 {'위' if market['spy_ma200_above'] else '아래'}")
 
     hist = load_history()
-    pit = load_pit()
-    print(f"SEC 원본 재무: {len(pit)}종목 (data/sec_pit.json)")
+    pit = load_pit() if cfg["sec_pit"] else {}
+    if cfg["sec_pit"]:
+        print(f"SEC 원본 재무: {len(pit)}종목 (data/sec_pit.json)")
     stocks, failed = [], []
-    for i, (ticker, name, theme) in enumerate(WATCHLIST):
+    for i, (ticker, name, theme) in enumerate(watchlist):
         try:
             s = fetch_stock(session, ticker, name, theme, market, pit)
             stocks.append(s)
-            print(f"  [{i+1:2d}/{len(WATCHLIST)}] {ticker:6s} ${s['price']:>9.2f}  "
+            print(f"  [{i+1:2d}/{len(watchlist)}] {ticker:9s} {s['price']:>11,.2f}  "
                   f"3축 {s['grow_score']:+d}/{s['val_score']:+d}/{s['fin_score']:+d}")
         except Exception as e:
             failed.append(ticker)
-            print(f"  [{i+1:2d}/{len(WATCHLIST)}] {ticker:6s} 실패: {e}")
+            print(f"  [{i+1:2d}/{len(watchlist)}] {ticker:9s} 실패: {e}")
             traceback.print_exc(limit=1)
         time.sleep(0.5)
 
-    if len(stocks) < len(WATCHLIST) * 0.6:
+    if len(stocks) < len(watchlist) * 0.6:
         print(f"오류: 성공 종목이 {len(stocks)}개뿐이라 data.json을 갱신하지 않습니다.")
         sys.exit(1)
 
@@ -776,8 +854,8 @@ def main():
             s["prev_rank"] = prev
 
     hist = save_history(hist, stocks)
-    print(f"FWD PER 히스토리: {len(hist)}일 누적 (history.json)")
-    track = track_vs_bench(hist)
+    print(f"지표 히스토리: {len(hist)}일 누적 ({os.path.basename(HIST_PATH)})")
+    track = track_vs_bench(hist, cfg["bench"])
     if track:
         market["track"] = track
         print(f"추적 {track['days']}일: 전략 {track['strategy_pct']:+.2f}% / "

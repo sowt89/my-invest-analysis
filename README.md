@@ -1,6 +1,13 @@
 # 나만의 투자분석
 
-미국 주식 40종목(+참고용 지수 ETF 1개)을 매일 자동으로 분석해, **이번 달에 살 종목 5개**를 알려주는 대시보드입니다.
+미국·한국 주식을 매일 자동으로 분석해, **이번 달에 살 종목 5개**를 알려주는 대시보드입니다. 우측 상단 버튼으로 시장을 전환합니다.
+
+| 시장 | 종목 | 시세 | PER·PSR 3~5년 평균 |
+|---|---|---|---|
+| 🇺🇸 미국 | 40종목 + QQQ | 실시간(60초) | SEC 원본 실측 |
+| 🇰🇷 한국 | 41종목 + KODEX 200 | 30분 간격 | 근사값 |
+
+순위 규칙과 점수 계산은 두 시장이 같습니다. 다만 **백테스트 검증은 미국 종목으로만 수행했습니다.** 한국 시장에서 같은 규칙이 통한다는 근거는 아직 없습니다.
 
 **바로가기: https://sowt89.github.io/my-invest-analysis/**
 
@@ -164,7 +171,13 @@ GitHub Actions가 자동으로 수집해 `data.json`에 저장하고, 화면은 
 ## 8. 직접 고쳐 쓰려면
 
 ### 관심종목 바꾸기
-`scripts/fetch_data.py` 파일 맨 위 `WATCHLIST`에서 `("티커", "회사명", "테마")` 형식으로 추가·삭제합니다.
+`scripts/fetch_data.py` 맨 위에서 미국은 `WATCHLIST`, 한국은 `WATCHLIST_KR`을 고칩니다. 형식은 `("티커", "회사명", "테마")`이고 한국 종목코드는 코스피 `.KS`, 코스닥 `.KQ`를 붙입니다.
+
+### 수집 실행
+```
+python3 scripts/fetch_data.py us    # 미국 → data.json
+python3 scripts/fetch_data.py kr    # 한국 → data_kr.json
+```
 
 ### 매수 종목 수 바꾸기
 같은 파일에서 `r <= 5` 부분의 숫자를 바꿉니다. 참고로 검증 결과 종목이 적을수록 수익은 높지만 낙폭도 커집니다(top2: 최대 -58%, top5: -38%).
@@ -184,8 +197,10 @@ scripts/validate_axis_scores.py  실적·재무 점수 예측력 검증
 scripts/test_sec_fundamentals.py 수집 로직 테스트 (네트워크 불필요)
 scripts/legacy_score.py          폐기된 역발상 점수 (백테스트 전용)
 scripts/sec_tag_report.py        XBRL 태그 가용성 진단
-data.json               수집된 데이터
-history.json            일별 지표 누적 기록 (최근 3년)
+data.json               수집된 데이터 (미국)
+data_kr.json            수집된 데이터 (한국)
+history.json            일별 지표 누적 기록 (최근 3년, 미국)
+history_kr.json         일별 지표 누적 기록 (최근 3년, 한국)
 archive/history-YYYY.json  3년이 지난 기록 (연도별 보관)
 data/sec_pit.json       SEC 원본 재무 시계열 (2010~, 매출·이익·주식수)
 .github/workflows/      자동 갱신 설정
