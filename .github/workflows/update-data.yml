@@ -29,17 +29,22 @@ jobs:
       - name: Install dependencies
         run: pip install yfinance requests curl_cffi
 
-      - name: Fetch data
-        run: python scripts/fetch_data.py
+      - name: Fetch data (US)
+        run: python scripts/fetch_data.py us
+
+      - name: Fetch data (KR)
+        run: python scripts/fetch_data.py kr
 
       - name: Commit and push data.json
         run: |
           # updated_at 타임스탬프만 바뀐 경우(장외·주말)는 커밋하지 않는다
           # (단, history.json에 새 스냅샷이 추가된 날 첫 실행은 커밋)
-          HIST_CHANGED=$(git status --porcelain -- history.json archive)
+          HIST_CHANGED=$(git status --porcelain -- history.json history_kr.json archive)
           if [ -z "$HIST_CHANGED" ] && git cat-file -e HEAD:data.json 2>/dev/null; then
-            jq -S 'del(.updated_at,.updated_at_kst)' data.json > /tmp/new.json
-            git show HEAD:data.json | jq -S 'del(.updated_at,.updated_at_kst)' > /tmp/old.json
+            jq -s -S 'map(del(.updated_at,.updated_at_kst))' data.json data_kr.json > /tmp/new.json
+            git show HEAD:data.json > /tmp/o1.json
+            git show HEAD:data_kr.json > /tmp/o2.json 2>/dev/null || echo '{}' > /tmp/o2.json
+            jq -s -S 'map(del(.updated_at,.updated_at_kst))' /tmp/o1.json /tmp/o2.json > /tmp/old.json
             if cmp -s /tmp/new.json /tmp/old.json; then
               echo "실질 데이터 변경 없음 — 커밋 생략"
               exit 0
@@ -47,7 +52,7 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data.json history.json
+          git add data.json history.json data_kr.json history_kr.json
           # archive/는 3년 지난 기록이 처음 생길 때까지 존재하지 않는다
           if [ -d archive ]; then git add archive; fi
           MSG="chore: update market data ($(date -u +'%Y-%m-%d %H:%M UTC'))"
