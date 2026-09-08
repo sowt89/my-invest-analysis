@@ -32,5 +32,27 @@ def main():
                           f"당기 {(r.get('thstrm_amount') or '')[:14]:>14s}  기간 {r.get('thstrm_dt','')}")
 
 
+def full_probe():
+    """전체 재무제표·주식수 응답 원형 확인 — 현대차 순이익이 안 잡히는 이유, 신한지주 주식수 0의 원인."""
+    cm = D.corp_map()
+    for sc, name, year, reprt in (("005380", "현대차", "2019", "11013"), ("005380", "현대차", "2020", "11011"),
+                                  ("105560", "KB금융", "2021", "11013")):
+        rows = D.full_statement(cm[sc], year, reprt)
+        print(f"\n[{name} {year} {reprt}] 전체 재무제표 {len(rows)}행 · 키: {sorted(rows[0]) if rows else '-'}")
+        for r in rows:
+            if r.get("sj_div") in ("IS", "CIS"):
+                print(f"   {r.get('sj_div'):3s} {r.get('account_nm',''):34s} id={r.get('account_id','-'):50s} "
+                      f"당기 {(r.get('thstrm_amount') or '')[:14]:>14s} 누적 {(r.get('thstrm_add_amount') or '')[:14]:>14s} "
+                      f"기간 {r.get('thstrm_dt','')}")
+    for sc, name in (("055550", "신한지주"), ("105560", "KB금융")):
+        d = json.loads(D.get("stockTotqySttus.json", corp_code=cm[sc], bsns_year="2024", reprt_code="11011"))
+        print(f"\n[{name} 2024 주식수] status={d.get('status')}")
+        for r in d.get("list") or []:
+            print(f"   se={r.get('se')!r} istc_totqy={r.get('istc_totqy')} rcept={r.get('rcept_no')}")
+
+
 if __name__ == "__main__":
+    if "--full" in sys.argv:
+        full_probe()
+        sys.exit()
     main()

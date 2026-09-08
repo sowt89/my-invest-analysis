@@ -162,7 +162,7 @@ def shares_of(corp, year):
     d = json.loads(get("stockTotqySttus.json", corp_code=corp, bsns_year=str(year),
                        reprt_code="11011"))
     for r in d.get("list") or []:
-        if r.get("se", "").startswith("보통주"):
+        if "보통주" in (r.get("se") or ""):
             rc = (r.get("rcept_no") or "")[:8]
             return num(r.get("istc_totqy")), (f"{rc[:4]}-{rc[4:6]}-{rc[6:8]}" if len(rc) == 8 else None)
     return None, None

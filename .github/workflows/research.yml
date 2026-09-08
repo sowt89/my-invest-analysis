@@ -26,7 +26,7 @@ jobs:
           python scripts/test_sec_fundamentals.py
           python scripts/test_dart_fundamentals.py
 
-      - run: python "scripts/${{ inputs.script }}"
+      - run: python scripts/${{ inputs.script }}   # 인자도 허용 (예: dart_tag_report.py --full)
         env:
           DART_API_KEY: ${{ secrets.DART_API_KEY }}
 
@@ -36,6 +36,14 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add data
-            git commit -m "chore: SEC point-in-time 데이터셋 갱신"
-            git push
+            git commit -m "chore: point-in-time 데이터셋 갱신"
+            # 실행 중 같은 브랜치에 다른 커밋이 올라오면 push가 거부된다 — 최신 위에 다시 얹어 재시도
+            for i in 1 2 3; do
+              git push && exit 0
+              echo "push 거부 — 재시도 ($i/3)"
+              git fetch origin "$GITHUB_REF_NAME"
+              git reset --soft "origin/$GITHUB_REF_NAME"
+              git commit -m "chore: point-in-time 데이터셋 갱신" || exit 0
+            done
+            exit 1
           fi
