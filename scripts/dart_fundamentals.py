@@ -13,6 +13,11 @@ DART와 SEC의 차이
   · 조회 가능 기간은 2015년부터다.
   · 정정공시는 API가 최신본만 주므로 최초 제출값을 보장하지 못한다 (SEC와 다름).
 
+속도: DART는 호출당 수 초가 걸린다. 회사별·보고서별로 전체 재무제표를 부르면
+42종목 x 11년 x 4보고서로 수천 건이 되어 60분 제한을 넘긴다(실제로 취소됐다).
+그래서 여러 회사를 한 번에 주는 주요계정 API(fnlttMultiAcnt)로 손익·재무상태를
+받고, 주식수만 회사·연도별로 부른다. 현금흐름(FCF)은 주요계정에 없어 제외한다.
+
 키는 환경변수 DART_API_KEY로만 받는다. 개발 환경에서는 DART 접속이 막혀 있어
 Actions에서 실행한다.
 """
@@ -60,7 +65,7 @@ ACCOUNTS = {
     "cl":    (["ifrs-full_CurrentLiabilities"], ["유동부채"]),
 }
 DEBT = (["ifrs-full_LongtermBorrowings", "ifrs-full_BondsIssued"], ["장기차입금", "사채"])
-FLOW_KEYS = ("rev", "op", "ni", "cfo", "capex")
+FLOW_KEYS = ("rev", "op", "ni", "cfo", "capex")   # cfo·capex는 주요계정에 없어 비어 있다
 
 
 def get(endpoint, **params):
@@ -115,85 +120,100 @@ def pick(rows, ids, names):
     return None
 
 
-def statements(corp, year, reprt):
-    """연결 우선, 없으면 별도. (행 목록, 재무제표 구분)"""
-    for fs in ("CFS", "OFS"):
-        d = json.loads(get("fnlttSinglAcntAll.json", corp_code=corp, bsns_year=str(year),
-                           reprt_code=reprt, fs_div=fs))
-        if d.get("status") == "000" and d.get("list"):
-            return d["list"], fs
-    return [], None
+def major_accounts(corps, year, reprt):
+    """주요계정 일괄 조회. {corp_code: (행 목록, fs_div)} — 연결 우선, 없으면 별도."""
+    out = {}
+    for i in range(0, len(corps), 20):                     # 한 번에 20개씩
+        d = json.loads(get("fnlttMultiAcnt.json", corp_code=",".join(corps[i:i + 20]),
+                           bsns_year=str(year), reprt_code=reprt))
+        if d.get("status") != "000":
+            continue
+        for r in d.get("list") or []:
+            out.setdefault(r["corp_code"], {}).setdefault(r.get("fs_div"), []).append(r)
+    return {c: (v.get("CFS") or v.get("OFS") or [], "CFS" if v.get("CFS") else "OFS")
+            for c, v in out.items()}
 
 
-def shares_of(corp, year, reprt):
+def shares_of(corp, year):
+    """사업보고서 기준 보통주 발행주식수. (값, 접수일)"""
     d = json.loads(get("stockTotqySttus.json", corp_code=corp, bsns_year=str(year),
-                       reprt_code=reprt))
+                       reprt_code="11011"))
     for r in d.get("list") or []:
         if r.get("se", "").startswith("보통주"):
-            return num(r.get("istc_totqy")), (r.get("rcept_no") or "")[:8]
+            rc = (r.get("rcept_no") or "")[:8]
+            return num(r.get("istc_totqy")), (f"{rc[:4]}-{rc[4:6]}-{rc[6:8]}" if len(rc) == 8 else None)
     return None, None
 
 
-def build(corp, this_year):
-    flows = {k: {} for k in FLOW_KEYS}      # {(start,end): (val, filed)}
-    inst = {k: {} for k in ("eq", "ca", "cl", "ltd")}
-    shares = {}
+def ingest(rows, filed, flows, inst):
+    """한 보고서의 주요계정 행을 분기값·잔액 사전에 넣는다."""
+    is_rows = [r for r in rows if r.get("sj_div") in ("IS", "CIS")]
+    bs_rows = [r for r in rows if r.get("sj_div") == "BS"]
+    for k in ("rev", "op", "ni"):
+        r = pick(is_rows, *ACCOUNTS[k])
+        if not r:
+            continue
+        st, en = dates_of(r.get("thstrm_dt"))
+        v = num(r.get("thstrm_amount"))
+        if st and en and v is not None:
+            flows[k].setdefault((st, en), (v, filed))
+        va = num(r.get("thstrm_add_amount"))               # 누적 (회계연도 시작 ~ en)
+        if en and va is not None:
+            flows[k].setdefault((f"{en[:4]}-01-01", en), (va, filed))
+    for k in ("eq", "ca", "cl"):
+        r = pick(bs_rows, *ACCOUNTS[k])
+        if r:
+            _, en = dates_of(r.get("thstrm_dt"))
+            v = num(r.get("thstrm_amount"))
+            if en and v is not None:
+                inst[k].setdefault(en, (v, filed))
+    debt = [num(r.get("thstrm_amount")) for r in bs_rows
+            if r.get("account_id") in DEBT[0]
+            or (r.get("account_nm") or "").replace(" ", "") in DEBT[1]]
+    debt = [d for d in debt if d is not None]
+    if debt and bs_rows:
+        _, en = dates_of(bs_rows[0].get("thstrm_dt"))
+        if en:
+            inst["ltd"].setdefault(en, (sum(debt), filed))
+
+
+def build_all(corps, this_year):
+    """{corp_code: rows}. 손익·재무상태는 일괄, 주식수는 회사·연도별."""
+    flows = {c: {k: {} for k in FLOW_KEYS} for c in corps}
+    inst = {c: {k: {} for k in ("eq", "ca", "cl", "ltd")} for c in corps}
+    shares = {c: {} for c in corps}
     calls = 0
     for year in range(FIRST_YEAR, this_year + 1):
         for reprt in REPORTS:
-            rows, fs = statements(corp, year, reprt)
-            calls += 1
-            if not rows:
-                continue
-            filed = f"{rows[0]['rcept_no'][:4]}-{rows[0]['rcept_no'][4:6]}-{rows[0]['rcept_no'][6:8]}"
-            is_rows = [r for r in rows if r.get("sj_div") in ("IS", "CIS")]
-            cf_rows = [r for r in rows if r.get("sj_div") == "CF"]
-            bs_rows = [r for r in rows if r.get("sj_div") == "BS"]
-
-            for k in ("rev", "op", "ni"):
-                r = pick(is_rows, *ACCOUNTS[k])
-                if not r:
+            got = major_accounts(corps, year, reprt)
+            calls += (len(corps) + 19) // 20
+            for c, (rows, _) in got.items():
+                if not rows:
                     continue
-                st, en = dates_of(r.get("thstrm_dt"))
-                v = num(r.get("thstrm_amount"))
-                if st and en and v is not None:
-                    flows[k].setdefault((st, en), (v, filed))
-                va = num(r.get("thstrm_add_amount"))          # 누적 (회계연도 시작 ~ en)
-                if en and va is not None:
-                    flows[k].setdefault((f"{en[:4]}-01-01", en), (va, filed))
-            for k in ("cfo", "capex"):
-                r = pick(cf_rows, *ACCOUNTS[k])
-                if not r:
-                    continue
-                st, en = dates_of(r.get("thstrm_dt"))
-                v = num(r.get("thstrm_amount"))
-                if en and v is not None:                        # 현금흐름표는 누적값
-                    flows[k].setdefault((st or f"{en[:4]}-01-01", en), (abs(v), filed))
-            for k in ("eq", "ca", "cl"):
-                r = pick(bs_rows, *ACCOUNTS[k])
-                if r:
-                    _, en = dates_of(r.get("thstrm_dt"))
-                    v = num(r.get("thstrm_amount"))
-                    if en and v is not None:
-                        inst[k].setdefault(en, (v, filed))
-            debt = [num(r.get("thstrm_amount")) for r in bs_rows
-                    if r.get("account_id") in DEBT[0]
-                    or (r.get("account_nm") or "").replace(" ", "") in DEBT[1]]
-            debt = [d for d in debt if d is not None]
-            if debt and bs_rows:
-                _, en = dates_of(bs_rows[0].get("thstrm_dt"))
-                if en:
-                    inst["ltd"].setdefault(en, (sum(debt), filed))
-
-            sh, sh_filed = shares_of(corp, year, reprt)
-            calls += 1
-            if sh and bs_rows:
-                _, en = dates_of(bs_rows[0].get("thstrm_dt"))
-                if en:
-                    shares[en] = (sh, f"{sh_filed[:4]}-{sh_filed[4:6]}-{sh_filed[6:8]}" if sh_filed else filed)
-            time.sleep(0.05)
-    q = {k: quarterly(flows[k]) for k in FLOW_KEYS}
-    return assemble(q, inst, shares), calls
+                rc = rows[0].get("rcept_no", "")
+                filed = f"{rc[:4]}-{rc[4:6]}-{rc[6:8]}"
+                ingest(rows, filed, flows[c], inst[c])
+        print(f"  {year} 재무 수집 완료", flush=True)
+    # 주식수: 회사 x 연도 (사업보고서). 결산일을 기준일로 쓴다.
+    from concurrent.futures import ThreadPoolExecutor
+    jobs = [(c, y) for c in corps for y in range(FIRST_YEAR, this_year + 1)]
+    def one(job):
+        c, y = job
+        try:
+            return c, y, shares_of(c, y)
+        except Exception:
+            return c, y, (None, None)
+    with ThreadPoolExecutor(max_workers=4) as ex:
+        for c, y, (sh, filed) in ex.map(one, jobs):
+            if sh and filed:
+                shares[c][f"{y}-12-31"] = (sh, filed)
+    calls += len(jobs)
+    print(f"  주식수 수집 완료 ({len(jobs)}건)", flush=True)
+    out = {}
+    for c in corps:
+        q = {k: quarterly(flows[c][k]) for k in FLOW_KEYS}
+        out[c] = assemble(q, inst[c], shares[c])
+    return out, calls
 
 
 def main():
@@ -201,25 +221,20 @@ def main():
         raise SystemExit("DART_API_KEY 없음")
     cm = corp_map()
     this_year = date.today().year
-    out, fails, total_calls = {}, [], 0
-    for t, name, theme in WATCHLIST_KR:
-        if theme == "지수 ETF":
-            continue
-        corp = cm.get(t.split(".")[0])
-        if not corp:
-            fails.append(f"{name}(고유번호 없음)")
-            continue
-        try:
-            rows, calls = build(corp, this_year)
-        except Exception as e:
-            fails.append(f"{name}({type(e).__name__})")
-            continue
-        total_calls += calls
+    targets = [(t, n, cm.get(t.split(".")[0])) for t, n, th in WATCHLIST_KR if th != "지수 ETF"]
+    fails = [f"{n}(고유번호 없음)" for t, n, c in targets if not c]
+    targets = [(t, n, c) for t, n, c in targets if c]
+    print(f"대상 {len(targets)}종목 · {FIRST_YEAR}~{this_year}", flush=True)
+
+    built, calls = build_all([c for _, _, c in targets], this_year)
+    out = {}
+    for t, name, c in targets:
+        rows = built.get(c, [])
         out[t] = rows
         cov = lambda k: sum(1 for r in rows if r.get(k) is not None)
         print(f"  {name:10s} {len(rows):3d}분기  {rows[0]['filed'] if rows else '-'}~"
               f"{rows[-1]['filed'] if rows else '-'}  ni {cov('niTtm')} eq {cov('eq')} "
-              f"ltd {cov('ltd')} fcf {cov('fcfTtm')} sh {cov('sh')}")
+              f"ltd {cov('ltd')} sh {cov('sh')}", flush=True)
 
     n = sum(len(v) for v in out.values())
     if n < 500:
@@ -227,8 +242,8 @@ def main():
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
-    print(f"\n{len(out)}종목 · 분기 레코드 {n}개 · API 호출 {total_calls}회 · "
-          f"{os.path.getsize(OUT)//1024}KB" + (f" · 실패 {fails}" if fails else ""))
+    print(f"\n{len(out)}종목 · 분기 레코드 {n}개 · API 호출 {calls}회 · "
+          f"{os.path.getsize(OUT)//1024}KB" + (f" · 실패 {fails}" if fails else ""), flush=True)
 
 
 if __name__ == "__main__":

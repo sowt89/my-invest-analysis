@@ -63,13 +63,20 @@ def synth(year, reprt, use_ids=True, rev_q=100.0):
 
 def fake_get(endpoint, **p):
     year, reprt = int(p.get("bsns_year", 0)), p.get("reprt_code")
-    if endpoint.startswith("fnlttSinglAcntAll"):
-        if year not in (2023, 2024) or p.get("fs_div") != "CFS":
-            return json.dumps({"status": "013", "list": []}).encode()
-        d, _ = synth(year, reprt, use_ids=fake_get.use_ids)
-        return json.dumps(d).encode()
-    if endpoint.startswith("stockTotqySttus"):
+    if endpoint.startswith("fnlttMultiAcnt"):
+        corps = p["corp_code"].split(",")
         if year not in (2023, 2024):
+            return json.dumps({"status": "013", "list": []}).encode()
+        rows = []
+        for c in corps:
+            d, _ = synth(year, reprt, use_ids=fake_get.use_ids)
+            for r in d["list"]:
+                if r["sj_div"] == "CF":            # 주요계정에는 현금흐름이 없다
+                    continue
+                rows.append({**r, "corp_code": c, "fs_div": "CFS"})
+        return json.dumps({"status": "000", "list": rows}).encode()
+    if endpoint.startswith("stockTotqySttus"):
+        if year not in (2023, 2024) or reprt != "11011":
             return json.dumps({"status": "013"}).encode()
         _, rc = synth(year, reprt)
         return json.dumps({"status": "000", "list": [
@@ -82,21 +89,23 @@ fake_get.use_ids = True
 D.get = fake_get
 D.FIRST_YEAR = 2023
 
-print("1) account_id로 매칭 · 2023~2024 8개 보고서")
-rows, calls = D.build("00000000", 2024)
+print("1) account_id로 매칭 · 2023~2024 8개 보고서 · 회사 2곳 일괄")
+built, calls = D.build_all(["A0000001", "B0000002"], 2024)
+rows = built["A0000001"]
+check("회사 2곳 모두 조립", sorted(built), ["A0000001", "B0000002"])
 check("레코드 수 (TTM 가능 시점)", len(rows), 5)
 last = rows[-1]
 check("매출 TTM = 4분기 합", last["revTtm"], 400.0)
 check("영업이익 TTM", last["opTtm"], 80.0)
 check("순이익 TTM", last["niTtm"], 60.0)
-check("영업현금 TTM (누적 차분)", last["cfoTtm"], 100.0)
-check("FCF = 영업현금 − 투자", last["fcfTtm"], 80.0)
+check("현금흐름은 주요계정에 없어 결측", last["fcfTtm"], None)
 check("자본총계", last["eq"], 5000.0)
 check("장기차입금 + 사채", last["ltd"], 500.0)
 check("보통주 주식수 (우선주 제외)", last["sh"], 1000.0)
 check("1년 전 매출 TTM", last["revTtmPrev"], 400.0)
 check("제출일 순서", rows == sorted(rows, key=lambda r: r["filed"]), True)
 check("사업보고서 접수일 = 이듬해", any(r["filed"].startswith("2025") for r in rows), True)
+check("호출 수 절감 (재무 8회 + 주식수 4회)", calls, 12)
 
 print("\n2) 4분기 역산 — 사업보고서(연간)만 있는 4분기")
 first_full = next(r for r in rows if r["end"] == "2023-12-31")
@@ -104,7 +113,7 @@ check("2023 연간 TTM", first_full["revTtm"], 400.0)
 
 print("\n3) account_id 없이 계정명으로 대체")
 fake_get.use_ids = False
-rows2, _ = D.build("00000000", 2024)
+rows2 = D.build_all(["A0000001"], 2024)[0]["A0000001"]
 check("계정명 매칭으로 같은 결과", rows2[-1]["revTtm"], 400.0)
 check("순이익도 계정명으로", rows2[-1]["niTtm"], 60.0)
 fake_get.use_ids = True
