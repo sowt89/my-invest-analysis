@@ -157,6 +157,16 @@ def build(ticker, cik):
     if not shares:      # 가중평균이 없으면 표지값으로 대체 (클래스 누락 가능)
         shares = collect(facts.get("facts", {}).get("dei", {}), SHARES_INSTANT, True, "shares")
 
+    return assemble(flows, inst, shares)
+
+
+def assemble(flows, inst, shares):
+    """분기값·잔액·주식수를 제출일 순으로 TTM 행으로 조립한다 (SEC·DART 공용).
+
+    flows : {지표: {분기종료일: (시작일, 값, 제출일)}}  — quarterly() 결과
+    inst  : {지표: {기준일: (값, 제출일)}}
+    shares: {기준일: (값, 제출일)}
+    """
     # 분기값은 (시작일, 값, 제출일), 잔액은 (값, 제출일) — 제출일은 항상 마지막 원소
     filings = sorted({v[-1] for d in list(flows.values()) + list(inst.values())
                       for v in d.values()})

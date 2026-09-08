@@ -126,18 +126,18 @@ WATCHLIST_KR = [
 MARKETS = {
     "us": {"watchlist": WATCHLIST, "bench": "QQQ", "trend": "SPY",
            "idx": [("nasdaq", "^IXIC"), ("sp500", "^GSPC")],
-           "fear_greed": True, "sec_pit": True, "live_quote": True,
+           "fear_greed": True, "pit": "sec_pit.json", "live_quote": True,
            "currency": "$", "out": "data.json", "hist": "history.json"},
     "kr": {"watchlist": WATCHLIST_KR, "bench": "069500.KS", "trend": "^KS11",
            "idx": [("kospi", "^KS11"), ("kosdaq", "^KQ11"), ("usdkrw", "KRW=X")],
-           "fear_greed": False, "sec_pit": False, "live_quote": False,
+           "fear_greed": False, "pit": "dart_pit.json", "live_quote": False,
            "currency": "₩", "out": "data_kr.json", "hist": "history_kr.json"},
 }
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT_PATH = os.path.join(_ROOT, "data.json")      # main()에서 시장에 맞게 교체된다
 HIST_PATH = os.path.join(_ROOT, "history.json")
-PIT_PATH = os.path.join(_ROOT, "data", "sec_pit.json")
+PIT_PATH = os.path.join(_ROOT, "data", "sec_pit.json")   # main()에서 시장에 맞게 교체된다
 HIST_DAYS = 1095  # 3년 (초과분은 archive/history-YYYY.json으로 이관)
 ARCHIVE_DIR = os.path.join(_ROOT, "archive")
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -430,7 +430,7 @@ def save_history(hist, stocks):
 
 
 def load_pit():
-    """SEC 원본 재무 시계열(data/sec_pit.json). 없으면 빈 dict."""
+    """원본 재무 시계열 (미국 SEC → sec_pit.json · 한국 DART → dart_pit.json). 없으면 빈 dict."""
     try:
         with open(PIT_PATH, encoding="utf-8") as f:
             return json.load(f)
@@ -752,7 +752,7 @@ def fetch_stock(session, ticker, name, theme, market, pit):
 
 # ---------------------------------------------------------------- main
 def main():
-    global OUT_PATH, HIST_PATH
+    global OUT_PATH, HIST_PATH, PIT_PATH
     mkt = sys.argv[1] if len(sys.argv) > 1 else "us"
     if mkt not in MARKETS:
         raise SystemExit(f"알 수 없는 시장: {mkt} (us | kr)")
@@ -760,6 +760,7 @@ def main():
     watchlist = cfg["watchlist"]
     OUT_PATH = os.path.join(_ROOT, cfg["out"])
     HIST_PATH = os.path.join(_ROOT, cfg["hist"])
+    PIT_PATH = os.path.join(_ROOT, "data", cfg["pit"])
     print(f"시장: {mkt.upper()} · {len(watchlist)}종목 → {cfg['out']}")
 
     session = make_session()
@@ -772,9 +773,8 @@ def main():
           f"200일선 {'위' if market['spy_ma200_above'] else '아래'}")
 
     hist = load_history()
-    pit = load_pit() if cfg["sec_pit"] else {}
-    if cfg["sec_pit"]:
-        print(f"SEC 원본 재무: {len(pit)}종목 (data/sec_pit.json)")
+    pit = load_pit()
+    print(f"원본 재무(point-in-time): {len(pit)}종목 ({cfg['pit']})")
     stocks, failed = [], []
     for i, (ticker, name, theme) in enumerate(watchlist):
         try:
