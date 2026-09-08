@@ -29,8 +29,8 @@ from datetime import date
 import yfinance as yf
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from fetch_data import (WATCHLIST, finance_score, growth_score,
-                        valuation_score, make_session)
+from fetch_data import (WATCHLIST, adj_shares, finance_score, growth_score,
+                        make_session, splits_of, valuation_score)
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PIT = os.path.join(_ROOT, "data", "sec_pit.json")
@@ -48,17 +48,21 @@ def month_ends(start, end):
 
 
 def load_prices(tickers):
+    """{종목: {"px": {월말: 종가}, "splits": [(날짜, 배율)]}} — 캐시가 있으면 재사용."""
     if os.path.exists(CACHE):
         with open(CACHE) as f:
-            return json.load(f)
+            px = json.load(f)
+        if all("splits" in v for v in px.values()):     # 분할 정보 없는 옛 캐시는 버린다
+            return px
     session = make_session()
     px = {}
     for t in tickers:
         h = yf.Ticker(t, session=session).history(period="max", interval="1mo",
                                                   auto_adjust=True)
-        px[t] = {d.date().isoformat(): float(c) for d, c in zip(h.index, h["Close"])
-                 if c == c}
-        print(f"  {t}: {len(px[t])}개월")
+        px[t] = {"px": {d.date().isoformat(): float(c) for d, c in zip(h.index, h["Close"])
+                        if c == c},
+                 "splits": splits_of(h)}
+        print(f"  {t}: {len(px[t]['px'])}개월 · 분할 {len(px[t]['splits'])}회")
     with open(CACHE, "w") as f:
         json.dump(px, f, separators=(",", ":"))
     return px
@@ -70,7 +74,7 @@ def price_at(series, ym):
     return series[max(ks)] if ks else None
 
 
-def multiples(rows, months, series):
+def multiples(rows, months, series, splits=()):
     """월별 PER·PSR·FCF수익률을 실측 계산한다. {월: {...}}
 
     각 월에 대해 그 시점까지 제출된 최신 재무만 쓴다(미래 정보 차단).
@@ -89,7 +93,7 @@ def multiples(rows, months, series):
         r = usable[idx]
         if r["filed"] > ym:
             continue
-        mcap = px * r["sh"]
+        mcap = px * adj_shares(r, splits)      # 야후 주가는 분할 조정돼 있어 주식수도 맞춘다
         out[ym] = {
             "per": mcap / r["niTtm"] if (r.get("niTtm") or 0) > 0 else None,
             "psr": mcap / r["revTtm"] if (r.get("revTtm") or 0) > 0 else None,
@@ -209,8 +213,8 @@ def run(tickers, px, months, rows, label):
                     pairs = []
                     for t in tickers:
                         s = rows.get((ym, t))
-                        p0 = price_at(px.get(t, {}), ym[:7])
-                        p1 = price_at(px.get(t, {}), months[i + hz][:7])
+                        p0 = price_at(px[t]["px"], ym[:7])
+                        p1 = price_at(px[t]["px"], months[i + hz][:7])
                         if s and p0 and p1 and s[idx] is not None:
                             pairs.append((s[idx], (p1 / p0 - 1) * 100))
                     if len(pairs) < 10:
@@ -229,8 +233,8 @@ def run(tickers, px, months, rows, label):
                 continue
             pairs = []
             for t in tickers:
-                p0 = price_at(px.get(t, {}), ym[:7])
-                p1 = price_at(px.get(t, {}), months[i + hz][:7])
+                p0 = price_at(px[t]["px"], ym[:7])
+                p1 = price_at(px[t]["px"], months[i + hz][:7])
                 if (ym, t) in rows and p0 and p1:
                     pairs.append((random.random(), (p1 / p0 - 1) * 100))
             if len(pairs) < 10:
@@ -251,7 +255,7 @@ def main():
     months = month_ends("2010-06-30", "2026-08-31")
 
     rows = {}
-    mults = {t: multiples(pit[t], months, px.get(t, {})) for t in tickers}
+    mults = {t: multiples(pit[t], months, px[t]["px"], px[t]["splits"]) for t in tickers}
     for i, ym in enumerate(months):
         for t in tickers:
             sc = scores_at(pit[t], ym)
@@ -261,7 +265,7 @@ def main():
 
     run(tickers, px, months, rows, "전체 종목")
     # 2010년 이전 상장 종목만 — 최근 상장한 투기성 종목의 영향을 배제
-    mature = [t for t in tickers if px.get(t) and min(px[t]) < "2010-01"]
+    mature = [t for t in tickers if px.get(t) and min(px[t]["px"]) < "2010-01"]
     run(mature, px, months, rows, "2010년 이전 상장 종목만")
 
 
