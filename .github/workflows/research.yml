@@ -25,6 +25,8 @@ jobs:
         run: python scripts/test_sec_fundamentals.py
 
       - run: python "scripts/${{ inputs.script }}"
+        env:
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
 
       - name: Commit dataset if produced
         run: |
