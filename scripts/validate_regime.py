@@ -1,20 +1,24 @@
 #!/usr/bin/env python3
-"""시장 국면(상승장·혼조·하락장) 구분이 실제로 의미가 있는지 검증한다.
+"""시장 국면 판별 방식들을 같은 데이터로 비교 검증한다.
 
-앱이 쓰는 규칙 (fetch_data.py와 동일)
-  상승장 = 기준 지수가 200일선 위  AND  시장 폭 >= 55%
-  하락장 = 기준 지수가 200일선 아래 AND  시장 폭 < 45%
-  혼조   = 그 밖
-  시장 폭 = 워치리스트 종목 중 자기 200일선 위에 있는 비중
+국면 판별에 흔히 쓰이는 방식을 실시간 계산이 가능한 형태로 구현하고
+(미래 정보를 쓰는 사후 구간 설정 방식은 대시보드에 쓸 수 없어 제외),
+각 시점 이후 3개월 지수 수익률로 어느 방식이 앞날을 가르는지 본다.
 
-주 1회(금요일 기준) 표본을 만들고, 그 시점 이후 3개월(63거래일) 수익률을 본다.
-지수(SPY) 수익률과 모멘텀 상위 5종목 균등보유 수익률을 함께 계산한다.
-VIX 30 이상 구간도 같은 방식으로 따로 집계한다.
+비교 대상
+  200일선        지수가 200일 이동평균 위인가 (가장 흔한 기준)
+  200일선+기울기  위에 더해 200일선 자체가 상승 중인가
+  골든크로스      50일선 > 200일선
+  20% 규칙       직전 고점 대비 -20%면 하락장, 직전 저점 대비 +20%면 상승장.
+                Lunde-Timmermann(2004)의 20% 기준을 실시간으로 옮긴 것
+  10% 규칙       같은 방식, 기준 10%
+  12개월 모멘텀   최근 12개월 수익률이 양수인가
+  앱 방식        지수 200일선 + 시장 폭(55/45) — 3단계
 
-주의: 워치리스트는 2026년 시점에 고른 목록이라 절대 수익률은 부풀려져 있다.
-국면 간 '차이'를 보는 용도로만 유효하다.
+지수는 편입·폐지가 반영된 지수 자체를 쓴다(생존 편향 없음). 앱 방식의 시장 폭만
+현재 워치리스트를 쓰므로 그 항목에는 편향이 있다.
 
-사용: python3 scripts/validate_regime.py [시작연도] [시장: us|kr]
+사용: python3 scripts/validate_regime.py [시장: us|kr] [시작연도]
 """
 
 import os
@@ -26,12 +30,12 @@ import yfinance as yf
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from fetch_data import WATCHLIST, WATCHLIST_KR, closes_of, make_session
 
-MARKETS = {"us": {"watchlist": WATCHLIST, "trend": "SPY", "vix": "^VIX"},
-           "kr": {"watchlist": WATCHLIST_KR, "trend": "^KS11", "vix": None}}
-
 FWD = 63          # 3개월 (거래일)
 MA = 200
-TOP_N = 5
+MARKETS = {
+    "us": {"index": "^GSPC", "watchlist": WATCHLIST, "start": "1990"},
+    "kr": {"index": "^KS11", "watchlist": WATCHLIST_KR, "start": "1996"},
+}
 
 
 def load(session, symbols):
@@ -47,101 +51,181 @@ def load(session, symbols):
     return px
 
 
-def above_ma(series, days, i):
-    """i 시점에 자기 200일선 위인가. 자료가 모자라면 None."""
-    win = [series[d] for d in days[max(0, i - MA + 1):i + 1] if d in series]
-    if len(win) < MA * 0.9 or days[i] not in series:
+def series_of(px, days):
+    """일자 축에 맞춘 종가 리스트 (없는 날은 직전 값)."""
+    out, last = [], None
+    for d in days:
+        last = px.get(d, last)
+        out.append(last)
+    return out
+
+
+def sma(vals, i, n):
+    if i + 1 < n:
         return None
-    return series[days[i]] > sum(win) / len(win)
+    return sum(vals[i - n + 1:i + 1]) / n
 
 
-def mom_score(series, days, i):
-    """앱과 같은 점수 = 0.5 x 12-1 모멘텀 + 0.5 x 200일선 이격도."""
+# ---- 판별 방식들: (이름, 함수) · 함수는 i 시점의 상태를 "상승"/"하락"/"중립"으로 준다
+def rule_ma200(idx, i, ctx):
+    m = sma(idx, i, MA)
+    return None if m is None else ("상승" if idx[i] > m else "하락")
+
+
+def rule_ma200_slope(idx, i, ctx):
+    m, m_prev = sma(idx, i, MA), sma(idx, i - 21, MA)
+    if m is None or m_prev is None:
+        return None
+    return "상승" if (idx[i] > m and m > m_prev) else "하락"
+
+
+def rule_golden(idx, i, ctx):
+    f, s = sma(idx, i, 50), sma(idx, i, MA)
+    return None if (f is None or s is None) else ("상승" if f > s else "하락")
+
+
+def swing_state(idx, i, ctx, th):
+    """직전 고점 대비 -th% → 하락장, 직전 저점 대비 +th% → 상승장 (상태 유지).
+
+    Lunde-Timmermann(2004)의 20% 규칙을 실시간으로 옮긴 것. 사후 구간 설정과 달리
+    미래를 쓰지 않으므로 전환이 늦다.
+    """
+    key = f"swing{th}"
+    if key not in ctx:
+        ctx[key] = {"state": "상승", "peak": idx[0], "trough": idx[0], "at": 0}
+    s = ctx[key]
+    while s["at"] < i:                      # 앞 시점부터 순차 갱신 (i는 항상 증가)
+        s["at"] += 1
+        p = idx[s["at"]]
+        s["peak"], s["trough"] = max(s["peak"], p), min(s["trough"], p)
+        if s["state"] == "상승" and p <= s["peak"] * (1 - th / 100):
+            s["state"], s["trough"] = "하락", p
+        elif s["state"] == "하락" and p >= s["trough"] * (1 + th / 100):
+            s["state"], s["peak"] = "상승", p
+    return s["state"]
+
+
+def rule_swing20(idx, i, ctx):
+    return swing_state(idx, i, ctx, 20)
+
+
+def rule_swing10(idx, i, ctx):
+    return swing_state(idx, i, ctx, 10)
+
+
+def rule_mom12(idx, i, ctx):
     if i < 252:
         return None
-    win = days[i - 251:i + 1]
-    if not all(d in series for d in (win[0], win[-1], days[i - 21])):
-        return None
-    hist = [series[d] for d in win[-MA:] if d in series]
-    if len(hist) < MA * 0.9:
-        return None
-    return (0.5 * (series[days[i - 21]] / series[win[0]] - 1) * 100
-            + 0.5 * (series[days[i]] / (sum(hist) / len(hist)) - 1) * 100)
+    return "상승" if idx[i] > idx[i - 252] else "하락"
 
 
-def summarize(label, rows):
-    if len(rows) < 20:
-        print(f"  {label:26s} 표본 부족 ({len(rows)})")
-        return
-    spy = [r[0] for r in rows]
-    strat = [r[1] for r in rows if r[1] is not None]
-    loss = sum(1 for x in spy if x < 0) / len(spy) * 100
-    s_txt = f"{st.mean(strat):+6.1f}%" if strat else "   —  "
-    print(f"  {label:26s} 표본 {len(rows):4d}  지수 {st.mean(spy):+5.1f}%  "
-          f"손실확률 {loss:4.0f}%  중앙값 {st.median(spy):+5.1f}%  전략상위5 {s_txt}")
+def rule_app(idx, i, ctx):
+    """앱 방식: 지수 200일선 + 시장 폭 55/45 (3단계)."""
+    m = sma(idx, i, MA)
+    br = ctx["breadth"].get(i)
+    if m is None or br is None:
+        return None
+    if idx[i] > m and br >= 55:
+        return "상승"
+    if idx[i] <= m and br < 45:
+        return "하락"
+    return "중립"
+
+
+RULES = [("200일선", rule_ma200), ("200일선+기울기", rule_ma200_slope),
+         ("골든크로스", rule_golden), ("20% 규칙", rule_swing20),
+         ("10% 규칙", rule_swing10), ("12개월 모멘텀", rule_mom12),
+         ("앱 방식(폭 포함)", rule_app)]
+
+
+def report(name, states, fwd, switches):
+    """상태별 이후 3개월 지수 수익률·손실확률과 분리력을 출력한다."""
+    by = {}
+    for s, r in zip(states, fwd):
+        if s is not None:
+            by.setdefault(s, []).append(r)
+    if "상승" not in by or "하락" not in by:
+        print(f"  {name:16s} 표본 부족")
+        return None
+    line, loss = [], {}
+    for s in ("상승", "중립", "하락"):
+        v = by.get(s)
+        if not v:
+            continue
+        loss[s] = sum(1 for x in v if x < 0) / len(v) * 100
+        line.append(f"{s} {st.mean(v):+5.1f}%/손실{loss[s]:3.0f}%({len(v)})")
+    sep = loss["하락"] - loss["상승"]
+    print(f"  {name:16s} {' · '.join(line)}  ▶ 분리력 {sep:+5.1f}%p · 전환 {switches}회")
+    return sep
 
 
 def main():
-    start = sys.argv[1] if len(sys.argv) > 1 else "2000"
-    cfg = MARKETS[sys.argv[2] if len(sys.argv) > 2 else "us"]
+    mkt = sys.argv[1] if len(sys.argv) > 1 else "us"
+    cfg = MARKETS[mkt]
+    start = sys.argv[2] if len(sys.argv) > 2 else cfg["start"]
     session = make_session()
     tick = [t for t, _, th in cfg["watchlist"] if th != "지수 ETF"]
-    px = load(session, tick + [cfg["trend"]] + ([cfg["vix"]] if cfg["vix"] else []))
-    spy = px.pop(cfg["trend"])
-    vix = px.pop(cfg["vix"], {}) if cfg["vix"] else {}
-    print(f"주가 확보 {len(px)}종목 · 기준지수 {cfg['trend']} {min(spy)}~{max(spy)} · "
-          f"변동성지수 {'있음' if vix else '없음'}\n")
+    px = load(session, [cfg["index"]] + tick)
+    idx_px = px.pop(cfg["index"])
+    days = sorted(idx_px)
+    idx = [idx_px[d] for d in days]
+    print(f"{mkt.upper()} · 지수 {cfg['index']} {days[0]}~{days[-1]} · "
+          f"시장 폭용 종목 {len(px)}개\n")
 
-    days = sorted(spy)
-    idx = {d: i for i, d in enumerate(days)}
-    # 주 1회 표본: 각 주의 마지막 거래일
+    # 시장 폭(자기 200일선 위 비중) — 앱 방식에만 쓴다. 누적합으로 이동평균을 굴린다.
+    above = [0] * len(days)      # 200일선 위 종목 수
+    total = [0] * len(days)      # 200일치 자료가 있는 종목 수
+    for t in px:
+        v = series_of(px[t], days)
+        first = next((i for i, x in enumerate(v) if x is not None), None)
+        if first is None:
+            continue
+        cum = [0.0]
+        for x in v[first:]:
+            cum.append(cum[-1] + x)
+        for i in range(first + MA - 1, len(days)):
+            k = i - first + 1
+            m = (cum[k] - cum[k - MA]) / MA
+            total[i] += 1
+            above[i] += v[i] > m
+    breadth = {i: above[i] / total[i] * 100 for i in range(len(days)) if total[i] >= 10}
+
+    # 주 1회(주의 마지막 거래일) 표본
     import datetime as dt
     weekly = {}
-    for d in days:
+    for j, d in enumerate(days):
         y, w, _ = dt.date.fromisoformat(d).isocalendar()
-        weekly[(y, w)] = d
-    samples = [d for d in sorted(weekly.values()) if d[:4] >= start]
+        weekly[(y, w)] = j
+    samples = [j for j in sorted(weekly.values())
+               if days[j][:4] >= start and j + FWD < len(days)]
+    fwd = [(idx[j + FWD] / idx[j] - 1) * 100 for j in samples]
+    print(f"평가 구간 {days[samples[0]]} ~ {days[samples[-1]]} · 주간 표본 {len(samples)}개 "
+          f"· 이후 3개월 지수 수익률\n")
 
-    buckets = {"상승장": [], "혼조": [], "하락장": []}
-    panic = []
-    for d in samples:
-        i = idx[d]
-        if i + FWD >= len(days):
-            continue
-        flags = [above_ma(px[t], days, i) for t in px]
-        flags = [f for f in flags if f is not None]
-        if len(flags) < 10:
-            continue
-        breadth = sum(flags) / len(flags) * 100
-        spy_up = above_ma(spy, days, i)
-        if spy_up is None:
-            continue
-        regime = ("상승장" if spy_up and breadth >= 55 else
-                  "하락장" if not spy_up and breadth < 45 else "혼조")
-        fwd_spy = (spy[days[i + FWD]] / spy[d] - 1) * 100
+    ctx = {"breadth": breadth}
+    results = []
+    for name, fn in RULES:
+        states = [fn(idx, j, ctx) for j in samples]
+        sw = sum(1 for a, b in zip(states, states[1:]) if a and b and a != b)
+        results.append((name, report(name, states, fwd, sw)))
 
-        cand = []
-        for t in px:
-            s = mom_score(px[t], days, i)
-            if s is None or d not in px[t] or days[i + FWD] not in px[t]:
-                continue
-            cand.append((s, (px[t][days[i + FWD]] / px[t][d] - 1) * 100))
-        cand.sort(key=lambda x: -x[0])
-        fwd_strat = st.mean(r for _, r in cand[:TOP_N]) if len(cand) >= TOP_N * 2 else None
+    # 변동성지수 30 이상(패닉) 구간 — 미국만 (야후에 VKOSPI가 없다)
+    if mkt == "us":
+        vix = load(session, ["^VIX"]).get("^VIX", {})
+        if vix:
+            v = series_of(vix, days)
+            panic = [(j, r) for j, r in zip(samples, fwd) if (v[j] or 0) >= 30]
+            if len(panic) >= 20:
+                pr = [r for _, r in panic]
+                print(f"\n  변동성지수 30 이상   {st.mean(pr):+5.1f}%/손실"
+                      f"{sum(1 for x in pr if x < 0) / len(pr) * 100:3.0f}%({len(pr)})"
+                      "  ▶ 패닉 뒤 3개월은 오히려 반등이 잦다")
 
-        buckets[regime].append((fwd_spy, fwd_strat))
-        if vix.get(d, 0) >= 30:
-            panic.append((fwd_spy, fwd_strat))
-
-    total = sum(len(v) for v in buckets.values())
-    print(f"평가 구간 {samples[0]} ~ {samples[-1]} · 주간 표본 {total}개 · 이후 3개월 수익률\n")
-    for k in ("상승장", "혼조", "하락장"):
-        summarize(k, buckets[k])
-    print()
-    if vix:
-        summarize("변동성지수 30 이상 (패닉)", panic)
-    print("\n※ 워치리스트는 2026년 시점에 고른 목록 — 전략 절대 수익률은 부풀려져 있다.")
-    print("※ 표본이 주 단위로 겹쳐(3개월 구간 중복) 통계적 유의성은 과장된다.")
+    best = max((r for r in results if r[1] is not None), key=lambda r: r[1], default=None)
+    if best:
+        print(f"\n분리력(하락장 손실확률 − 상승장 손실확률)이 가장 큰 방식: {best[0]} {best[1]:+.1f}%p")
+    print("\n※ 3개월 구간이 주 단위로 겹쳐 통계적 유의성은 과장된다.")
+    print("※ 시장 폭은 현재 워치리스트 기준이라 그 항목만 생존 편향이 있다.")
 
 
 if __name__ == "__main__":

@@ -322,24 +322,21 @@ svg text{font-family:inherit}
   <p style="font-size:.78rem;color:var(--ink3)">백테스트는 이미 살아남은 종목으로 계산해 부풀려져 있습니다. 이 기록은 그 편향이 없는 유일한 성과 자료가 됩니다.</p>
 
   <h3>3. 시장 국면</h3>
-  <p>매수 종목 아래에 표시합니다. <b>기준 지수</b>는 미국 S&amp;P500 · 한국 KOSPI, <b>시장 폭</b>은 워치리스트에서 자기 200일선 위에 있는 종목 비중입니다.</p>
-  <table><colgroup><col style="width:22%"><col></colgroup>
-    <tr><th>국면</th><th>조건</th></tr>
-    <tr><td>상승장</td><td>기준 지수 200일선 위 <b>그리고</b> 시장 폭 55% 이상</td></tr>
-    <tr><td>하락장</td><td>기준 지수 200일선 아래 <b>그리고</b> 시장 폭 45% 미만</td></tr>
-    <tr><td>혼조</td><td>두 조건이 엇갈림</td></tr>
-  </table>
-  <p style="margin:12px 0 2px">국면별 이후 <b>3개월 지수 손실확률</b> — <code>validate_regime.py</code>로 재현</p>
-  <table><colgroup><col style="width:26%"><col><col></colgroup>
-    <tr><th>국면</th><th class="num">미국<br><span class="sub">2000~2026 · 1,379주</span></th><th class="num">한국<br><span class="sub">2010~2026 · 855주</span></th></tr>
-    <tr><td>상승장</td><td class="num">27%</td><td class="num">37%</td></tr>
-    <tr><td>혼조</td><td class="num">32%</td><td class="num">45%</td></tr>
-    <tr><td>하락장</td><td class="num">47%</td><td class="num">42%</td></tr>
-  </table>
-  <p style="font-size:.78rem;color:var(--ink3)">미국은 국면이 나빠질수록 손실확률이 뚜렷이 올라갑니다(27→32→47%). <b>한국은 그렇지 않습니다</b> — 하락장(42%)이 혼조(45%)보다 오히려 낮아, 국면 구분이 앞날을 가르지 못합니다. 한국 국면 표시는 참고로만 보세요.<br>
-  모멘텀 상위 5종목의 3개월 수익률은 국면과 무관하게 평균 양수였습니다(미국 상승장 +8.5% · 하락장 +7.3%). 국면은 비중 조절의 참고이지 매매 신호가 아닙니다.<br>
-  VIX 30 이상(미국 121주)은 이후 3개월 지수 +6.2% · 손실확률 23%로 오히려 반등이 잦았습니다.<br>
-  3개월 구간이 주 단위로 겹치므로 통계적 유의성은 과장돼 있습니다.</p>
+  <p>지수가 <b>직전 고점에서 20% 빠지면 하락장</b>, <b>직전 저점에서 20% 오르면 상승장</b>으로 봅니다. 학계에서 쓰는 Lunde-Timmermann(2004)의 20% 기준을, 미래를 쓰지 않고 오늘 시점에서 계산할 수 있게 옮긴 것입니다. 기준 지수는 미국 S&amp;P500 · 한국 KOSPI입니다.</p>
+  <p style="margin:12px 0 2px">판별 방식 비교 — 이후 <b>3개월 지수 손실확률</b> · <code>validate_regime.py</code>로 재현</p>
+  <div class="scroll-x"><table style="min-width:420px"><colgroup><col style="width:30%"><col><col><col></colgroup>
+    <tr><th>방식</th><th class="num">상승장</th><th class="num">하락장</th><th class="num">전환</th></tr>
+    <tr><td><b>20% 규칙</b><span class="sub">지금 쓰는 방식</span></td><td class="num">28%</td><td class="num"><b>50%</b></td><td class="num">12회</td></tr>
+    <tr><td>12개월 모멘텀</td><td class="num">27%</td><td class="num">38%</td><td class="num">50회</td></tr>
+    <tr><td>골든크로스</td><td class="num">27%</td><td class="num">37%</td><td class="num">34회</td></tr>
+    <tr><td>200일선</td><td class="num">27%</td><td class="num">37%</td><td class="num">124회</td></tr>
+    <tr><td>예전 방식<span class="sub">200일선 + 시장 폭</span></td><td class="num">27%</td><td class="num">45%</td><td class="num">242회</td></tr>
+  </table></div>
+  <p style="font-size:.78rem;color:var(--ink3)">미국 S&amp;P500 1990~2026 · 주간 1,901표본. 20% 규칙이 상승장과 하락장을 가장 크게 갈랐고(22.7%p) 전환도 36년간 12회로 가장 적었습니다. 예전 방식은 전환이 242회로 잦았고, 중간 단계인 '혼조'의 손실확률(24%)이 상승장(27%)보다 낮아 순서가 뒤집혀 있었습니다. 그래서 혼조 단계를 없앴습니다.</p>
+  <p style="font-size:.78rem;color:var(--ink3)">한국 KOSPI 1996~2026(1,537표본)에서도 20% 규칙이 가장 나았습니다(상승장 38% · 하락장 47% · 전환 34회). 다만 미국만큼 뚜렷하지는 않습니다.</p>
+  <p><b>200일선 · 골든크로스 · 시장 폭</b>은 국면 판정에서 빼고 보조 지표로만 표시합니다. <b>시장 폭</b> = 워치리스트에서 자기 200일선 위에 있는 종목 비중.<br>
+     <b>VIX 30↑</b> = 패닉 구간 · 이후 3개월 지수 +6.7% · 손실확률 21%(143주)로 오히려 반등이 잦았습니다.</p>
+  <p style="font-size:.78rem;color:var(--ink3)">3개월 구간이 주 단위로 겹치므로 통계적 유의성은 과장돼 있습니다. 국면은 비중 조절의 참고이지 매매 신호가 아닙니다 — 모멘텀 상위 5종목의 3개월 수익률은 국면과 무관하게 평균 양수였습니다.</p>
 
   <h3>4. 종목 진단</h3>
   <p><b>참고를 위한 측정입니다. 매매 판단은 모멘텀 순위 기준입니다.</b></p>
@@ -684,6 +681,7 @@ function renderBoard(){
        <div class="card-b" style="padding:11px 14px;font-size:.82rem;line-height:1.65;word-break:keep-all">⚠ ${t}</div></div>`).join('');
 
   /* 시장 국면 카드 */
+  /* 국면은 지수 고점·저점 대비 20% 반전으로 가른다 (validate_regime.py 비교에서 최상) */
   const rg=MARKET.regime, rgc=rg==='상승장'?'#4c8f3a':rg==='하락장'?'#c4472e':'#b58612';
   const chk=(ok,txt)=>`<div class="mrow"><span class="k">${txt}</span><span class="v" style="color:${ok==null?'var(--ink3)':ok?'#4c8f3a':'#c4472e'}">${ok==null?'—':ok?'긍정':'부정'}</span></div>`;
   document.getElementById('regime-box').innerHTML = rg
@@ -691,19 +689,22 @@ function renderBoard(){
          <span style="font-size:1.5rem;font-weight:800;color:${rgc}">${rg}</span>
          ${MARKET.panic?'<span class="gap-tag over" style="background:#f5ecd2;color:#b58612">VIX 30↑ 패닉</span>':''}
        </div>
-       ${chk(MARKET.trendAbove,(MARKET.mkt==='kr'?'KOSPI가':'S&P500이')+' 200일선 위')}
-       ${chk(MARKET.golden,'골든크로스 (50 &gt; 200일선)')}
-       <div class="mrow"><span class="k">시장 폭 (200일선 위 비중)</span><span class="v" style="color:${MARKET.breadth>=55?'#4c8f3a':MARKET.breadth<45?'#c4472e':'#b58612'}">${MARKET.breadth!=null?MARKET.breadth+'%':'—'}</span></div>
+       <div class="mrow"><span class="k">${MARKET.mkt==='kr'?'KOSPI':'S&P500'} 고점 대비</span><span class="v" style="color:${MARKET.regimeDd<=-10?'#c4472e':MARKET.regimeDd<=-5?'#b58612':'#4c8f3a'}">${MARKET.regimeDd!=null?fmt(MARKET.regimeDd)+'%':'—'}</span></div>
+       <div class="mrow"><span class="k">이 국면 시작</span><span class="v">${MARKET.regimeSince||'—'}</span></div>
+       ${chk(MARKET.trendAbove,'200일선 위 <span style="color:var(--ink3);font-weight:400">(보조)</span>')}
+       ${chk(MARKET.golden,'골든크로스 (50 &gt; 200일선) <span style="color:var(--ink3);font-weight:400">(보조)</span>')}
+       <div class="mrow"><span class="k">시장 폭 (200일선 위 비중) <span style="color:var(--ink3);font-weight:400">(보조)</span></span><span class="v" style="color:${MARKET.breadth>=55?'#4c8f3a':MARKET.breadth<45?'#c4472e':'#b58612'}">${MARKET.breadth!=null?MARKET.breadth+'%':'—'}</span></div>
        <p style="font-size:.73rem;color:var(--ink3);line-height:1.65;margin-top:9px;word-break:keep-all">${
-         rg==='상승장'?'지수와 다수 종목이 함께 상승 중<br>모멘텀이 가장 잘 작동하는 구간'
-        :rg==='하락장'?'지수와 다수 종목이 하락 중<br>순위 상위도 "덜 떨어진 종목"일 수 있음'
-        :'지수와 개별 종목의 추세가 엇갈리는 전환 구간<br>순위 변동이 잦아질 수 있음'}</p>`
+         (()=>{const kr=MARKET.mkt==='kr', src=kr?'KOSPI 30년':'S&P500 36년';
+           return rg==='상승장'
+             ? `직전 저점에서 20% 이상 오른 뒤 이어지는 구간<br>이후 3개월 지수 손실확률 ${kr?'38':'28'}% (${src})`
+             : `직전 고점에서 20% 이상 빠진 구간<br>이후 3개월 지수 손실확률 ${kr?'47':'50'}% (${src}) · 순위 상위도 "덜 떨어진 종목"일 수 있음`})()}</p>`
     : '<span style="font-size:.83rem;color:var(--ink2)">국면 데이터 없음 (샘플 데이터 표시 중)</span>';
 
   renderTrack();
   const top3=STOCKS.filter(s=>s.mr&&s.mr<=3).sort((a,b)=>a.mr-b.mr);
   document.getElementById('today-summary').innerHTML=
-    `<b style="color:#f0efeb">${MARKET.regime||'—'}</b> · SPY 52주 고점 대비 ${fmt(MARKET.spy52)}%<br>
+    `<b style="color:#f0efeb">${MARKET.regime||'—'}</b> · S&P500 52주 고점 대비 ${fmt(MARKET.spy52)}%<br>
      VIX ${fmt(MARKET.vix,2)} · Fear &amp; Greed ${fmt(MARKET.fg,0)} (${MARKET.fgLabel||'—'})<br>
      ${top3.length?`모멘텀 상위 — ${top3.map(symMain).join(' · ')}`:''}`;
   /* 값만 표시 — 역발상 가감점은 예측력이 음수로 확인돼 제거했다 */
@@ -712,10 +713,10 @@ function renderBoard(){
   const M = kr
     ? [['KOSPI 52주 낙폭',fmt(MARKET.spy52)+'%'],['KOSPI',fmt(MARKET.kospi,0)],
        ['KOSDAQ',fmt(MARKET.kosdaq,0)],['원/달러',fmt(MARKET.usdkrw,2)]]
-    : [['SPY 52주 낙폭',fmt(MARKET.spy52)+'%'],['VIX',fmt(MARKET.vix,2)],
+    : [['S&P500 52주 낙폭',fmt(MARKET.spy52)+'%'],['VIX',fmt(MARKET.vix,2)],
        ['Fear & Greed',fmt(MARKET.fg,0)]];
   if(MARKET.trendAbove!=null)
-    M.push([(kr?'KOSPI':'SPY')+' 200일선',MARKET.trendAbove?'위 · 상승':'아래 · 하락']);
+    M.push([(kr?'KOSPI':'S&P500')+' 200일선',MARKET.trendAbove?'위 · 상승':'아래 · 하락']);
   const bt=STOCKS.find(s=>s.th==='지수 ETF');
   document.getElementById('market-rows').innerHTML=
     M.map(([k,v])=>`<div class="mrow"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('')
@@ -1012,7 +1013,7 @@ function applyLiveData(D){
   THEMES=[...new Set(STOCKS.map(s=>s.th))];
   const m=D.market;
   MARKET={spy52:m.spy_dd_52w,vix:m.vix,fg:m.fear_greed,fgLabel:m.fg_label,
-    nasdaq:m.nasdaq,sp500:m.sp500,kospi:m.kospi,kosdaq:m.kosdaq,usdkrw:m.usdkrw,mkt:m.market||'us',liveQuote:m.live_quote,trendAbove:m.spy_ma200_above,regime:m.regime,track:m.track,breadth:m.breadth_pct,golden:m.spy_golden,panic:m.panic,topTheme:m.top5_theme,topThemeN:m.top5_theme_count};
+    nasdaq:m.nasdaq,sp500:m.sp500,kospi:m.kospi,kosdaq:m.kosdaq,usdkrw:m.usdkrw,mkt:m.market||'us',liveQuote:m.live_quote,trendAbove:m.spy_ma200_above,regime:m.regime,regimeSince:m.regime_since,regimeDd:m.regime_dd,track:m.track,breadth:m.breadth_pct,golden:m.spy_golden,panic:m.panic,topTheme:m.top5_theme,topThemeN:m.top5_theme_count};
   META={updated:D.updated_at_kst,updatedUtc:D.updated_at,live:true,compareDate:D.compare_date};
   if(!STOCKS.some(x=>x.t===curTicker))curTicker=STOCKS[0].t;
 }
