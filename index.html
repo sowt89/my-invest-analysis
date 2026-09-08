@@ -322,16 +322,24 @@ svg text{font-family:inherit}
   <p style="font-size:.78rem;color:var(--ink3)">백테스트는 이미 살아남은 종목으로 계산해 부풀려져 있습니다. 이 기록은 그 편향이 없는 유일한 성과 자료가 됩니다.</p>
 
   <h3>3. 시장 국면</h3>
-  <p>매수 종목 아래에 표시. 26년 데이터(주간 1,327표본) 검증 기준입니다.</p>
-  <table><colgroup><col style="width:22%"><col><col style="width:22%"></colgroup>
-    <tr><th>국면</th><th>조건</th><th class="num">3개월<br>손실확률</th></tr>
-    <tr><td>상승장</td><td>기준 지수 200일선 위<br>+ 시장 폭 55%↑</td><td class="num">27%</td></tr>
-    <tr><td>혼조</td><td>두 조건 엇갈림</td><td class="num">42%</td></tr>
-    <tr><td>하락장</td><td>기준 지수 200일선 아래<br>+ 시장 폭 45%↓</td><td class="num">42%</td></tr>
+  <p>매수 종목 아래에 표시합니다. <b>기준 지수</b>는 미국 S&amp;P500 · 한국 KOSPI, <b>시장 폭</b>은 워치리스트에서 자기 200일선 위에 있는 종목 비중입니다.</p>
+  <table><colgroup><col style="width:22%"><col></colgroup>
+    <tr><th>국면</th><th>조건</th></tr>
+    <tr><td>상승장</td><td>기준 지수 200일선 위 <b>그리고</b> 시장 폭 55% 이상</td></tr>
+    <tr><td>하락장</td><td>기준 지수 200일선 아래 <b>그리고</b> 시장 폭 45% 미만</td></tr>
+    <tr><td>혼조</td><td>두 조건이 엇갈림</td></tr>
   </table>
-  <p><b>기준 지수</b> = 미국 S&amp;P500 · 한국 KOSPI<br>
-     <b>시장 폭</b> = 자기 200일선 위에 있는 종목 비중<br>
-     <b>VIX 30↑</b> = 패닉 구간 · 이후 3개월 평균 +10.6%로 반등 잦음</p>
+  <p style="margin:12px 0 2px">국면별 이후 <b>3개월 지수 손실확률</b> — <code>validate_regime.py</code>로 재현</p>
+  <table><colgroup><col style="width:26%"><col><col></colgroup>
+    <tr><th>국면</th><th class="num">미국<br><span class="sub">2000~2026 · 1,379주</span></th><th class="num">한국<br><span class="sub">2010~2026 · 855주</span></th></tr>
+    <tr><td>상승장</td><td class="num">27%</td><td class="num">37%</td></tr>
+    <tr><td>혼조</td><td class="num">32%</td><td class="num">45%</td></tr>
+    <tr><td>하락장</td><td class="num">47%</td><td class="num">42%</td></tr>
+  </table>
+  <p style="font-size:.78rem;color:var(--ink3)">미국은 국면이 나빠질수록 손실확률이 뚜렷이 올라갑니다(27→32→47%). <b>한국은 그렇지 않습니다</b> — 하락장(42%)이 혼조(45%)보다 오히려 낮아, 국면 구분이 앞날을 가르지 못합니다. 한국 국면 표시는 참고로만 보세요.<br>
+  모멘텀 상위 5종목의 3개월 수익률은 국면과 무관하게 평균 양수였습니다(미국 상승장 +8.5% · 하락장 +7.3%). 국면은 비중 조절의 참고이지 매매 신호가 아닙니다.<br>
+  VIX 30 이상(미국 121주)은 이후 3개월 지수 +6.2% · 손실확률 23%로 오히려 반등이 잦았습니다.<br>
+  3개월 구간이 주 단위로 겹치므로 통계적 유의성은 과장돼 있습니다.</p>
 
   <h3>4. 종목 진단</h3>
   <p><b>참고를 위한 측정입니다. 매매 판단은 모멘텀 순위 기준입니다.</b></p>

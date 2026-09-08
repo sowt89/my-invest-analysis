@@ -821,8 +821,9 @@ def main():
         print(f"오류: 성공 종목이 {len(stocks)}개뿐이라 data.json을 갱신하지 않습니다.")
         sys.exit(1)
 
-    # 시장 국면: SPY 200일선 × 시장 폭 (26년 검증 — 상승장 3개월 +3.3%/손실 27%,
-    # 하락장 +1.5%/42%. VIX 30↑은 역발상 반등 구간 +10.6%)
+    # 시장 국면: 기준 지수 200일선 x 시장 폭
+    # (validate_regime.py 재현 — 미국 3개월 손실확률 상승장 27% · 혼조 32% · 하락장 47%,
+    #  한국은 37/45/42%로 국면이 앞날을 가르지 못한다)
     ma_flags = [x["above_ma200"] for x in stocks if x["above_ma200"] is not None
                 and x["theme"] != "지수 ETF"]
     breadth = round(sum(ma_flags) / len(ma_flags) * 100) if ma_flags else None
