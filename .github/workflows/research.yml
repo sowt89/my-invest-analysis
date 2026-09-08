@@ -22,7 +22,9 @@ jobs:
           python-version: "3.12"
       - run: pip install yfinance requests curl_cffi
       - name: Unit tests
-        run: python scripts/test_sec_fundamentals.py
+        run: |
+          python scripts/test_sec_fundamentals.py
+          python scripts/test_dart_fundamentals.py
 
       - run: python "scripts/${{ inputs.script }}"
         env:
