@@ -247,6 +247,33 @@ def run(tickers, px, months, rows, label):
         print()
 
 
+def run_annual(tickers, px, months, rows):
+    """12개월 구간이 겹치지 않도록 연 1회(매년 6월 말)만 측정한 IC.
+
+    겹치는 월별 측정은 t값이 부풀려지므로 문서에는 이 수치를 쓴다.
+    """
+    print(f"\n{'='*62}\n연 1회 비중첩 측정 (12개월 선행) · {len(tickers)}종목\n{'='*62}")
+    pts = [i for i in range(0, len(months) - 12, 12)]
+    for idx, name in ((0, "재무 점수"), (1, "실적 점수"), (2, "밸류 점수"), (None, "랜덤 대조군")):
+        random.seed(42)
+        ics = []
+        for i in pts:
+            pairs = []
+            for t in tickers:
+                s = rows.get((months[i], t))
+                p0 = price_at(px[t]["px"], months[i][:7])
+                p1 = price_at(px[t]["px"], months[i + 12][:7])
+                if s and p0 and p1 and (idx is None or s[idx] is not None):
+                    pairs.append((random.random() if idx is None else s[idx], p1 / p0 - 1))
+            if len(pairs) >= 10:
+                ics.append(spearman(pairs))
+        ics = [x for x in ics if x is not None]
+        m, sd = st.mean(ics), st.pstdev(ics)
+        t = m / (sd / math.sqrt(len(ics))) if sd else 0
+        neg = sum(1 for x in ics if x < 0)
+        print(f"  {name:10s} IC {m:+.3f}  t {t:+.2f}  음수 {neg}/{len(ics)}년  (관측 {len(ics)}회)")
+
+
 def main():
     with open(PIT) as f:
         pit = json.load(f)
@@ -263,6 +290,7 @@ def main():
                 rows[(ym, t)] = (sc[0], sc[1], value_score_at(mults[t], months, i))
     print(f"\n평가 구간 {months[0][:7]} ~ {months[-1][:7]} · 관측 {len(rows)}건")
 
+    run_annual(tickers, px, months, rows)
     run(tickers, px, months, rows, "전체 종목")
     # 2010년 이전 상장 종목만 — 최근 상장한 투기성 종목의 영향을 배제
     mature = [t for t in tickers if px.get(t) and min(px[t]["px"]) < "2010-01"]
