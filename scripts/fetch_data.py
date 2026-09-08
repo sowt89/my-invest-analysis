@@ -530,7 +530,7 @@ def track_vs_bench(hist, bench="QQQ", top_n=5):
             "holding": held}
 
 
-def fetch_stock(session, ticker, name, theme, market, pit):
+def fetch_stock(session, ticker, name, theme, pit):
     tk = yf.Ticker(ticker, session=session)
     info = retry(lambda: tk.info, default={}) or {}
 
@@ -802,7 +802,7 @@ def main():
     stocks, failed = [], []
     for i, (ticker, name, theme) in enumerate(watchlist):
         try:
-            s = fetch_stock(session, ticker, name, theme, market, pit)
+            s = fetch_stock(session, ticker, name, theme, pit)
             stocks.append(s)
             print(f"  [{i+1:2d}/{len(watchlist)}] {ticker:9s} {s['price']:>11,.2f}  "
                   f"3축 {s['grow_score']:+d}/{s['val_score']:+d}/{s['fin_score']:+d}")

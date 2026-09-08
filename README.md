@@ -17,7 +17,7 @@
 
 ## 1. 한 줄 요약
 
-> 관심종목 40개 중 **최근 흐름이 가장 좋은 5종목**을 골라주고, 한 달에 한 번 그 목록이 바뀌면 갈아타는 방식입니다.
+> 관심종목(미국 40개 · 한국 42개) 중 **최근 흐름이 가장 좋은 5종목**을 골라주고, 한 달에 한 번 그 목록이 바뀌면 갈아타는 방식입니다.
 
 ---
 
@@ -46,8 +46,8 @@
 ### 매수 종목 (첫 화면)
 - **이번 달 매수 종목** — 모멘텀 상위 5종목
 - **현재 시장 국면** — 상승장 · 혼조 · 하락장
-- **전략 vs QQQ 기록** — 백테스트가 아니라 오늘부터 쌓는 실제 성과. 상위 5종목 균등보유와 QQQ를 같은 기간으로 비교합니다. 백테스트는 이미 살아남은 종목으로 계산해 부풀려져 있으므로, 이 기록이 편향 없는 유일한 성과 자료가 됩니다. 판단에 쓰려면 최소 1년 이상 필요합니다.
-- **모멘텀 순위** — 전 종목. 지수 ETF와 데이터가 없는 종목은 순위에서 제외되어 현재 38종목이 대상입니다. 구간은 순위 묶음(`상위 5` · `6~15위` · `16위↓`)이며 매매 지시가 아님
+- **전략 vs 지수 기록** — 백테스트가 아니라 오늘부터 쌓는 실제 성과. 상위 5종목 균등보유와 지수(미국 QQQ · 한국 KODEX 200)를 같은 기간으로 비교합니다. 백테스트는 이미 살아남은 종목으로 계산해 부풀려져 있으므로, 이 기록이 편향 없는 유일한 성과 자료가 됩니다. 판단에 쓰려면 최소 1년 이상 필요합니다.
+- **모멘텀 순위** — 전 종목. 지수 ETF와 상장 1년 미만처럼 데이터가 부족한 종목은 순위에서 빠집니다(현재 미국 38 · 한국 42종목). 구간은 순위 묶음(`상위 5` · `6~15위` · `16위↓`)이며 매매 지시가 아님
 
 ### 종목 진단
 실적 · 밸류 · 재무 3축 점수. **참고를 위한 측정**입니다.
@@ -161,10 +161,12 @@ SEC 원본 재무제표(point-in-time)로 2010~2026년을 검증했습니다. IC
 | 항목 | 출처 | 갱신 |
 |---|---|---|
 | 시세·재무·실적·전망 | Yahoo Finance | 장중 30분 / 장외 2시간 |
-| 시장 심리 지수 | CNN Fear & Greed | 위와 동일 |
+| 시장 심리 지수 | CNN Fear & Greed | 위와 동일 (미국만) |
 | 실시간 현재가 | Finnhub | 미국 장중 60초 / 장외 10분 |
+| 공시 원본 재무 (미국) | SEC EDGAR | 수동 갱신 (`research.yml`) |
+| 공시 원본 재무 (한국) | DART | 수동 갱신 (`research.yml`) |
 
-GitHub Actions가 자동으로 수집해 `data.json`에 저장하고, 화면은 그 파일을 읽어 그립니다. 서버 없이 GitHub Pages로만 동작하며 **운영 비용은 0원**입니다.
+PER·PSR의 3~5년 평균은 공시 원본(SEC·DART)으로 계산하며, 이 데이터셋은 수집에 30분 넘게 걸려 종목을 추가했을 때만 수동으로 다시 만듭니다. 나머지는 GitHub Actions가 자동으로 수집해 `data.json`에 저장하고, 화면은 그 파일을 읽어 그립니다. 서버 없이 GitHub Pages로만 동작하며 **운영 비용은 0원**입니다.
 
 화면 상단에 마지막 갱신 시각이 한국 시간으로 표시됩니다.
 
@@ -191,15 +193,17 @@ python3 scripts/fetch_data.py kr    # 한국 → data_kr.json
 ```
 index.html              화면 전체 (단일 파일)
 scripts/fetch_data.py   데이터 수집 + 순위 계산
-scripts/backtest_momentum.py     모멘텀 전략 백테스트 (26년, 검증 근거)
+scripts/backtest_momentum.py     모멘텀 전략 백테스트 (미국 26년 · 한국 17년, 검증 근거)
 scripts/backtest_legacy.py       역발상 점수 백테스트 (10년, 근거 재현용)
 scripts/backtest_legacy_long.py  같은 방식 장기 검증 (25년)
 scripts/sec_fundamentals.py      SEC 원본 재무제표 수집 (미국, point-in-time)
 scripts/dart_fundamentals.py     DART 원본 재무제표 수집 (한국, point-in-time)
 scripts/validate_axis_scores.py  실적·재무 점수 예측력 검증
-scripts/test_sec_fundamentals.py 수집 로직 테스트 (네트워크 불필요)
+scripts/test_sec_fundamentals.py  SEC 수집 로직 테스트 (네트워크 불필요)
+scripts/test_dart_fundamentals.py DART 수집 로직 테스트 (네트워크 불필요)
 scripts/legacy_score.py          폐기된 역발상 점수 (백테스트 전용)
-scripts/sec_tag_report.py        XBRL 태그 가용성 진단
+scripts/sec_tag_report.py        XBRL 태그 가용성 진단 (종목 추가 시)
+scripts/dart_tag_report.py       DART 계정명 진단 (종목 추가 시)
 data.json               수집된 데이터 (미국)
 data_kr.json            수집된 데이터 (한국)
 history.json            일별 지표 누적 기록 (최근 3년, 미국)
