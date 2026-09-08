@@ -37,6 +37,8 @@
 
 **③ 화면 상단에 시장 국면(상승장·혼조·하락장)이 함께 표시됩니다.**
 
+기준 지수(미국 S&P500 · 한국 KOSPI)가 200일선 위인지와, 워치리스트에서 자기 200일선 위에 있는 종목 비중(시장 폭)을 함께 봅니다. 둘 다 좋으면 상승장, 둘 다 나쁘면 하락장, 엇갈리면 혼조입니다. 미국은 국면이 나빠질수록 이후 3개월 지수 손실확률이 27%→32%→47%로 뚜렷이 올라가지만, **한국은 42~45%로 차이가 없어 참고에 그칩니다**(`scripts/validate_regime.py`로 재현).
+
 ---
 
 ## 3. 화면 설명
@@ -216,6 +218,7 @@ scripts/backtest_legacy_long.py  같은 방식 장기 검증 (25년)
 scripts/sec_fundamentals.py      SEC 원본 재무제표 수집 (미국, point-in-time)
 scripts/dart_fundamentals.py     DART 원본 재무제표 수집 (한국, point-in-time)
 scripts/validate_axis_scores.py  실적·재무 점수 예측력 검증
+scripts/validate_regime.py       시장 국면 구분의 예측력 검증
 scripts/test_sec_fundamentals.py  SEC 수집 로직 테스트 (네트워크 불필요)
 scripts/test_dart_fundamentals.py DART 수집 로직 테스트 (네트워크 불필요)
 scripts/legacy_score.py          폐기된 역발상 점수 (백테스트 전용)
