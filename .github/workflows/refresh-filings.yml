@@ -1,0 +1,64 @@
+name: Refresh filing data
+
+# PER·PSR 실측에 쓰는 공시 원본 재무(SEC·DART)를 주 1회 다시 만든다.
+# 이 데이터가 낡으면 최신 분기 실적이 빠진 채로 배수가 계산된다.
+on:
+  schedule:
+    # 매주 일요일 18:00 UTC (월요일 03:00 KST) — 미국 금요일 장 마감 후, 한국 월요일 개장 전
+    - cron: "0 18 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-filings
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install yfinance requests curl_cffi
+
+      # 수집 로직 테스트를 먼저 돌린다 (네트워크 불필요) — 깨진 로직으로 데이터를 덮어쓰지 않기 위해
+      - name: Unit tests
+        run: |
+          python scripts/test_sec_fundamentals.py
+          python scripts/test_dart_fundamentals.py
+
+      # 각 스크립트는 레코드 수가 정상 범위 미달이면 저장하지 않고 실패한다
+      - name: SEC (미국)
+        run: python scripts/sec_fundamentals.py
+
+      - name: DART (한국)
+        run: python scripts/dart_fundamentals.py
+        env:
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+
+      - name: Commit
+        run: |
+          if [ -z "$(git status --porcelain -- data)" ]; then
+            echo "변경 없음"; exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data
+          MSG="chore: 공시 원본 재무 갱신 ($(date -u +'%Y-%m-%d'))"
+          git commit -m "$MSG"
+          # 시세 갱신 워크플로와 겹치면 push가 거부된다 — 최신 main 위에 다시 얹어 재시도
+          # reset은 --mixed로 한다 — --soft는 그 사이 올라온 다른 변경을 되돌린다
+          for i in 1 2 3; do
+            git push && exit 0
+            echo "push 거부 — 재시도 ($i/3)"
+            git fetch origin main
+            git reset --mixed origin/main
+            git add data
+            git commit -m "$MSG" || exit 0
+          done
+          exit 1

@@ -267,11 +267,11 @@ svg text{font-family:inherit}
     </div>
     <div class="card-b scroll-x" style="padding:8px 0 10px">
       <table class="cmp-table"><thead><tr>
-        <th>종목</th><th>테마</th><th>현재가</th><th>시총</th><th>PER</th><th>PSR</th><th>EV/EBITDA</th><th>Gross</th><th>Op</th><th>Profit</th><th>괴리</th>
+        <th>종목</th><th>PER</th><th>괴리</th><th>PSR</th><th>EV/EBITDA</th><th>Gross</th><th>Op</th><th>Profit</th><th>현재가</th><th>시총</th><th>테마</th>
       </tr></thead><tbody id="cmp-body"></tbody></table>
     </div>
   </div>
-  <p class="foot-note">※ PER = 최근 4분기 실적 기준 · 괴리 = 그 PER의 3년 평균 대비 이격<br>※ 음수(초록) = 과거 평균보다 저평가<br>※ PER·3년 평균 모두 공시 원본 실측(미국 SEC · 한국 DART) · 적자 구간은 산출 제외<br>※ <sup>F</sup> 표시 = 적자 등으로 최근 4분기 PER이 없어 FWD PER(예상 실적)로 대체한 값</p>
+  <p class="foot-note">※ PER = 최근 4분기 실적 기준 · 괴리 = 그 PER의 3년 평균 대비 이격<br>※ 음수(초록) = 과거 평균보다 저평가<br>※ PER · PSR · 각 평균 모두 공시 원본 실측(미국 SEC · 한국 DART) · 적자 구간은 산출 제외<br>※ <sup>F</sup> 표시 = 적자 등으로 최근 4분기 PER이 없어 FWD PER(예상 실적)로 대체한 값</p>
 </main>
 
 <div id="guide"><div class="gwrap">
@@ -380,7 +380,7 @@ svg text{font-family:inherit}
   </table>
   <p style="font-size:.78rem;color:var(--ink3)">결측 지표는 0점 처리<br>
   3년 평균 PER · 5년 평균 PSR은 공시 원본 재무제표(미국 SEC · 한국 DART)로 계산합니다 — 각 시점의 주가 × 당시 발행주식수 ÷ 당시 이익(또는 매출). 주가는 액면분할이 소급 조정돼 있으므로 보고서 주식수도 같은 기준으로 맞춥니다.<br>
-  실측이 불가능한 종목은 화면에 <b>근사값</b>으로 표시합니다 — ETF, 매출 계정이 없는 금융지주, 야후 재무와 30% 넘게 어긋나는 종목, 주식 클래스가 여럿인 종목입니다.<br>
+  계산을 믿어도 되는지는 <b>시가총액</b>으로 확인합니다 — 보고서 주식수 × 현재가가 지금 시가총액과 ±30% 안에서 맞으면 주식수가 맞다는 뜻이고, 분자(이익·매출)는 공시 원본이라 그대로 씁니다. 맞지 않으면(주식 클래스가 여럿인 종목) 산출을 포기하고 <b>근사값</b>으로 표시합니다. ETF, 매출 계정이 없는 금융지주, 적자 종목도 근사 또는 결측입니다.<br>
   FWD PER(예상 실적 기준)은 참고로만 표시하고 점수에는 쓰지 않습니다. 컨센서스의 과거값을 구할 수 없어 3년 평균을 만들 수 없기 때문입니다.</p>
 
   <h3>5. 검증 근거</h3>
@@ -428,8 +428,8 @@ svg text{font-family:inherit}
     <tr><td>Yahoo Finance<span class="sub">시세 · 재무 · 실적 · 컨센서스</span></td><td class="num">장중 30분</td></tr>
     <tr><td>CNN Fear &amp; Greed<span class="sub">시장 심리</span></td><td class="num">장중 30분</td></tr>
     <tr><td>Finnhub<span class="sub">실시간 현재가 · 미국만</span></td><td class="num">장중 60초</td></tr>
-    <tr><td>SEC EDGAR<span class="sub">미국 공시 원본 재무 (PER·PSR 실측)</span></td><td class="num">수동 갱신</td></tr>
-    <tr><td>DART<span class="sub">한국 공시 원본 재무 (PER·PSR 실측)</span></td><td class="num">수동 갱신</td></tr>
+    <tr><td>SEC EDGAR<span class="sub">미국 공시 원본 재무 (PER·PSR 실측)</span></td><td class="num">주 1회</td></tr>
+    <tr><td>DART<span class="sub">한국 공시 원본 재무 (PER·PSR 실측)</span></td><td class="num">주 1회</td></tr>
   </table>
   <p style="font-size:.78rem;color:var(--ink3)">갱신 시각은 화면 상단 표시 · 서버 없이 동작해 운영 비용 없음</p>
 
@@ -809,11 +809,13 @@ function renderCompare(){
     document.getElementById('cmp-body').innerHTML=STOCKS.filter(s=>!th||s.th===th).map(s=>{
       const d=detail(s);const gap=gapOf(d);
       return `<tr onclick="openDetail('${s.t}')" style="cursor:pointer">
-      <td class="tk">${symMain(s)}</td><td class="theme-cell">${s.th}</td>
-      <td>${won(s.p)}</td><td>${mc(s.mc)}</td>
-      <td>${d.trailPer!=null?fmt(d.trailPer):(d.fwdPer!=null?`<span class="hz">${fmt(d.fwdPer)}<sup>F</sup></span>`:'—')}</td><td>${fmt(d.psr,2)}</td><td>${fmt(d.evEbitda)}</td>
+      <td class="tk">${symMain(s)}</td>
+      <td>${d.trailPer!=null?fmt(d.trailPer):(d.fwdPer!=null?`<span class="hz">${fmt(d.fwdPer)}<sup>F</sup></span>`:'—')}</td>
+      <td>${gap==null?'<span class="hz">—</span>':h(pct(gap),gap<0)}</td>
+      <td>${fmt(d.psr,2)}</td><td>${fmt(d.evEbitda)}</td>
       <td>${d.gross==null?'<span class="hz">—</span>':h(fmt(d.gross)+'%',d.gross>=40)}</td><td>${d.op==null?'<span class="hz">—</span>':h(fmt(d.op)+'%',d.op>=20)}</td>
-      <td>${d.profit==null?'<span class="hz">—</span>':h(fmt(d.profit)+'%',d.profit>=10)}</td><td>${gap==null?'<span class="hz">—</span>':h(pct(gap),gap<0)}</td></tr>`}).join('');
+      <td>${d.profit==null?'<span class="hz">—</span>':h(fmt(d.profit)+'%',d.profit>=10)}</td>
+      <td>${won(s.p)}</td><td>${mc(s.mc)}</td><td class="theme-cell">${s.th}</td></tr>`}).join('');
   }
   ct.onchange=draw;draw();
 }
@@ -1009,13 +1011,16 @@ function applyLiveData(D){
 function updateStatus(){
   const el=document.getElementById('data-status'),note=document.getElementById('board-note');
   if(META.live){
+    /* 실시간 시세는 미국만 지원한다 (한국은 ⚙ 버튼도 숨김) */
+    const canLive=MARKET.liveQuote!==false;
     let t=`실데이터 · 업데이트 ${META.updated} KST`;
-    if(finnKey())t+=lastQuote?` · 실시간 시세 ${lastQuote.getHours().toString().padStart(2,'0')}:${lastQuote.getMinutes().toString().padStart(2,'0')}`:' · 실시간 시세 연결 중…';
+    if(!canLive)t+=' · 장중 30분 간격 갱신';
+    else if(finnKey())t+=lastQuote?` · 실시간 시세 ${lastQuote.getHours().toString().padStart(2,'0')}:${lastQuote.getMinutes().toString().padStart(2,'0')}`:' · 실시간 시세 연결 중…';
     else t+=' · 우측 상단 ⚙에서 무료 Finnhub 키 등록 시 실시간 시세';
     el.textContent=t;
     note.innerHTML=`※ 모멘텀 = 최근 1개월 제외 1년 수익률 + 200일선 이격도 (반반)<br>
       ※ 구간 = 모멘텀 순위 묶음 (매매 지시 아님) · 지수 ETF 제외<br>
-      ※ yfinance ${META.updated} KST 갱신${finnKey()?' · Finnhub 실시간 시세':''}`;
+      ※ yfinance ${META.updated} KST 갱신${canLive&&finnKey()?' · Finnhub 실시간 시세':''}`;
   }else{
     el.textContent='⚠ 실데이터 로드 실패 — 내장 샘플 데이터 표시 중';
     note.textContent='※ 샘플 데이터 · 실데이터 로드 실패';
