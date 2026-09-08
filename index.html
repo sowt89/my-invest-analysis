@@ -683,7 +683,7 @@ function renderBoard(){
   document.getElementById('today-summary').innerHTML=
     `<b style="color:#f0efeb">${MARKET.regime||'—'}</b> · SPY 52주 고점 대비 ${fmt(MARKET.spy52)}%<br>
      VIX ${fmt(MARKET.vix,2)} · Fear &amp; Greed ${fmt(MARKET.fg,0)} (${MARKET.fgLabel||'—'})<br>
-     ${top3.length?`모멘텀 상위 — ${top3.map(s=>s.t).join(' · ')}`:''}`;
+     ${top3.length?`모멘텀 상위 — ${top3.map(symMain).join(' · ')}`:''}`;
   /* 값만 표시 — 역발상 가감점은 예측력이 음수로 확인돼 제거했다 */
   /* 시장별 지표 — 한국은 변동성지수·공포탐욕 지수가 없어 환율로 대체한다 */
   const kr=MARKET.mkt==='kr';
@@ -721,13 +721,15 @@ function renderTrack(){
   const t=MARKET.track, card=document.getElementById('track-card');
   if(!t||!t.days){card.style.display='none';return}
   card.style.display='';
-  document.getElementById('track-title').textContent=`전략 vs ${t.bench} · 실제 기록`;
+  /* 벤치마크는 티커로 저장되므로 화면에는 이름으로 (한국 종목코드는 이름 구실을 못 한다) */
+  const bn=(STOCKS.find(x=>x.t===t.bench)||{}).n||t.bench;
+  document.getElementById('track-title').textContent=`전략 vs ${bn} · 실제 기록`;
   const diff=t.strategy_pct-t.bench_pct;
   const col=v=>v>=0?'#4c8f3a':'#c4472e';
   const row=(k,v)=>`<div class="mrow"><span class="k">${k}</span>
     <span class="v" style="color:${col(v)}">${v>=0?'+':''}${fmt(v,2)}%</span></div>`;
   document.getElementById('track-box').innerHTML=
-    row('모멘텀 상위 5',t.strategy_pct)+row(t.bench,t.bench_pct)+
+    row('모멘텀 상위 5',t.strategy_pct)+row(bn,t.bench_pct)+
     `<div class="mrow"><span class="k">차이</span>
       <span class="v" style="color:${col(diff)}">${diff>=0?'+':''}${fmt(diff,2)}%p</span></div>
      <p style="font-size:.72rem;color:var(--ink3);line-height:1.5;margin-top:9px">
