@@ -460,15 +460,14 @@ def adj_shares(row, splits):
     return sh
 
 
-def sec_multiple(rows, dates, closes, key, weeks=None, check_now=None, splits=()):
+def sec_multiple(rows, dates, closes, key, weeks=None, splits=()):
     """각 시점의 배수(주가 x 당시 발행주식수 / 당시 TTM 지표)를 실측 계산한다.
 
     반환: (평균, 최신값). 산출 불가면 (None, None).
     key="revTtm"이면 PSR, "niTtm"이면 PER.
     적자 구간(분모 <= 0)은 배수가 의미를 잃으므로 제외한다.
-    check_now가 주어지면 최신 재계산값과 30% 넘게 어긋날 때 폐기한다
-    (다중 주식 클래스 등 주식수 집계 불일치 방어).
     splits: 분할 이벤트 [(날짜, 배율)] — 제출 뒤 분할은 주식수에 소급 반영한다.
+    주식수가 믿을 만한지는 호출부에서 시가총액으로 먼저 확인한다.
     """
     usable = [r for r in rows if r.get("sh") and (r.get(key) or 0) > 0]
     if len(usable) < 8 or not dates:
@@ -486,8 +485,6 @@ def sec_multiple(rows, dates, closes, key, weeks=None, check_now=None, splits=()
         return None, None
     last = usable[-1]
     now = closes[-1] * adj_shares(last, splits) / last[key]
-    if check_now and abs(now / check_now - 1) > 0.3:
-        return None, None
     return sum(vals) / len(vals), now
 
 
@@ -530,7 +527,7 @@ def track_vs_bench(hist, bench="QQQ", top_n=5):
             "holding": held}
 
 
-def fetch_stock(session, ticker, name, theme, market, pit):
+def fetch_stock(session, ticker, name, theme, pit):
     tk = yf.Ticker(ticker, session=session)
     info = retry(lambda: tk.info, default={}) or {}
 
@@ -600,15 +597,23 @@ def fetch_stock(session, ticker, name, theme, market, pit):
     # FWD PER 프록시로 만든 괴리는 예상 EPS가 약분돼 "주가 / 3년 평균 주가"와
     # 같아져 버려 밸류에이션을 재지 못한다.
     splits = splits_of(h5)
-    trail_per_avg, trail_per = sec_multiple(pit_rows, price_dates_5y, closes5_all,
-                                            "niTtm", weeks=157,
-                                            check_now=info.get("trailingPE"), splits=splits)
+    # 보고서 주식수가 지금 시가총액을 재현하는지 먼저 확인한다. 주식 클래스가 여럿인
+    # 종목(BRK-B)은 보고서 주식수로 시총이 맞지 않아 배수를 산출할 수 없다.
+    # 야후의 이익·매출과 배수끼리 비교하지 않는 이유는 종목에 따라 야후 쪽이 크게
+    # 어긋나기 때문이다 (리노공업은 야후 매출이 공시 실적의 1/3 수준).
+    last_sh = next((adj_shares(r, splits) for r in reversed(pit_rows) if r.get("sh")), None)
+    shares_ok = not (mcap and last_sh) or abs(price * last_sh / mcap - 1) <= 0.3
+    if shares_ok:
+        trail_per_avg, trail_per = sec_multiple(pit_rows, price_dates_5y, closes5_all,
+                                                "niTtm", weeks=157, splits=splits)
+        avg_psr, psr_now = sec_multiple(pit_rows, price_dates_5y, closes5_all,
+                                        "revTtm", splits=splits)
+    else:
+        trail_per_avg = trail_per = avg_psr = psr_now = None
     gap = ((trail_per / trail_per_avg - 1) * 100) if (trail_per and trail_per_avg) else None
 
-    psr = info.get("priceToSalesTrailing12Months")
-    # 5년 평균 PSR: SEC 원본(주식수·매출) 실측을 우선하고, 불가하면 근사값으로 대체
-    avg_psr, _ = sec_multiple(pit_rows, price_dates_5y, closes5_all, "revTtm",
-                              check_now=psr, splits=splits)
+    # 현재 PSR도 평균과 같은 기준(공시 원본)으로 맞춘다. 실측이 안 되면 야후 값.
+    psr = psr_now if psr_now is not None else info.get("priceToSalesTrailing12Months")
     psr_src = "sec" if avg_psr is not None else "proxy"
     if avg_psr is None:
         avg_psr = (psr * avg5y_px / price) if (psr and avg5y_px) else None
@@ -802,7 +807,7 @@ def main():
     stocks, failed = [], []
     for i, (ticker, name, theme) in enumerate(watchlist):
         try:
-            s = fetch_stock(session, ticker, name, theme, market, pit)
+            s = fetch_stock(session, ticker, name, theme, pit)
             stocks.append(s)
             print(f"  [{i+1:2d}/{len(watchlist)}] {ticker:9s} {s['price']:>11,.2f}  "
                   f"3축 {s['grow_score']:+d}/{s['val_score']:+d}/{s['fin_score']:+d}")

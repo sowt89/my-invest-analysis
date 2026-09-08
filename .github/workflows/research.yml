@@ -1,12 +1,14 @@
 name: Research (manual)
 
+# 일회성 조사·진단용. 데이터셋 정기 갱신은 refresh-filings.yml이 맡는다.
+
 on:
   workflow_dispatch:
     inputs:
       script:
         description: "실행할 스크립트 (scripts/ 하위)"
         required: true
-        default: "sec_probe.py"
+        default: "dart_tag_report.py"
 
 permissions:
   contents: write
@@ -38,11 +40,13 @@ jobs:
             git add data
             git commit -m "chore: point-in-time 데이터셋 갱신"
             # 실행 중 같은 브랜치에 다른 커밋이 올라오면 push가 거부된다 — 최신 위에 다시 얹어 재시도
+            # reset은 --mixed로 한다 — --soft는 그 사이 올라온 다른 변경을 되돌린다
             for i in 1 2 3; do
               git push && exit 0
               echo "push 거부 — 재시도 ($i/3)"
               git fetch origin "$GITHUB_REF_NAME"
-              git reset --soft "origin/$GITHUB_REF_NAME"
+              git reset --mixed "origin/$GITHUB_REF_NAME"
+              git add data
               git commit -m "chore: point-in-time 데이터셋 갱신" || exit 0
             done
             exit 1

@@ -267,11 +267,11 @@ svg text{font-family:inherit}
     </div>
     <div class="card-b scroll-x" style="padding:8px 0 10px">
       <table class="cmp-table"><thead><tr>
-        <th>종목</th><th>테마</th><th>현재가</th><th>시총</th><th>FWD PER</th><th>PSR</th><th>EV/EBITDA</th><th>Gross</th><th>Op</th><th>Profit</th><th>괴리</th>
+        <th>종목</th><th>PER</th><th>괴리</th><th>PSR</th><th>EV/EBITDA</th><th>Gross</th><th>Op</th><th>Profit</th><th>현재가</th><th>시총</th><th>테마</th>
       </tr></thead><tbody id="cmp-body"></tbody></table>
     </div>
   </div>
-  <p class="foot-note">※ 괴리 = 현재 PER의 3년 평균 대비 이격<br>※ 음수(초록) = 과거 평균보다 저평가<br>※ 3년 평균 PER은 공시 원본 실측(미국 SEC · 한국 DART) · 적자 구간은 산출 제외</p>
+  <p class="foot-note">※ PER = 최근 4분기 실적 기준 · 괴리 = 그 PER의 3년 평균 대비 이격<br>※ 음수(초록) = 과거 평균보다 저평가<br>※ PER · PSR · 각 평균 모두 공시 원본 실측(미국 SEC · 한국 DART) · 적자 구간은 산출 제외<br>※ <sup>F</sup> 표시 = 적자 등으로 최근 4분기 PER이 없어 FWD PER(예상 실적)로 대체한 값</p>
 </main>
 
 <div id="guide"><div class="gwrap">
@@ -284,11 +284,11 @@ svg text{font-family:inherit}
     <tr><td>🇺🇸 미국</td><td>40종목 + QQQ<span class="sub">실시간 시세 · SEC 원본 재무로 PER·PSR 실측</span></td></tr>
     <tr><td>🇰🇷 한국</td><td>42종목 + KODEX 200<span class="sub">30분 간격 시세 · DART 원본 재무로 PER·PSR 실측</span></td></tr>
   </table>
-  <p style="font-size:.78rem;color:var(--ink3)">순위 규칙과 점수 계산은 두 시장이 동일합니다. 한국은 변동성지수(VKOSPI)와 공포·탐욕 지수가 없어 원/달러 환율로 대체하며, 검증(백테스트)은 미국 종목으로만 수행했습니다.</p>
+  <p style="font-size:.78rem;color:var(--ink3)">순위 규칙과 점수 계산은 두 시장이 동일합니다. 한국은 변동성지수(VKOSPI)와 공포·탐욕 지수가 없어 원/달러 환율로 대체합니다. 백테스트는 두 시장 모두 수행했으나(5번 항목), 한국은 워치리스트에 최근 상장 종목이 많아 검증 구간이 짧습니다.</p>
 
   <h3>화면 구성</h3>
   <table><colgroup><col class="c-ind"><col></colgroup>
-    <tr><td>매수 종목</td><td>모멘텀 상위 5종목 · 시장 국면 · 전략 vs QQQ 기록 · 전 종목 순위</td></tr>
+    <tr><td>매수 종목</td><td>모멘텀 상위 5종목 · 시장 국면 · 전략 vs 지수 기록 · 전 종목 순위</td></tr>
     <tr><td>종목 진단</td><td>실적 · 밸류 · 재무 3축 점수</td></tr>
     <tr><td>종목 상세</td><td>주가 차트 · 재무 · 현금흐름 · 컨센서스</td></tr>
     <tr><td>밸류 비교</td><td>전 종목 밸류에이션 표</td></tr>
@@ -312,8 +312,8 @@ svg text{font-family:inherit}
     <tr><td>⚠ 배너</td><td>섹터 쏠림(5종목 중 3개 이상 같은 테마) · 데이터 24시간 이상 미갱신</td></tr>
   </table>
 
-  <h3>2. 전략 vs QQQ 기록</h3>
-  <p>백테스트가 아니라 <b>오늘부터 쌓는 실제 기록</b>입니다. 매일 상위 5종목의 주가를 저장해 균등보유 수익률을 계산하고, 같은 기간 QQQ와 비교합니다.</p>
+  <h3>2. 전략 vs 지수 기록</h3>
+  <p>백테스트가 아니라 <b>오늘부터 쌓는 실제 기록</b>입니다. 매일 상위 5종목의 주가를 저장해 균등보유 수익률을 계산하고, 같은 기간 지수와 비교합니다. 비교 지수는 미국 QQQ · 한국 KODEX 200입니다.</p>
   <table><colgroup><col class="c-ind"><col></colgroup>
     <tr><td>교체 시점</td><td>달이 바뀌는 첫 기록</td></tr>
     <tr><td>미반영</td><td>거래비용 · 세금 · 환율</td></tr>
@@ -379,8 +379,9 @@ svg text{font-family:inherit}
     <tr><td>상단 카드</td><td>세 점수가 <b>모두 +2 이상</b>인 종목<span class="sub">합산만 보면 한 축의 약점이 가려짐<br>추천이 아니라 선별 조건</span></td></tr>
   </table>
   <p style="font-size:.78rem;color:var(--ink3)">결측 지표는 0점 처리<br>
-  5년 평균 PSR은 SEC 원본 재무제표로 계산합니다 — 각 시점의 주가 × 당시 발행주식수 ÷ 당시 매출.<br>
-  3년 평균 FWD PER은 아직 근사값입니다. 예상 실적(컨센서스)의 과거값을 구할 수 없어, 현재 예상 실적을 과거 주가에 대입합니다. 이 방식은 고성장 종목을 실제보다 고평가로 계산합니다. 매일 실측이 누적되면 점차 대체됩니다.</p>
+  3년 평균 PER · 5년 평균 PSR은 공시 원본 재무제표(미국 SEC · 한국 DART)로 계산합니다 — 각 시점의 주가 × 당시 발행주식수 ÷ 당시 이익(또는 매출). 주가는 액면분할이 소급 조정돼 있으므로 보고서 주식수도 같은 기준으로 맞춥니다.<br>
+  계산을 믿어도 되는지는 <b>시가총액</b>으로 확인합니다 — 보고서 주식수 × 현재가가 지금 시가총액과 ±30% 안에서 맞으면 주식수가 맞다는 뜻이고, 분자(이익·매출)는 공시 원본이라 그대로 씁니다. 맞지 않으면(주식 클래스가 여럿인 종목) 산출을 포기하고 <b>근사값</b>으로 표시합니다. ETF, 매출 계정이 없는 금융지주, 적자 종목도 근사 또는 결측입니다.<br>
+  FWD PER(예상 실적 기준)은 참고로만 표시하고 점수에는 쓰지 않습니다. 컨센서스의 과거값을 구할 수 없어 3년 평균을 만들 수 없기 때문입니다.</p>
 
   <h3>5. 검증 근거</h3>
   <p>2000~2026년 · 319개월 · 닷컴버블 · 금융위기 포함</p>
@@ -402,6 +403,15 @@ svg text{font-family:inherit}
     <li>무작위 대조군(230배)이 균등보유(237배)와 같음 → 집중 효과가 아닌 <b>선택 능력</b></li>
     <li><b>닷컴 구간은 열위</b> — 당시 19종목 중에서만 선택 가능했던 점 감안 필요</li>
   </ul>
+  <p style="margin:14px 0 2px"><b>한국</b> · 2010~2026년 · 200개월</p>
+  <table><colgroup><col><col style="width:24%"><col style="width:22%"></colgroup>
+    <tr><th>방식</th><th class="num">최종</th><th class="num">최대낙폭</th></tr>
+    <tr><td>모멘텀 상위 5종목</td><td class="num">288배</td><td class="num">-34%</td></tr>
+    <tr><td>전 종목 균등보유</td><td class="num">15.4배</td><td class="num">-22%</td></tr>
+    <tr><td>무작위 5종목 (대조군)</td><td class="num">15.4배</td><td class="num">-22%</td></tr>
+    <tr><td>KODEX 200 매수 후 보유</td><td class="num">7.2배</td><td class="num">-34%</td></tr>
+  </table>
+  <p style="font-size:.78rem;color:var(--ink3)">한국도 3개 시대 모두 균등보유 대비 우위(0.99 · 2.50 · 7.57배)였습니다. 다만 2015년 이후 상장 종목이 많아 초기 구간은 31종목 중에서만 골랐고, 최근 우위 폭이 유독 커 반도체·2차전지 랠리의 영향이 큽니다. 미국보다 기간이 짧아 신뢰도는 낮습니다.</p>
   <p style="font-size:.78rem;color:var(--ink3)">버린 방식: 역발상 점수 매수 · 점수 악화 시 매도 · 200일선 이탈 매도 · 신호 대기 적립 · 가중치 최적화 · 테마별 규칙</p>
 
   <h3>6. 한계</h3>
@@ -417,7 +427,9 @@ svg text{font-family:inherit}
     <tr><th>출처</th><th class="num">갱신</th></tr>
     <tr><td>Yahoo Finance<span class="sub">시세 · 재무 · 실적 · 컨센서스</span></td><td class="num">장중 30분</td></tr>
     <tr><td>CNN Fear &amp; Greed<span class="sub">시장 심리</span></td><td class="num">장중 30분</td></tr>
-    <tr><td>Finnhub<span class="sub">실시간 현재가</span></td><td class="num">장중 60초</td></tr>
+    <tr><td>Finnhub<span class="sub">실시간 현재가 · 미국만</span></td><td class="num">장중 60초</td></tr>
+    <tr><td>SEC EDGAR<span class="sub">미국 공시 원본 재무 (PER·PSR 실측)</span></td><td class="num">주 1회</td></tr>
+    <tr><td>DART<span class="sub">한국 공시 원본 재무 (PER·PSR 실측)</span></td><td class="num">주 1회</td></tr>
   </table>
   <p style="font-size:.78rem;color:var(--ink3)">갱신 시각은 화면 상단 표시 · 서버 없이 동작해 운영 비용 없음</p>
 
@@ -797,11 +809,13 @@ function renderCompare(){
     document.getElementById('cmp-body').innerHTML=STOCKS.filter(s=>!th||s.th===th).map(s=>{
       const d=detail(s);const gap=gapOf(d);
       return `<tr onclick="openDetail('${s.t}')" style="cursor:pointer">
-      <td class="tk">${symMain(s)}</td><td class="theme-cell">${s.th}</td>
-      <td>${won(s.p)}</td><td>${mc(s.mc)}</td>
-      <td>${d.fwdPer?fmt(d.fwdPer):'—'}</td><td>${fmt(d.psr,2)}</td><td>${fmt(d.evEbitda)}</td>
+      <td class="tk">${symMain(s)}</td>
+      <td>${d.trailPer!=null?fmt(d.trailPer):(d.fwdPer!=null?`<span class="hz">${fmt(d.fwdPer)}<sup>F</sup></span>`:'—')}</td>
+      <td>${gap==null?'<span class="hz">—</span>':h(pct(gap),gap<0)}</td>
+      <td>${fmt(d.psr,2)}</td><td>${fmt(d.evEbitda)}</td>
       <td>${d.gross==null?'<span class="hz">—</span>':h(fmt(d.gross)+'%',d.gross>=40)}</td><td>${d.op==null?'<span class="hz">—</span>':h(fmt(d.op)+'%',d.op>=20)}</td>
-      <td>${d.profit==null?'<span class="hz">—</span>':h(fmt(d.profit)+'%',d.profit>=10)}</td><td>${gap==null?'<span class="hz">—</span>':h(pct(gap),gap<0)}</td></tr>`}).join('');
+      <td>${d.profit==null?'<span class="hz">—</span>':h(fmt(d.profit)+'%',d.profit>=10)}</td>
+      <td>${won(s.p)}</td><td>${mc(s.mc)}</td><td class="theme-cell">${s.th}</td></tr>`}).join('');
   }
   ct.onchange=draw;draw();
 }
@@ -997,13 +1011,16 @@ function applyLiveData(D){
 function updateStatus(){
   const el=document.getElementById('data-status'),note=document.getElementById('board-note');
   if(META.live){
+    /* 실시간 시세는 미국만 지원한다 (한국은 ⚙ 버튼도 숨김) */
+    const canLive=MARKET.liveQuote!==false;
     let t=`실데이터 · 업데이트 ${META.updated} KST`;
-    if(finnKey())t+=lastQuote?` · 실시간 시세 ${lastQuote.getHours().toString().padStart(2,'0')}:${lastQuote.getMinutes().toString().padStart(2,'0')}`:' · 실시간 시세 연결 중…';
+    if(!canLive)t+=' · 장중 30분 간격 갱신';
+    else if(finnKey())t+=lastQuote?` · 실시간 시세 ${lastQuote.getHours().toString().padStart(2,'0')}:${lastQuote.getMinutes().toString().padStart(2,'0')}`:' · 실시간 시세 연결 중…';
     else t+=' · 우측 상단 ⚙에서 무료 Finnhub 키 등록 시 실시간 시세';
     el.textContent=t;
     note.innerHTML=`※ 모멘텀 = 최근 1개월 제외 1년 수익률 + 200일선 이격도 (반반)<br>
       ※ 구간 = 모멘텀 순위 묶음 (매매 지시 아님) · 지수 ETF 제외<br>
-      ※ yfinance ${META.updated} KST 갱신${finnKey()?' · Finnhub 실시간 시세':''}`;
+      ※ yfinance ${META.updated} KST 갱신${canLive&&finnKey()?' · Finnhub 실시간 시세':''}`;
   }else{
     el.textContent='⚠ 실데이터 로드 실패 — 내장 샘플 데이터 표시 중';
     note.textContent='※ 샘플 데이터 · 실데이터 로드 실패';
