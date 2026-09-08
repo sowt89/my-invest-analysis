@@ -2,7 +2,7 @@
 """나만의 투자분석 — 실데이터 수집 스크립트.
 
 yfinance로 워치리스트 40종목의 시세·1년 주가·재무·마진·컨센서스와
-시장지표(^VIX, ^IXIC, ^GSPC, SPY 52주 낙폭, CNN Fear & Greed)를 수집해
+시장지표(^VIX, ^IXIC, ^GSPC 52주 낙폭·국면, CNN Fear & Greed)를 수집해
 data.json으로 저장한다. QQQ 포함 40개 티커 중 지수 ETF는 순위에서 제외한다.
 
 매매 판단은 모멘텀 횡단면 순위(모멘텀 + 200일선 이격도)를 기준으로 한다.
@@ -124,7 +124,7 @@ WATCHLIST_KR = [
 
 # 시장별 설정 — 코드는 하나를 공유하고 이 표만 갈아끼운다
 MARKETS = {
-    "us": {"watchlist": WATCHLIST, "bench": "QQQ", "trend": "SPY",
+    "us": {"watchlist": WATCHLIST, "bench": "QQQ", "trend": "^GSPC",
            "idx": [("nasdaq", "^IXIC"), ("sp500", "^GSPC")],
            "fear_greed": True, "pit": "sec_pit.json", "live_quote": True,
            "currency": "$", "out": "data.json", "hist": "history.json"},
@@ -317,6 +317,27 @@ def fetch_fear_greed():
         return None
 
 
+def swing_regime(closes, dates, th=20):
+    """지수 고점·저점 대비 th% 반전으로 상승장·하락장을 가른다.
+
+    Lunde-Timmermann(2004)의 20% 기준을 실시간 계산이 가능한 형태로 옮긴 것이다.
+    (원래 방식은 사후에 고점·저점을 찾으므로 오늘 시점에서는 쓸 수 없다.)
+    validate_regime.py 비교에서 200일선·골든크로스·12개월 모멘텀보다 앞날을 잘 갈랐고
+    전환도 훨씬 적었다 — 미국 36년 12회, 한국 30년 34회.
+
+    반환: {regime, regime_since, regime_dd} — 상태, 시작일, 고점 대비 하락률(%)
+    """
+    state, peak, trough, since = "상승장", closes[0], closes[0], dates[0]
+    for p, d in zip(closes, dates):
+        peak, trough = max(peak, p), min(trough, p)
+        if state == "상승장" and p <= peak * (1 - th / 100):
+            state, trough, since = "하락장", p, d
+        elif state == "하락장" and p >= trough * (1 + th / 100):
+            state, peak, since = "상승장", p, d
+    return {"regime": state, "regime_since": since,
+            "regime_dd": rnd((closes[-1] / peak - 1) * 100, 1)}
+
+
 def fetch_market(session, cfg):
     """시장 지표. 지수 구성과 추세 기준 종목은 시장별 설정을 따른다.
 
@@ -335,14 +356,17 @@ def fetch_market(session, cfg):
 
     dd = above_ma200 = None
     try:
-        closes = closes_of(yf.Ticker(cfg["trend"], session=session)
-                           .history(period="1y", interval="1d"))
+        h = yf.Ticker(cfg["trend"], session=session).history(period="max", interval="1d")
+        closes = closes_of(h)
+        dates = [d.strftime("%Y-%m-%d") for d, v in zip(h.index, h["Close"]) if v == v]
         if closes:
             cur = closes[-1]
-            dd = (cur / max(closes) - 1) * 100
+            yr = closes[-252:]
+            dd = (cur / max(yr) - 1) * 100
             if len(closes) >= 200:
                 above_ma200 = cur > sum(closes[-200:]) / 200
                 out["spy_golden"] = (sum(closes[-50:]) / 50) > (sum(closes[-200:]) / 200)
+            out.update(swing_regime(closes, dates))
     except Exception as e:
         print(f"  ! {cfg['trend']} 수집 실패: {e}")
     out["spy_dd_52w"] = rnd(dd, 1)
@@ -821,22 +845,14 @@ def main():
         print(f"오류: 성공 종목이 {len(stocks)}개뿐이라 data.json을 갱신하지 않습니다.")
         sys.exit(1)
 
-    # 시장 국면: 기준 지수 200일선 x 시장 폭
-    # (validate_regime.py 재현 — 미국 3개월 손실확률 상승장 27% · 혼조 32% · 하락장 47%,
-    #  한국은 37/45/42%로 국면이 앞날을 가르지 못한다)
+    # 시장 국면은 fetch_market의 20% 규칙(swing_regime)이 정한다. 200일선과 시장 폭은
+    # 보조 지표로 함께 보여준다 — 옛 방식(200일선 x 시장 폭)은 전환이 잦고(미국 36년
+    # 242회) 중간 단계인 '혼조'의 손실확률이 상승장보다 낮아 순서가 뒤집혔다.
     ma_flags = [x["above_ma200"] for x in stocks if x["above_ma200"] is not None
                 and x["theme"] != "지수 ETF"]
     breadth = round(sum(ma_flags) / len(ma_flags) * 100) if ma_flags else None
     market["breadth_pct"] = breadth
-    spy_up = market.get("spy_ma200_above")
-    if spy_up is None or breadth is None:
-        market["regime"] = "판단 불가"
-    elif spy_up and breadth >= 55:
-        market["regime"] = "상승장"
-    elif not spy_up and breadth < 45:
-        market["regime"] = "하락장"
-    else:
-        market["regime"] = "혼조"
+    market.setdefault("regime", "판단 불가")
     market["panic"] = bool(market.get("vix") and market["vix"] >= 30)
 
     # 모멘텀 횡단면 순위 (1위가 가장 강함) — 지수 ETF는 제외
