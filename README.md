@@ -230,7 +230,7 @@ scripts/backtest_legacy_long.py  같은 방식 장기 검증 (25년)
 scripts/sec_fundamentals.py      SEC 원본 재무제표 수집 (미국, point-in-time)
 scripts/dart_fundamentals.py     DART 원본 재무제표 수집 (한국, point-in-time)
 scripts/validate_axis_scores.py  실적·재무 점수 예측력 검증
-scripts/validate_regime.py       시장 국면 구분의 예측력 검증
+scripts/validate_regime.py       시장 국면 판별 방식 비교 검증 (20% 규칙·200일선 등)
 scripts/test_sec_fundamentals.py  SEC 수집 로직 테스트 (네트워크 불필요)
 scripts/test_dart_fundamentals.py DART 수집 로직 테스트 (네트워크 불필요)
 scripts/legacy_score.py          폐기된 역발상 점수 (백테스트 전용)
