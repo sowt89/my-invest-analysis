@@ -51,7 +51,41 @@ def full_probe():
             print(f"   se={r.get('se')!r} istc_totqy={r.get('istc_totqy')} rcept={r.get('rcept_no')}")
 
 
+def build_probe(stock_code):
+    """한 회사만 전체 수집 과정을 돌려 지표별로 잡힌 분기(시작~종료, 제출일)를 나열한다."""
+    from datetime import date
+    cm = D.corp_map()
+    corp = cm[stock_code]
+    flows = {k: {} for k in D.FLOW_KEYS}
+    inst = {k: {} for k in ("eq", "ca", "cl", "ltd")}
+    for year in range(D.FIRST_YEAR, date.today().year + 1):
+        for reprt in D.REPORTS:
+            rows, _ = D.major_accounts([corp], year, reprt).get(corp, ([], None))
+            if rows:
+                rc = rows[0].get("rcept_no", "")
+                D.ingest(rows, f"{rc[:4]}-{rc[4:6]}-{rc[6:8]}", flows, inst)
+            if D.lacks(rows):
+                full = D.full_statement(corp, year, reprt)
+                src = "전체" if full else "없음"
+                if full:
+                    rc = full[0].get("rcept_no", "")
+                    st, en = D.PERIOD[reprt]
+                    D.ingest(full, f"{rc[:4]}-{rc[4:6]}-{rc[6:8]}", flows, inst,
+                             period=(f"{year}-{st}", f"{year}-{en}"))
+                print(f"  {year} {reprt}: 주요계정 {len(rows)}행 → 보강 {src}", flush=True)
+    for k in ("rev", "ni"):
+        q = D.quarterly(flows[k])
+        print(f"\n[{stock_code}] {k} 원시 {len(flows[k])}건 → 분기 {len(q)}개")
+        for (st, en), (v, f) in sorted(flows[k].items()):
+            print(f"   원시 {st}~{en}  {v:>18,.0f}  제출 {f}")
+        for en in sorted(q):
+            print(f"   분기 {q[en][0]}~{en}  {q[en][1]:>18,.0f}  제출 {q[en][2]}")
+
+
 if __name__ == "__main__":
+    if "--build" in sys.argv:
+        build_probe(sys.argv[sys.argv.index("--build") + 1])
+        sys.exit()
     if "--full" in sys.argv:
         full_probe()
         sys.exit()

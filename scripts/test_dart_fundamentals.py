@@ -136,6 +136,15 @@ check("'기타 유동부채'≠'유동부채' (부분 일치 금지)",
 check("공백 무시 일치",
       D.pick([{"account_nm": "영업이익 (손실)", "account_id": "x"}], [], ["영업이익(손실)"]) is not None, True)
 
+print("\n4-1) account_id 접두어 차이 · IS/CIS 중복")
+check("ifrs_ 접두어(옛 표기)도 매칭",
+      D.pick([{"account_nm": "지배기업소유주지분", "account_id": "ifrs_ProfitLossAttributableToOwnersOfParent"}],
+             ["ifrs-full_ProfitLossAttributableToOwnersOfParent"], []) is not None, True)
+check("표준코드 미사용 표기는 id 매칭 안 함", D.norm_id("-표준계정코드 미사용-"), None)
+dup = [{"sj_div": "IS", "account_nm": "연결당기순이익", "account_id": "-", "thstrm_amount": "10"},
+       {"sj_div": "CIS", "account_nm": "연결당기순이익", "account_id": "-", "thstrm_amount": "99"}]
+check("IS와 CIS에 같은 이름이면 앞선 IS 행", D.pick(dup, *D.ACCOUNTS["ni"])["thstrm_amount"], "10")
+
 print("\n5) 주요계정에 매출이 빠진 회사 — 전체 재무제표로 보강")
 rows3 = D.build_all(["C0000003"], 2024)[0]["C0000003"]
 check("보강 호출: 8개 보고서 x 1회 (CFS에서 찾음)", fake_get.full_calls, 8)

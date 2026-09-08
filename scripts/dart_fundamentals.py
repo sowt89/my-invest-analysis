@@ -61,7 +61,8 @@ ACCOUNTS = {
     "ni":    (["ifrs-full_ProfitLossAttributableToOwnersOfParent", "ifrs-full_ProfitLoss"],
               ["지배기업의 소유주에게 귀속되는 당기순이익(손실)", "지배기업 소유주지분 순이익",
                "당기순이익", "당기순이익(손실)", "분기순이익", "분기순이익(손실)",
-               "반기순이익", "반기순이익(손실)"]),
+               "반기순이익", "반기순이익(손실)",
+               "연결당기순이익", "연결분기순이익", "연결반기순이익"]),   # 현대차식 표기
     "cfo":   (["ifrs-full_CashFlowsFromUsedInOperatingActivities"],
               ["영업활동현금흐름", "영업활동으로 인한 현금흐름", "영업활동으로부터의 현금흐름"]),
     "capex": (["ifrs-full_PurchaseOfPropertyPlantAndEquipment"],
@@ -114,13 +115,24 @@ def dates_of(s):
     return (None, ds[0]) if ds else (None, None)
 
 
+def norm_id(i):
+    """'ifrs-full_Revenue'·'ifrs_Revenue'(2019년 이전 표기) → 'Revenue'. 표준코드 없으면 None."""
+    i = i or ""
+    return i.split("_", 1)[1] if "_" in i and not i.startswith("-") else None
+
+
 def pick(rows, ids, names):
-    """account_id 후보 → 계정명 후보 순으로 첫 매칭 행. 계정명은 정확히 일치해야 한다."""
-    by_id = {r.get("account_id"): r for r in rows}
+    """account_id 후보 → 계정명 후보 순으로 첫 매칭 행. 계정명은 정확히 일치해야 한다.
+
+    같은 계정이 손익계산서(IS)와 포괄손익계산서(CIS)에 겹쳐 나오면 앞선 행(IS)을 쓴다.
+    """
+    by_id, by_nm = {}, {}
+    for r in rows:
+        by_id.setdefault(norm_id(r.get("account_id")), r)
+        by_nm.setdefault((r.get("account_nm") or "").replace(" ", ""), r)
     for i in ids:
-        if i in by_id:
-            return by_id[i]
-    by_nm = {(r.get("account_nm") or "").replace(" ", ""): r for r in rows}
+        if norm_id(i) in by_id:
+            return by_id[norm_id(i)]
     for n in names:
         if n.replace(" ", "") in by_nm:
             return by_nm[n.replace(" ", "")]
