@@ -271,7 +271,7 @@ svg text{font-family:inherit}
       </tr></thead><tbody id="cmp-body"></tbody></table>
     </div>
   </div>
-  <p class="foot-note">※ 괴리 = 현재 PER의 3년 평균 대비 이격<br>※ 음수(초록) = 과거 평균보다 저평가<br>※ 3년 평균 PER은 SEC 원본 실측 · 적자 구간은 산출 제외</p>
+  <p class="foot-note">※ 괴리 = 현재 PER의 3년 평균 대비 이격<br>※ 음수(초록) = 과거 평균보다 저평가<br>※ 3년 평균 PER은 공시 원본 실측(미국 SEC · 한국 DART) · 적자 구간은 산출 제외</p>
 </main>
 
 <div id="guide"><div class="gwrap">
@@ -282,7 +282,7 @@ svg text{font-family:inherit}
   <h3>시장 전환</h3>
   <table><colgroup><col class="c-ind"><col></colgroup>
     <tr><td>🇺🇸 미국</td><td>40종목 + QQQ<span class="sub">실시간 시세 · SEC 원본 재무로 PER·PSR 실측</span></td></tr>
-    <tr><td>🇰🇷 한국</td><td>41종목 + KODEX 200<span class="sub">30분 간격 시세 · PER·PSR은 근사값</span></td></tr>
+    <tr><td>🇰🇷 한국</td><td>42종목 + KODEX 200<span class="sub">30분 간격 시세 · DART 원본 재무로 PER·PSR 실측</span></td></tr>
   </table>
   <p style="font-size:.78rem;color:var(--ink3)">순위 규칙과 점수 계산은 두 시장이 동일합니다. 한국은 변동성지수(VKOSPI)와 공포·탐욕 지수가 없어 원/달러 환율로 대체하며, 검증(백테스트)은 미국 종목으로만 수행했습니다.</p>
 
@@ -359,8 +359,8 @@ svg text{font-family:inherit}
   <p style="margin-bottom:2px"><b>밸류 점수</b> (-5 ~ +6)</p>
   <table><colgroup><col class="c-ind"><col class="c-half"><col class="c-half"></colgroup>
     <tr><th>지표</th><th class="num">가점</th><th class="num">감점</th></tr>
-    <tr><td>PER 3년 괴리<span class="sub">SEC 원본 실측</span></td><td class="num">-5% → +1<br>-20% → +2</td><td class="num">+10% → -1<br>+30% → -2</td></tr>
-    <tr><td>PSR 5년 괴리<span class="sub">SEC 원본 실측</span></td><td class="num">-20% → +1</td><td class="num">+50% → -1</td></tr>
+    <tr><td>PER 3년 괴리<span class="sub">공시 원본 실측</span></td><td class="num">-5% → +1<br>-20% → +2</td><td class="num">+10% → -1<br>+30% → -2</td></tr>
+    <tr><td>PSR 5년 괴리<span class="sub">공시 원본 실측</span></td><td class="num">-20% → +1</td><td class="num">+50% → -1</td></tr>
     <tr><td>FCF 수익률</td><td class="num">3% → +1<br>5% → +2</td><td class="num">음수 → -1</td></tr>
     <tr><td>PEG</td><td class="num">1 미만 → +1</td><td class="num">2.5 초과 → -1</td></tr>
   </table>
@@ -498,6 +498,8 @@ function bandCls(s){const b=band(s);return b==='상위 5'?'s-strong':b==='6~15�
 const fmt=(x,d=1)=>x==null||isNaN(x)?'—':x.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
 const sign=x=>x==null||isNaN(x)?'—':(x>0?'+':'')+x;
 const pct=(x,d=1)=>x==null||isNaN(x)?'—':(x>0?'+':'')+fmt(x,d)+'%';
+/* 공시 원본 출처 이름 — 데이터의 'sec' 표기는 두 시장이 공유한다 */
+const srcLabel=()=>CUR==='₩'?'DART 원본 실측':'SEC 원본 실측';
 /* 종목 표기 — 미국은 티커가 이름 구실을 하지만 한국 종목코드는 아니다 */
 const symMain=x=>CUR==='₩'?x.n:x.t;
 const symSub =x=>CUR==='₩'?x.t.replace(/\.(KS|KQ)$/,''):x.n;
@@ -873,11 +875,11 @@ function renderDetail(){
   <p class="sec-sub">3년 평균 대비 이격</p>
   <div class="d-card">
     ${kr('PER <span style="color:var(--dk-ink3);font-weight:400">(최근 4분기)</span>',d.trailPer==null?'—':fmt(d.trailPer)+(gap==null?'':`<span class="gap-tag ${gap<0?'':'over'}">${gap<0?'3Y 평균 대비 저평가':'3Y 평균 대비 고평가'} ${pct(gap)}</span>`),undefined)}
-    ${kr('3Y 평균 PER <span style="color:var(--dk-ink3);font-weight:400">(SEC 원본 실측)</span>',fmt(d.avgTrailPer),undefined)}
+    ${kr('3Y 평균 PER <span style="color:var(--dk-ink3);font-weight:400">('+(d.avgTrailPer!=null?srcLabel():'산출 불가')+')</span>',fmt(d.avgTrailPer),undefined)}
     ${kr('FWD PER <span style="color:var(--dk-ink3);font-weight:400">(참고 · 점수 미반영)</span>',fmt(d.fwdPer),undefined)}
     ${kr('PSR',fmt(d.psr,2),undefined)}
     ${kr('FWD PSR',fmt(d.fwdPsr,2),undefined)}
-    ${kr('5Y 평균 PSR <span style="color:var(--dk-ink3);font-weight:400">('+(d.psrSrc==='sec'?'SEC 원본 실측':'근사값')+')</span>',fmt(d.avgPsr,2),undefined)}
+    ${kr('5Y 평균 PSR <span style="color:var(--dk-ink3);font-weight:400">('+(d.psrSrc==='sec'?srcLabel():'근사값')+')</span>',fmt(d.avgPsr,2),undefined)}
     ${kr('EV/EBITDA',fmt(d.evEbitda,2),undefined)}
     ${kr('PEG',fmt(d.peg,2),undefined)}
     ${kr('FCF 수익률',fmt(d.fcfY,2)+'%',undefined)}
@@ -935,7 +937,7 @@ function renderDetail(){
     <div class="legend"><span><i style="background:var(--c1)"></i>예상 매출</span></div>
     <div class="chart-box" id="est-chart"></div>
   </div>
-  <p class="foot-note" style="color:#6a6b70">${META.live?`※ yfinance · ${META.updated} KST 업데이트<br>※ 3Y 평균 PER · 5Y 평균 PSR은 SEC 원본 재무제표 실측`:'※ 샘플 데이터 · 실데이터 로드 실패'}</p>`;
+  <p class="foot-note" style="color:#6a6b70">${META.live?`※ yfinance · ${META.updated} KST 업데이트<br>※ 3Y 평균 PER · 5Y 평균 PSR은 ${srcLabel().replace(' 실측','')} 재무제표 실측`:'※ 샘플 데이터 · 실데이터 로드 실패'}</p>`;
   const c1=getComputedStyle(document.documentElement).getPropertyValue('--c1').trim();
   const c2=getComputedStyle(document.documentElement).getPropertyValue('--c2').trim();
   const c3=getComputedStyle(document.documentElement).getPropertyValue('--c3').trim();
