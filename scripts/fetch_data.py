@@ -438,7 +438,29 @@ def load_pit():
         return {}
 
 
-def sec_multiple(rows, dates, closes, key, weeks=None, check_now=None):
+def splits_of(h):
+    """가격 히스토리의 액면분할 이벤트 [(날짜, 배율)]. 예: 10:1 분할 → 10.0"""
+    if h is None or len(h) == 0 or "Stock Splits" not in h:
+        return []
+    return [(d.strftime("%Y-%m-%d"), float(x)) for d, x in zip(h.index, h["Stock Splits"])
+            if x == x and x and x != 1]
+
+
+def adj_shares(row, splits):
+    """보고서 주식수를 오늘 기준으로 환산한다.
+
+    야후 주가는 분할 소급 조정돼 있지만 보고서 주식수는 당시 그대로이므로,
+    제출 뒤에 일어난 분할 배율을 곱해 주지 않으면 분할 전 구간의 배수가 배율만큼
+    작게 계산된다 (예: 10:1 분할 전 PER이 1/10로 나온다).
+    """
+    sh = row["sh"]
+    for d, ratio in splits:
+        if d > row["filed"]:
+            sh *= ratio
+    return sh
+
+
+def sec_multiple(rows, dates, closes, key, weeks=None, check_now=None, splits=()):
     """각 시점의 배수(주가 x 당시 발행주식수 / 당시 TTM 지표)를 실측 계산한다.
 
     반환: (평균, 최신값). 산출 불가면 (None, None).
@@ -446,6 +468,7 @@ def sec_multiple(rows, dates, closes, key, weeks=None, check_now=None):
     적자 구간(분모 <= 0)은 배수가 의미를 잃으므로 제외한다.
     check_now가 주어지면 최신 재계산값과 30% 넘게 어긋날 때 폐기한다
     (다중 주식 클래스 등 주식수 집계 불일치 방어).
+    splits: 분할 이벤트 [(날짜, 배율)] — 제출 뒤 분할은 주식수에 소급 반영한다.
     """
     usable = [r for r in rows if r.get("sh") and (r.get(key) or 0) > 0]
     if len(usable) < 8 or not dates:
@@ -458,11 +481,11 @@ def sec_multiple(rows, dates, closes, key, weeks=None, check_now=None):
             idx += 1
         r = usable[idx]
         if r["filed"] <= d:
-            vals.append(px * r["sh"] / r[key])
+            vals.append(px * adj_shares(r, splits) / r[key])
     if len(vals) < 20:
         return None, None
     last = usable[-1]
-    now = closes[-1] * last["sh"] / last[key]
+    now = closes[-1] * adj_shares(last, splits) / last[key]
     if check_now and abs(now / check_now - 1) > 0.3:
         return None, None
     return sum(vals) / len(vals), now
@@ -576,15 +599,16 @@ def fetch_stock(session, ticker, name, theme, market, pit):
     # 밸류 점수용 PER 괴리는 SEC 원본 실측(주가 x 주식수 / TTM 순이익)으로 계산한다.
     # FWD PER 프록시로 만든 괴리는 예상 EPS가 약분돼 "주가 / 3년 평균 주가"와
     # 같아져 버려 밸류에이션을 재지 못한다.
+    splits = splits_of(h5)
     trail_per_avg, trail_per = sec_multiple(pit_rows, price_dates_5y, closes5_all,
                                             "niTtm", weeks=157,
-                                            check_now=info.get("trailingPE"))
+                                            check_now=info.get("trailingPE"), splits=splits)
     gap = ((trail_per / trail_per_avg - 1) * 100) if (trail_per and trail_per_avg) else None
 
     psr = info.get("priceToSalesTrailing12Months")
     # 5년 평균 PSR: SEC 원본(주식수·매출) 실측을 우선하고, 불가하면 근사값으로 대체
     avg_psr, _ = sec_multiple(pit_rows, price_dates_5y, closes5_all, "revTtm",
-                              check_now=psr)
+                              check_now=psr, splits=splits)
     psr_src = "sec" if avg_psr is not None else "proxy"
     if avg_psr is None:
         avg_psr = (psr * avg5y_px / price) if (psr and avg5y_px) else None

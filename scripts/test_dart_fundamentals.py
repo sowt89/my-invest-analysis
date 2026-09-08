@@ -73,8 +73,18 @@ def fake_get(endpoint, **p):
             for r in d["list"]:
                 if r["sj_div"] == "CF":            # 주요계정에는 현금흐름이 없다
                     continue
+                if c == "C0000003" and r["account_nm"] == "매출액":   # 주요계정에 매출이 빠진 회사
+                    continue
                 rows.append({**r, "corp_code": c, "fs_div": "CFS"})
         return json.dumps({"status": "000", "list": rows}).encode()
+    if endpoint.startswith("fnlttSinglAcntAll"):
+        fake_get.full_calls += 1
+        if year not in (2023, 2024) or p["fs_div"] != "CFS":
+            return json.dumps({"status": "013", "list": []}).encode()
+        d, _ = synth(year, reprt, use_ids=fake_get.use_ids)
+        for r in d["list"]:
+            r.pop("thstrm_dt")                     # 전체 재무제표 응답에는 기간 필드가 없다
+        return json.dumps(d).encode()
     if endpoint.startswith("stockTotqySttus"):
         if year not in (2023, 2024) or reprt != "11011":
             return json.dumps({"status": "013"}).encode()
@@ -86,6 +96,7 @@ def fake_get(endpoint, **p):
 
 
 fake_get.use_ids = True
+fake_get.full_calls = 0
 D.get = fake_get
 D.FIRST_YEAR = 2023
 
@@ -106,6 +117,7 @@ check("1년 전 매출 TTM", last["revTtmPrev"], 400.0)
 check("제출일 순서", rows == sorted(rows, key=lambda r: r["filed"]), True)
 check("사업보고서 접수일 = 이듬해", any(r["filed"].startswith("2025") for r in rows), True)
 check("호출 수 절감 (재무 8회 + 주식수 4회)", calls, 12)
+check("매출·순이익이 다 있으면 전체 재무제표를 부르지 않는다", fake_get.full_calls, 0)
 
 print("\n2) 4분기 역산 — 사업보고서(연간)만 있는 4분기")
 first_full = next(r for r in rows if r["end"] == "2023-12-31")
@@ -124,7 +136,56 @@ check("'기타 유동부채'≠'유동부채' (부분 일치 금지)",
 check("공백 무시 일치",
       D.pick([{"account_nm": "영업이익 (손실)", "account_id": "x"}], [], ["영업이익(손실)"]) is not None, True)
 
-print("\n5) 날짜 파싱")
+print("\n4-1) account_id 접두어 차이 · IS/CIS 중복")
+check("ifrs_ 접두어(옛 표기)도 매칭",
+      D.pick([{"account_nm": "지배기업소유주지분", "account_id": "ifrs_ProfitLossAttributableToOwnersOfParent"}],
+             ["ifrs-full_ProfitLossAttributableToOwnersOfParent"], []) is not None, True)
+check("표준코드 미사용 표기는 id 매칭 안 함", D.norm_id("-표준계정코드 미사용-"), None)
+dup = [{"sj_div": "IS", "account_nm": "연결당기순이익", "account_id": "-", "thstrm_amount": "10"},
+       {"sj_div": "CIS", "account_nm": "연결당기순이익", "account_id": "-", "thstrm_amount": "99"}]
+check("IS와 CIS에 같은 이름이면 앞선 IS 행", D.pick(dup, *D.ACCOUNTS["ni"])["thstrm_amount"], "10")
+
+print("\n5) 주요계정에 매출이 빠진 회사 — 전체 재무제표로 보강")
+rows3 = D.build_all(["C0000003"], 2024)[0]["C0000003"]
+check("보강 호출: 8개 보고서 x 1회 (CFS에서 찾음)", fake_get.full_calls, 8)
+check("보강한 매출 TTM", rows3[-1]["revTtm"], 400.0)
+check("주요계정 값은 유지 (순이익)", rows3[-1]["niTtm"], 60.0)
+check("기간 필드 없이 사업보고서 4분기 역산", next(r for r in rows3 if r["end"] == "2023-12-31")["revTtm"], 400.0)
+
+print("\n6) 매출 계정이 아예 없는 금융회사 — 순이익 기준으로 행 생성")
+flows = {k: {} for k in D.FLOW_KEYS}; inst = {k: {} for k in ("eq", "ca", "cl", "ltd")}
+for y in (2023, 2024):
+    for reprt in D.REPORTS:
+        d, rc = synth(y, reprt)
+        rows = [r for r in d["list"] if r["account_nm"] != "매출액" and r["sj_div"] != "CF"]
+        D.ingest(rows, f"{rc[:4]}-{rc[4:6]}-{rc[6:8]}", flows, inst)
+q = {k: D.quarterly(flows[k]) for k in D.FLOW_KEYS}
+fin = D.assemble(q, inst, {"2023-12-31": (1000.0, "2024-03-15"), "2024-12-31": (1000.0, "2025-03-15")})
+check("매출 없이도 행 생성", len(fin) > 0, True)
+check("매출 결측", fin[-1]["revTtm"], None)
+check("순이익 TTM", fin[-1]["niTtm"], 60.0)
+check("주식수", fin[-1]["sh"], 1000.0)
+
+print("\n6-1) 현대차식 표기 — 3개월 금액에 누적 기간 라벨, 정정본 접수일")
+flows = {k: {} for k in D.FLOW_KEYS}; inst = {k: {} for k in ("eq", "ca", "cl", "ltd")}
+for y in (2023, 2024):
+    for reprt in D.REPORTS:
+        d, rc = synth(y, reprt)
+        for r in d["list"]:
+            if r["sj_div"] == "IS" and reprt != "11011":
+                r["thstrm_dt"] = f"{y}.01.01 ~ {y}.{Q[reprt][1].replace('-', '.')}"   # 누적 기간으로 표기
+                r.pop("thstrm_add_amount", None)
+        D.ingest([r for r in d["list"] if r["sj_div"] != "CF"], D.filed_of(rc, y, reprt), flows, inst)
+q = D.quarterly(flows["rev"])
+check("누적 라벨이어도 분기 매출 100", q.get("2024-06-30", (None, None))[1], 100.0)
+check("종료일로 정한 시작일", q.get("2024-06-30", (None,))[0], "2024-04-01")
+from sec_fundamentals import ttm_at
+check("TTM 400", ttm_at(q, "2025-12-31")[0], 400.0)
+check("정상 접수일은 그대로", D.filed_of("20240515000000", 2024, "11013"), "2024-05-15")
+check("정정본(2년 뒤) 접수일은 법정 기한으로", D.filed_of("20260217000000", 2020, "11011"), "2021-03-31")
+check("반기 기한 45일", D.filed_of("20260101000000", 2024, "11012"), "2024-08-14")
+
+print("\n7) 날짜 파싱")
 check("기간", D.dates_of("2025.04.01 ~ 2025.06.30"), ("2025-04-01", "2025-06-30"))
 check("시점", D.dates_of("2025.06.30"), (None, "2025-06-30"))
 check("빈 값", D.dates_of(""), (None, None))

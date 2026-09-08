@@ -173,7 +173,9 @@ def assemble(flows, inst, shares):
     rows, seen = [], set()
     for f in filings:
         rev, rend = ttm_at(flows["rev"], f)
-        if rev is None or rend in seen:
+        if rev is None:                       # 매출 계정이 없는 금융회사는 순이익 기준
+            rend = ttm_at(flows["ni"], f)[1]
+        if rend is None or rend in seen:
             continue
         seen.add(rend)
         row = {"filed": f, "end": rend, "revTtm": rev}

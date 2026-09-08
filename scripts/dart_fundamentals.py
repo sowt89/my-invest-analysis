@@ -12,11 +12,20 @@ DART와 SEC의 차이
   · 사업보고서는 연간값만 있어 4분기 = 연간 − 3분기 누적으로 역산한다.
   · 조회 가능 기간은 2015년부터다.
   · 정정공시는 API가 최신본만 주므로 최초 제출값을 보장하지 못한다 (SEC와 다름).
+    접수일도 정정본 날짜가 오므로(현대차는 2015~2020년 사업보고서가 모두 2022-02-17),
+    법정 제출기한(분기·반기 45일, 사업보고서 90일)을 넘는 접수일은 기한으로 당긴다.
+  · 손익 당기금액(thstrm_amount)은 분기·반기 보고서에서 항상 3개월치다. 그런데
+    기간 표기(thstrm_dt)는 회사에 따라 누적 기간으로 적혀 있어(현대차 "01.01 ~ 06.30"에
+    2분기 3개월 금액), 기간 표기 대신 종료일로 분기 시작일을 정한다.
 
 속도: DART는 호출당 수 초가 걸린다. 회사별·보고서별로 전체 재무제표를 부르면
 42종목 x 11년 x 4보고서로 수천 건이 되어 60분 제한을 넘긴다(실제로 취소됐다).
 그래서 여러 회사를 한 번에 주는 주요계정 API(fnlttMultiAcnt)로 손익·재무상태를
 받고, 주식수만 회사·연도별로 부른다. 현금흐름(FCF)은 주요계정에 없어 제외한다.
+
+주요계정에 매출·순이익 행이 빠진 보고서(현대차 순이익, 카카오 매출, 금융 3사 등)만
+전체 재무제표(fnlttSinglAcntAll)를 회사·보고서별로 따로 불러 메운다.
+주요계정은 account_id를 주지 않아('-') 실제 매칭은 한글 계정명으로 이뤄진다.
 
 키는 환경변수 DART_API_KEY로만 받는다. 개발 환경에서는 DART 접속이 막혀 있어
 Actions에서 실행한다.
@@ -44,6 +53,9 @@ OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                    "data", "dart_pit.json")
 FIRST_YEAR = 2015
 REPORTS = ["11013", "11012", "11014", "11011"]          # 1분기 · 반기 · 3분기 · 사업보고서
+# 보고서별 당기 3개월 기간 (전체 재무제표 응답에는 기간 필드가 없어 이걸로 채운다)
+PERIOD = {"11013": ("01-01", "03-31"), "11012": ("04-01", "06-30"),
+          "11014": ("07-01", "09-30"), "11011": ("01-01", "12-31")}
 
 # 지표별 (account_id 후보, 한글 계정명 후보). 앞선 후보를 우선한다.
 ACCOUNTS = {
@@ -54,7 +66,8 @@ ACCOUNTS = {
     "ni":    (["ifrs-full_ProfitLossAttributableToOwnersOfParent", "ifrs-full_ProfitLoss"],
               ["지배기업의 소유주에게 귀속되는 당기순이익(손실)", "지배기업 소유주지분 순이익",
                "당기순이익", "당기순이익(손실)", "분기순이익", "분기순이익(손실)",
-               "반기순이익", "반기순이익(손실)"]),
+               "반기순이익", "반기순이익(손실)",
+               "연결당기순이익", "연결분기순이익", "연결반기순이익"]),   # 현대차식 표기
     "cfo":   (["ifrs-full_CashFlowsFromUsedInOperatingActivities"],
               ["영업활동현금흐름", "영업활동으로 인한 현금흐름", "영업활동으로부터의 현금흐름"]),
     "capex": (["ifrs-full_PurchaseOfPropertyPlantAndEquipment"],
@@ -107,13 +120,44 @@ def dates_of(s):
     return (None, ds[0]) if ds else (None, None)
 
 
+def norm_id(i):
+    """'ifrs-full_Revenue'·'ifrs_Revenue'(2019년 이전 표기) → 'Revenue'. 표준코드 없으면 None."""
+    i = i or ""
+    return i.split("_", 1)[1] if "_" in i and not i.startswith("-") else None
+
+
+def qstart(en):
+    """분기 종료일 → 그 3개월 구간 시작일. 12-31은 연간(사업보고서)이라 01-01."""
+    m = int(en[5:7])
+    return f"{en[:4]}-01-01" if m == 12 else f"{en[:4]}-{m - 2:02d}-01"
+
+
+DEADLINE = {"11013": 45, "11012": 45, "11014": 45, "11011": 90}     # 법정 제출기한 (일)
+
+
+def filed_of(rcept_no, year, reprt):
+    """접수번호 앞 8자리 → 제출일. 정정본이라 기한을 넘긴 날짜면 법정 기한으로 당긴다."""
+    rc = rcept_no or ""
+    if len(rc) < 8:
+        return None
+    filed = date(int(rc[:4]), int(rc[4:6]), int(rc[6:8]))
+    end = date(int(year), *map(int, PERIOD[reprt][1].split("-")))
+    limit = date.fromordinal(end.toordinal() + DEADLINE[reprt])
+    return min(filed, limit).isoformat()
+
+
 def pick(rows, ids, names):
-    """account_id 후보 → 계정명 후보 순으로 첫 매칭 행. 계정명은 정확히 일치해야 한다."""
-    by_id = {r.get("account_id"): r for r in rows}
+    """account_id 후보 → 계정명 후보 순으로 첫 매칭 행. 계정명은 정확히 일치해야 한다.
+
+    같은 계정이 손익계산서(IS)와 포괄손익계산서(CIS)에 겹쳐 나오면 앞선 행(IS)을 쓴다.
+    """
+    by_id, by_nm = {}, {}
+    for r in rows:
+        by_id.setdefault(norm_id(r.get("account_id")), r)
+        by_nm.setdefault((r.get("account_nm") or "").replace(" ", ""), r)
     for i in ids:
-        if i in by_id:
-            return by_id[i]
-    by_nm = {(r.get("account_nm") or "").replace(" ", ""): r for r in rows}
+        if norm_id(i) in by_id:
+            return by_id[norm_id(i)]
     for n in names:
         if n.replace(" ", "") in by_nm:
             return by_nm[n.replace(" ", "")]
@@ -134,28 +178,51 @@ def major_accounts(corps, year, reprt):
             for c, v in out.items()}
 
 
+def full_statement(corp, year, reprt):
+    """전체 재무제표(회사·보고서별 1건). 연결 우선, 없으면 별도. 없으면 []."""
+    for fs in ("CFS", "OFS"):
+        d = json.loads(get("fnlttSinglAcntAll.json", corp_code=corp, bsns_year=str(year),
+                           reprt_code=reprt, fs_div=fs))
+        if d.get("status") == "000" and d.get("list"):
+            return d["list"]
+    return []
+
+
+def lacks(rows, keys=("rev", "ni")):
+    """손익 행에서 keys 중 하나라도 못 찾으면 True (전체 재무제표 보강 대상)."""
+    is_rows = [r for r in rows if r.get("sj_div") in ("IS", "CIS")]
+    return any(pick(is_rows, *ACCOUNTS[k]) is None for k in keys)
+
+
 def shares_of(corp, year):
     """사업보고서 기준 보통주 발행주식수. (값, 접수일)"""
     d = json.loads(get("stockTotqySttus.json", corp_code=corp, bsns_year=str(year),
                        reprt_code="11011"))
     for r in d.get("list") or []:
-        if r.get("se", "").startswith("보통주"):
+        if "보통주" in (r.get("se") or ""):
             rc = (r.get("rcept_no") or "")[:8]
             return num(r.get("istc_totqy")), (f"{rc[:4]}-{rc[4:6]}-{rc[6:8]}" if len(rc) == 8 else None)
     return None, None
 
 
-def ingest(rows, filed, flows, inst):
-    """한 보고서의 주요계정 행을 분기값·잔액 사전에 넣는다."""
+def ingest(rows, filed, flows, inst, period=None):
+    """한 보고서의 계정 행을 분기값·잔액 사전에 넣는다. 먼저 넣은 값을 유지한다.
+
+    period: 기간 필드(thstrm_dt)가 없는 전체 재무제표 행에 쓸 (시작일, 종료일).
+    """
     is_rows = [r for r in rows if r.get("sj_div") in ("IS", "CIS")]
     bs_rows = [r for r in rows if r.get("sj_div") == "BS"]
     for k in ("rev", "op", "ni"):
         r = pick(is_rows, *ACCOUNTS[k])
         if not r:
             continue
-        st, en = dates_of(r.get("thstrm_dt"))
+        _, en = dates_of(r.get("thstrm_dt"))
+        en = en or (period and period[1])
+        if not en:
+            continue
+        st = qstart(en)                                    # 당기금액은 항상 3개월(연간은 12개월)
         v = num(r.get("thstrm_amount"))
-        if st and en and v is not None:
+        if v is not None:
             flows[k].setdefault((st, en), (v, filed))
         va = num(r.get("thstrm_add_amount"))               # 누적 (회계연도 시작 ~ en)
         if en and va is not None:
@@ -164,6 +231,7 @@ def ingest(rows, filed, flows, inst):
         r = pick(bs_rows, *ACCOUNTS[k])
         if r:
             _, en = dates_of(r.get("thstrm_dt"))
+            en = en or (period and period[1])
             v = num(r.get("thstrm_amount"))
             if en and v is not None:
                 inst[k].setdefault(en, (v, filed))
@@ -173,6 +241,7 @@ def ingest(rows, filed, flows, inst):
     debt = [d for d in debt if d is not None]
     if debt and bs_rows:
         _, en = dates_of(bs_rows[0].get("thstrm_dt"))
+        en = en or (period and period[1])
         if en:
             inst["ltd"].setdefault(en, (sum(debt), filed))
 
@@ -182,20 +251,38 @@ def build_all(corps, this_year):
     flows = {c: {k: {} for k in FLOW_KEYS} for c in corps}
     inst = {c: {k: {} for k in ("eq", "ca", "cl", "ltd")} for c in corps}
     shares = {c: {} for c in corps}
-    calls = 0
+    calls, needs = 0, []                        # needs: 매출·순이익이 빠진 (회사, 연도, 보고서)
     for year in range(FIRST_YEAR, this_year + 1):
         for reprt in REPORTS:
             got = major_accounts(corps, year, reprt)
             calls += (len(corps) + 19) // 20
-            for c, (rows, _) in got.items():
-                if not rows:
-                    continue
-                rc = rows[0].get("rcept_no", "")
-                filed = f"{rc[:4]}-{rc[4:6]}-{rc[6:8]}"
-                ingest(rows, filed, flows[c], inst[c])
+            for c in corps:
+                rows, _ = got.get(c, ([], None))
+                if rows:
+                    ingest(rows, filed_of(rows[0].get("rcept_no"), year, reprt), flows[c], inst[c])
+                if lacks(rows):
+                    needs.append((c, year, reprt))
         print(f"  {year} 재무 수집 완료", flush=True)
-    # 주식수: 회사 x 연도 (사업보고서). 결산일을 기준일로 쓴다.
     from concurrent.futures import ThreadPoolExecutor
+    # 주요계정에 빠진 보고서만 전체 재무제표로 보강 (회사·보고서별 호출)
+    def fill(job):
+        c, y, reprt = job
+        try:
+            return job, full_statement(c, y, reprt)
+        except Exception:
+            return job, []
+    filled = 0
+    with ThreadPoolExecutor(max_workers=4) as ex:
+        for (c, y, reprt), rows in ex.map(fill, needs):
+            if not rows:
+                continue
+            st, en = PERIOD[reprt]
+            ingest(rows, filed_of(rows[0].get("rcept_no"), y, reprt), flows[c], inst[c],
+                   period=(f"{y}-{st}", f"{y}-{en}"))
+            filled += 1
+    calls += len(needs) * 2                     # CFS·OFS 최대 2회로 잡는다
+    print(f"  전체 재무제표 보강 {filled}/{len(needs)}건", flush=True)
+    # 주식수: 회사 x 연도 (사업보고서). 결산일을 기준일로 쓴다.
     jobs = [(c, y) for c in corps for y in range(FIRST_YEAR, this_year + 1)]
     def one(job):
         c, y = job
