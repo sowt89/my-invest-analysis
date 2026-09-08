@@ -166,6 +166,25 @@ check("매출 결측", fin[-1]["revTtm"], None)
 check("순이익 TTM", fin[-1]["niTtm"], 60.0)
 check("주식수", fin[-1]["sh"], 1000.0)
 
+print("\n6-1) 현대차식 표기 — 3개월 금액에 누적 기간 라벨, 정정본 접수일")
+flows = {k: {} for k in D.FLOW_KEYS}; inst = {k: {} for k in ("eq", "ca", "cl", "ltd")}
+for y in (2023, 2024):
+    for reprt in D.REPORTS:
+        d, rc = synth(y, reprt)
+        for r in d["list"]:
+            if r["sj_div"] == "IS" and reprt != "11011":
+                r["thstrm_dt"] = f"{y}.01.01 ~ {y}.{Q[reprt][1].replace('-', '.')}"   # 누적 기간으로 표기
+                r.pop("thstrm_add_amount", None)
+        D.ingest([r for r in d["list"] if r["sj_div"] != "CF"], D.filed_of(rc, y, reprt), flows, inst)
+q = D.quarterly(flows["rev"])
+check("누적 라벨이어도 분기 매출 100", q.get("2024-06-30", (None, None))[1], 100.0)
+check("종료일로 정한 시작일", q.get("2024-06-30", (None,))[0], "2024-04-01")
+from sec_fundamentals import ttm_at
+check("TTM 400", ttm_at(q, "2025-12-31")[0], 400.0)
+check("정상 접수일은 그대로", D.filed_of("20240515000000", 2024, "11013"), "2024-05-15")
+check("정정본(2년 뒤) 접수일은 법정 기한으로", D.filed_of("20260217000000", 2020, "11011"), "2021-03-31")
+check("반기 기한 45일", D.filed_of("20260101000000", 2024, "11012"), "2024-08-14")
+
 print("\n7) 날짜 파싱")
 check("기간", D.dates_of("2025.04.01 ~ 2025.06.30"), ("2025-04-01", "2025-06-30"))
 check("시점", D.dates_of("2025.06.30"), (None, "2025-06-30"))

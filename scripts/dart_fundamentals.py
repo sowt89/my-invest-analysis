@@ -12,6 +12,11 @@ DART와 SEC의 차이
   · 사업보고서는 연간값만 있어 4분기 = 연간 − 3분기 누적으로 역산한다.
   · 조회 가능 기간은 2015년부터다.
   · 정정공시는 API가 최신본만 주므로 최초 제출값을 보장하지 못한다 (SEC와 다름).
+    접수일도 정정본 날짜가 오므로(현대차는 2015~2020년 사업보고서가 모두 2022-02-17),
+    법정 제출기한(분기·반기 45일, 사업보고서 90일)을 넘는 접수일은 기한으로 당긴다.
+  · 손익 당기금액(thstrm_amount)은 분기·반기 보고서에서 항상 3개월치다. 그런데
+    기간 표기(thstrm_dt)는 회사에 따라 누적 기간으로 적혀 있어(현대차 "01.01 ~ 06.30"에
+    2분기 3개월 금액), 기간 표기 대신 종료일로 분기 시작일을 정한다.
 
 속도: DART는 호출당 수 초가 걸린다. 회사별·보고서별로 전체 재무제표를 부르면
 42종목 x 11년 x 4보고서로 수천 건이 되어 60분 제한을 넘긴다(실제로 취소됐다).
@@ -121,6 +126,26 @@ def norm_id(i):
     return i.split("_", 1)[1] if "_" in i and not i.startswith("-") else None
 
 
+def qstart(en):
+    """분기 종료일 → 그 3개월 구간 시작일. 12-31은 연간(사업보고서)이라 01-01."""
+    m = int(en[5:7])
+    return f"{en[:4]}-01-01" if m == 12 else f"{en[:4]}-{m - 2:02d}-01"
+
+
+DEADLINE = {"11013": 45, "11012": 45, "11014": 45, "11011": 90}     # 법정 제출기한 (일)
+
+
+def filed_of(rcept_no, year, reprt):
+    """접수번호 앞 8자리 → 제출일. 정정본이라 기한을 넘긴 날짜면 법정 기한으로 당긴다."""
+    rc = rcept_no or ""
+    if len(rc) < 8:
+        return None
+    filed = date(int(rc[:4]), int(rc[4:6]), int(rc[6:8]))
+    end = date(int(year), *map(int, PERIOD[reprt][1].split("-")))
+    limit = date.fromordinal(end.toordinal() + DEADLINE[reprt])
+    return min(filed, limit).isoformat()
+
+
 def pick(rows, ids, names):
     """account_id 후보 → 계정명 후보 순으로 첫 매칭 행. 계정명은 정확히 일치해야 한다.
 
@@ -191,11 +216,13 @@ def ingest(rows, filed, flows, inst, period=None):
         r = pick(is_rows, *ACCOUNTS[k])
         if not r:
             continue
-        st, en = dates_of(r.get("thstrm_dt"))
-        if not en and period:
-            st, en = period
+        _, en = dates_of(r.get("thstrm_dt"))
+        en = en or (period and period[1])
+        if not en:
+            continue
+        st = qstart(en)                                    # 당기금액은 항상 3개월(연간은 12개월)
         v = num(r.get("thstrm_amount"))
-        if st and en and v is not None:
+        if v is not None:
             flows[k].setdefault((st, en), (v, filed))
         va = num(r.get("thstrm_add_amount"))               # 누적 (회계연도 시작 ~ en)
         if en and va is not None:
@@ -232,8 +259,7 @@ def build_all(corps, this_year):
             for c in corps:
                 rows, _ = got.get(c, ([], None))
                 if rows:
-                    rc = rows[0].get("rcept_no", "")
-                    ingest(rows, f"{rc[:4]}-{rc[4:6]}-{rc[6:8]}", flows[c], inst[c])
+                    ingest(rows, filed_of(rows[0].get("rcept_no"), year, reprt), flows[c], inst[c])
                 if lacks(rows):
                     needs.append((c, year, reprt))
         print(f"  {year} 재무 수집 완료", flush=True)
@@ -250,9 +276,8 @@ def build_all(corps, this_year):
         for (c, y, reprt), rows in ex.map(fill, needs):
             if not rows:
                 continue
-            rc = rows[0].get("rcept_no", "")
             st, en = PERIOD[reprt]
-            ingest(rows, f"{rc[:4]}-{rc[4:6]}-{rc[6:8]}", flows[c], inst[c],
+            ingest(rows, filed_of(rows[0].get("rcept_no"), y, reprt), flows[c], inst[c],
                    period=(f"{y}-{st}", f"{y}-{en}"))
             filled += 1
     calls += len(needs) * 2                     # CFS·OFS 최대 2회로 잡는다

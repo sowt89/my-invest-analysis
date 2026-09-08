@@ -62,15 +62,13 @@ def build_probe(stock_code):
         for reprt in D.REPORTS:
             rows, _ = D.major_accounts([corp], year, reprt).get(corp, ([], None))
             if rows:
-                rc = rows[0].get("rcept_no", "")
-                D.ingest(rows, f"{rc[:4]}-{rc[4:6]}-{rc[6:8]}", flows, inst)
+                D.ingest(rows, D.filed_of(rows[0].get("rcept_no"), year, reprt), flows, inst)
             if D.lacks(rows):
                 full = D.full_statement(corp, year, reprt)
                 src = "전체" if full else "없음"
                 if full:
-                    rc = full[0].get("rcept_no", "")
                     st, en = D.PERIOD[reprt]
-                    D.ingest(full, f"{rc[:4]}-{rc[4:6]}-{rc[6:8]}", flows, inst,
+                    D.ingest(full, D.filed_of(full[0].get("rcept_no"), year, reprt), flows, inst,
                              period=(f"{year}-{st}", f"{year}-{en}"))
                 print(f"  {year} {reprt}: 주요계정 {len(rows)}행 → 보강 {src}", flush=True)
     for k in ("rev", "ni"):
