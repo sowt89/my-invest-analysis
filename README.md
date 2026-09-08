@@ -5,7 +5,7 @@
 | 시장 | 종목 | 시세 | PER·PSR 3~5년 평균 |
 |---|---|---|---|
 | 🇺🇸 미국 | 40종목 + QQQ | 실시간(60초) | SEC 원본 실측 |
-| 🇰🇷 한국 | 41종목 + KODEX 200 | 30분 간격 | 근사값 |
+| 🇰🇷 한국 | 42종목 + KODEX 200 | 30분 간격 | DART 원본 실측 |
 
 순위 규칙과 점수 계산은 두 시장이 같습니다. 다만 **백테스트 검증은 미국 종목으로만 수행했습니다.** 한국 시장에서 같은 규칙이 통한다는 근거는 아직 없습니다.
 
@@ -64,7 +64,7 @@ SEC 원본 재무제표(point-in-time)로 2010~2026년을 검증했습니다. IC
 
 검증 절차는 `scripts/validate_axis_scores.py` 참고.
 
-> **평균 PER·PSR은 SEC 원본 재무제표로 계산합니다.** 각 시점의 주가 × 당시 발행주식수 ÷ 당시 이익(또는 매출)이라, 이익·매출이 성장한 종목의 과거 밸류에이션이 왜곡되지 않습니다. 적자 구간은 PER이 성립하지 않아 산출에서 제외됩니다.
+> **평균 PER·PSR은 공시 원본 재무제표(미국 SEC · 한국 DART)로 계산합니다.** 각 시점의 주가 × 당시 발행주식수 ÷ 당시 이익(또는 매출)이라, 이익·매출이 성장한 종목의 과거 밸류에이션이 왜곡되지 않습니다. 적자 구간은 PER이 성립하지 않아 산출에서 제외됩니다.
 >
 > FWD PER(예상 실적 기준)은 화면에 참고로만 표시하고 점수에는 쓰지 않습니다. 컨센서스의 과거값을 구할 수 없어 3년 평균을 만들 수 없기 때문입니다.
 
@@ -192,7 +192,8 @@ scripts/fetch_data.py   데이터 수집 + 순위 계산
 scripts/backtest_momentum.py     모멘텀 전략 백테스트 (26년, 검증 근거)
 scripts/backtest_legacy.py       역발상 점수 백테스트 (10년, 근거 재현용)
 scripts/backtest_legacy_long.py  같은 방식 장기 검증 (25년)
-scripts/sec_fundamentals.py      SEC 원본 재무제표 수집 (point-in-time)
+scripts/sec_fundamentals.py      SEC 원본 재무제표 수집 (미국, point-in-time)
+scripts/dart_fundamentals.py     DART 원본 재무제표 수집 (한국, point-in-time)
 scripts/validate_axis_scores.py  실적·재무 점수 예측력 검증
 scripts/test_sec_fundamentals.py 수집 로직 테스트 (네트워크 불필요)
 scripts/legacy_score.py          폐기된 역발상 점수 (백테스트 전용)
@@ -202,7 +203,8 @@ data_kr.json            수집된 데이터 (한국)
 history.json            일별 지표 누적 기록 (최근 3년, 미국)
 history_kr.json         일별 지표 누적 기록 (최근 3년, 한국)
 archive/history-YYYY.json  3년이 지난 기록 (연도별 보관)
-data/sec_pit.json       SEC 원본 재무 시계열 (2010~, 매출·이익·주식수)
+data/sec_pit.json       SEC 원본 재무 시계열 (미국, 2010~)
+data/dart_pit.json      DART 원본 재무 시계열 (한국, 2017~)
 .github/workflows/      자동 갱신 설정
 ```
 
