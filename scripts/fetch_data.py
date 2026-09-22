@@ -520,15 +520,20 @@ def adj_shares(row, splits):
     return sh
 
 
+MULTIPLE_CAP = {"niTtm": 200, "revTtm": 100}   # 이 위는 배수가 의미를 잃는 구간
+
+
 def sec_multiple(rows, dates, closes, key, weeks=None, splits=()):
     """각 시점의 배수(주가 x 당시 발행주식수 / 당시 TTM 지표)를 실측 계산한다.
 
     반환: (평균, 최신값). 산출 불가면 (None, None).
     key="revTtm"이면 PSR, "niTtm"이면 PER.
-    적자 구간(분모 <= 0)은 배수가 의미를 잃으므로 제외한다.
+    적자 구간(분모 <= 0)과 MULTIPLE_CAP을 넘는 구간(매출·이익이 0에 가까워
+    배수가 수천 배로 튀는 초기 기업)은 배수가 의미를 잃으므로 제외한다.
     splits: 분할 이벤트 [(날짜, 배율)] — 제출 뒤 분할은 주식수에 소급 반영한다.
     주식수가 믿을 만한지는 호출부에서 시가총액으로 먼저 확인한다.
     """
+    cap = MULTIPLE_CAP[key]
     usable = [r for r in rows if r.get("sh") and (r.get(key) or 0) > 0]
     if len(usable) < 8 or not dates:
         return None, None
@@ -540,12 +545,19 @@ def sec_multiple(rows, dates, closes, key, weeks=None, splits=()):
             idx += 1
         r = usable[idx]
         if r["filed"] <= d:
-            vals.append(px * adj_shares(r, splits) / r[key])
+            v = px * adj_shares(r, splits) / r[key]
+            if v <= cap:          # 분모가 0에 가까운 구간은 평균을 왜곡하므로 뺀다
+                vals.append(v)
     if len(vals) < 20:
         return None, None
-    last = usable[-1]
-    now = closes[-1] * adj_shares(last, splits) / last[key]
-    return sum(vals) / len(vals), now
+    avg = sum(vals) / len(vals)
+    # 최신값은 '마지막 흑자 행'이 아니라 진짜 최신 행으로 계산한다.
+    # 최신 분기가 적자면 배수가 없다(None) — 예전 흑자 배수를 대신 쓰지 않는다.
+    latest = [r for r in rows if r.get("sh")][-1]
+    if (latest.get(key) or 0) <= 0:
+        return avg, None
+    now = closes[-1] * adj_shares(latest, splits) / latest[key]
+    return avg, (now if now <= cap else None)
 
 
 REBAL_DAY = 22          # 매달 이 날짜를 기준으로 교체한다 (휴장이면 다음 기록일)
@@ -686,6 +698,9 @@ def fetch_stock(session, ticker, name, theme, pit):
     gap = ((trail_per / trail_per_avg - 1) * 100) if (trail_per and trail_per_avg) else None
 
     # 현재 PSR도 평균과 같은 기준(공시 원본)으로 맞춘다. 실측이 안 되면 야후 값.
+    # 현재값만 실측이 안 되면(배수 상한 초과) 평균도 근사값으로 내려 기준을 맞춘다.
+    if psr_now is None:
+        avg_psr = None
     psr = psr_now if psr_now is not None else info.get("priceToSalesTrailing12Months")
     psr_src = "sec" if avg_psr is not None else "proxy"
     if avg_psr is None:
