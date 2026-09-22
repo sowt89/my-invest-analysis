@@ -710,7 +710,7 @@ function renderBoard(){
          <span style="font-size:1.5rem;font-weight:800;color:${rgc}">${rg}</span>
          ${MARKET.panic?'<span class="gap-tag over" style="background:#f5ecd2;color:#b58612">VIX 30↑ 패닉</span>':''}
        </div>
-       <div class="mrow"><span class="k">${MARKET.mkt==='kr'?'KOSPI':'S&P500'} 고점 대비</span><span class="v" style="color:${MARKET.regimeDd<=-10?'#c4472e':MARKET.regimeDd<=-5?'#b58612':'#4c8f3a'}">${MARKET.regimeDd!=null?fmt(MARKET.regimeDd)+'%':'—'}</span></div>
+       <div class="mrow"><span class="k">${MARKET.mkt==='kr'?'KOSPI':'S&P500'} 이 국면 고점 대비 <span style="color:var(--ink3);font-weight:400">(52주 고점과 다름)</span></span><span class="v" style="color:${MARKET.regimeDd<=-10?'#c4472e':MARKET.regimeDd<=-5?'#b58612':'#4c8f3a'}">${MARKET.regimeDd!=null?fmt(MARKET.regimeDd)+'%':'—'}</span></div>
        <div class="mrow"><span class="k">이 국면 시작</span><span class="v">${MARKET.regimeSince||'—'}</span></div>
        ${chk(MARKET.trendAbove,'200일선 위 <span style="color:var(--ink3);font-weight:400">(보조)</span>')}
        ${chk(MARKET.golden,'골든크로스 (50 &gt; 200일선) <span style="color:var(--ink3);font-weight:400">(보조)</span>')}
