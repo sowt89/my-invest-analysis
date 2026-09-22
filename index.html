@@ -417,12 +417,20 @@ svg text{font-family:inherit}
     <tr><td>KODEX 200 매수 후 보유</td><td class="num">7.2배</td><td class="num">-34%</td></tr>
   </table>
   <p style="font-size:.78rem;color:var(--ink3)">한국도 3개 시대 모두 균등보유 대비 우위(0.99 · 2.50 · 7.57배)였습니다. 다만 2015년 이후 상장 종목이 많아 초기 구간은 31종목 중에서만 골랐고, 최근 우위 폭이 유독 커 반도체·2차전지 랠리의 영향이 큽니다. 미국보다 기간이 짧아 신뢰도는 낮습니다.</p>
+  <p style="margin:14px 0 2px"><b>생존 편향 없는 재검증</b> · 워치리스트는 사람이 고른 목록이라 절대 수익률이 부풀려져 있을 수 있습니다. 상장폐지되지 않는 자산군 ETF 15개(섹터·소형주·해외·채권·금·리츠, 1998~2004년 상장)로 같은 규칙을 다시 시험했습니다.</p>
+  <table><colgroup><col><col style="width:24%"><col style="width:22%"></colgroup>
+    <tr><th>방식 (상위 5/15, 2001~2026)</th><th class="num">최종</th><th class="num">연평균</th></tr>
+    <tr><td>모멘텀 상위 5</td><td class="num">13.0배</td><td class="num">10.7%</td></tr>
+    <tr><td>균등보유 (15개 전체)</td><td class="num">8.4배</td><td class="num">8.7%</td></tr>
+    <tr><td>무작위 5 (대조군)</td><td class="num">8.6배</td><td class="num">8.9%</td></tr>
+  </table>
+  <p style="font-size:.78rem;color:var(--ink3)">균등보유 대비 1.56배(연 2%p) 우위 — 모멘텀 효과 자체는 생존 편향의 산물이 아닙니다. 다만 이 우위는 워치리스트 결과(약 9배)보다 훨씬 작습니다. 워치리스트의 절대 수익률은 상당 부분 "살아남은 40종목 중에서 골랐다"는 사실에서 나옵니다. ETF는 분산된 바스켓이라 변동성이 작아 배율을 직접 비교하면 안 됩니다 — <code>validate_no_survivorship.py</code>로 재현.</p>
   <p style="font-size:.78rem;color:var(--ink3)">버린 방식: 역발상 점수 매수 · 점수 악화 시 매도 · 200일선 이탈 매도 · 신호 대기 적립 · 가중치 최적화 · 테마별 규칙</p>
 
   <h3>6. 한계</h3>
   <div class="warn"><p><b>최대 낙폭 -50%</b> · 26년 중 두 번 반토막. 견딜 수 있는 금액만.</p></div>
   <div class="warn"><p><b>하락장에선 "덜 떨어진" 종목을 고름</b> · 상대 순위라 전부 하락 중이어도 5개를 채움</p></div>
-  <div class="warn"><p><b>워치리스트가 성과를 좌우</b> · 부진 종목만 모인 풀에서는 오히려 손해</p></div>
+  <div class="warn"><p><b>워치리스트가 성과를 좌우</b> · 부진 종목만 모인 풀에서는 오히려 손해 · 생존 편향 없는 유니버스로 재검증하면 우위가 1.56배로 줄어듭니다(5번 항목)</p></div>
   <div class="warn"><p><b>세금 부담</b> · 26년 시뮬레이션 세전 41억 → 세후 9.4억</p></div>
   <div class="warn"><p><b>지수보다 낫다고 검증된 것 아님</b> · 검증 범위는 "같은 워치리스트 안에서의 선택"</p></div>
   <div class="warn"><p><b>급락 대응 불가</b> · 월 1회 점검 기준</p></div>
