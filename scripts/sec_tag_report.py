@@ -12,16 +12,14 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from sec_fundamentals import get, days
+from sec_fundamentals import FLOW, get, days
 
 TARGETS = ["AVGO", "CEG", "BRK-B"]
 LOOK = {
     "순이익": ["NetIncomeLoss", "NetIncomeLossAvailableToCommonStockholdersBasic",
              "ProfitLoss", "NetIncomeLossAttributableToParent",
              "IncomeLossFromContinuingOperations"],
-    "매출": ["RevenueFromContractWithCustomerExcludingAssessedTax", "Revenues",
-           "SalesRevenueNet", "RevenueFromContractWithCustomerIncludingAssessedTax",
-           "RegulatedAndUnregulatedOperatingRevenue"],
+    "매출": FLOW["rev"],
     "주식수": ["WeightedAverageNumberOfDilutedSharesOutstanding",
             "WeightedAverageNumberOfSharesOutstandingBasic",
             "CommonStockSharesOutstanding", "CommonStockSharesIssued"],

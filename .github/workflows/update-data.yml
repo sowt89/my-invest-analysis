@@ -68,8 +68,8 @@ jobs:
           for i in 1 2 3; do
             git push && exit 0
             echo "push 거부 — 최신 main 위에 다시 얹어 재시도 ($i/3)"
-            git fetch origin main
-            git reset --mixed origin/main      # 인덱스를 최신 main에 맞추고, 생성 파일은 작업본 유지
+            git fetch origin "$GITHUB_REF_NAME"
+            git reset --mixed "origin/$GITHUB_REF_NAME"   # 인덱스를 최신 원격에 맞추고, 생성 파일은 작업본 유지
             git add $FILES
             git commit -m "$MSG" || exit 0     # 차이가 없으면 이미 반영된 것
           done

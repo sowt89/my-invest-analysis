@@ -13,7 +13,7 @@
                 Lunde-Timmermann(2004)의 20% 기준을 실시간으로 옮긴 것
   10% 규칙       같은 방식, 기준 10%
   12개월 모멘텀   최근 12개월 수익률이 양수인가
-  앱 방식        지수 200일선 + 시장 폭(55/45) — 3단계
+  예전 앱 방식   지수 200일선 + 시장 폭(55/45) — 3단계 (지금 앱은 20% 규칙)
 
 지수는 편입·폐지가 반영된 지수 자체를 쓴다(생존 편향 없음). 앱 방식의 시장 폭만
 현재 워치리스트를 쓰므로 그 항목에는 편향이 있다.
@@ -120,7 +120,7 @@ def rule_mom12(idx, i, ctx):
 
 
 def rule_app(idx, i, ctx):
-    """앱 방식: 지수 200일선 + 시장 폭 55/45 (3단계)."""
+    """예전 앱 방식: 지수 200일선 + 시장 폭 55/45 (3단계). 지금은 20% 규칙을 쓴다."""
     m = sma(idx, i, MA)
     br = ctx["breadth"].get(i)
     if m is None or br is None:
@@ -135,7 +135,7 @@ def rule_app(idx, i, ctx):
 RULES = [("200일선", rule_ma200), ("200일선+기울기", rule_ma200_slope),
          ("골든크로스", rule_golden), ("20% 규칙", rule_swing20),
          ("10% 규칙", rule_swing10), ("12개월 모멘텀", rule_mom12),
-         ("앱 방식(폭 포함)", rule_app)]
+         ("예전 앱 방식(폭 포함)", rule_app)]
 
 
 def report(name, states, fwd, switches):

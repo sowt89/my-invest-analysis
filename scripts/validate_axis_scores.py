@@ -29,7 +29,7 @@ from datetime import date
 import yfinance as yf
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from fetch_data import (WATCHLIST, adj_shares, finance_score, growth_score,
+from fetch_data import (adj_shares, finance_score, growth_score,
                         make_session, splits_of, valuation_score)
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
