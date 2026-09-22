@@ -73,6 +73,42 @@ WATCHLIST = [
     ("LMT", "Lockheed Martin", "산업재"),
     ("COIN", "Coinbase", "금융"),
     ("BRK-B", "Berkshire Hathaway", "금융"),
+
+    # --- 나스닥100 시총 상위 50 규칙으로 편입 (nasdaq100_top50_watchlist.py)
+    # 사람이 "요즘 뜨는 회사"를 손으로 넣는 여지를 줄이려고 기계적으로 뽑는다.
+    # 위 테마 종목은 그대로 두고 상위 50에서 빠진 것만 더했다.
+    # GOOG는 GOOGL과 같은 회사(주식 클래스만 다름)라 순위 중복을 피해 제외한다.
+    ("ASML", "ASML", "반도체"),
+    ("AMAT", "Applied Materials", "반도체"),
+    ("LRCX", "Lam Research", "반도체"),
+    ("KLAC", "KLA", "반도체"),
+    ("TXN", "Texas Instruments", "반도체"),
+    ("ADI", "Analog Devices", "반도체"),
+    ("MRVL", "Marvell Technology", "반도체"),
+    ("SNDK", "SanDisk", "반도체"),
+    ("STX", "Seagate Technology", "반도체"),
+    ("WDC", "Western Digital", "반도체"),
+    ("PANW", "Palo Alto Networks", "SW 주식"),
+    ("CRWD", "CrowdStrike", "SW 주식"),
+    ("FTNT", "Fortinet", "SW 주식"),
+    ("ADBE", "Adobe", "SW 주식"),
+    ("SHOP", "Shopify", "SW 주식"),
+    ("APP", "AppLovin", "SW 주식"),
+    ("ADP", "Automatic Data Processing", "SW 주식"),
+    ("CSCO", "Cisco Systems", "기술"),
+    ("BKNG", "Booking Holdings", "기술"),
+    ("ABNB", "Airbnb", "기술"),
+    ("MELI", "MercadoLibre", "기술"),
+    ("PDD", "PDD Holdings", "기술"),
+    ("AMGN", "Amgen", "헬스케어"),
+    ("GILD", "Gilead Sciences", "헬스케어"),
+    ("VRTX", "Vertex Pharmaceuticals", "헬스케어"),
+    ("WMT", "Walmart", "소비재"),
+    ("COST", "Costco", "소비재"),
+    ("PEP", "PepsiCo", "소비재"),
+    ("SBUX", "Starbucks", "소비재"),
+    ("TMUS", "T-Mobile US", "커뮤니케이션"),
+    ("LIN", "Linde", "산업재"),
 ]
 
 # 한국 시장 워치리스트 (yfinance 코드: .KS 코스피 / .KQ 코스닥)
