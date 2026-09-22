@@ -316,7 +316,7 @@ svg text{font-family:inherit}
   <h3>2. 전략 vs 지수 기록</h3>
   <p>백테스트가 아니라 <b>오늘부터 쌓는 실제 기록</b>입니다. 매일 상위 5종목의 주가를 저장해 균등보유 수익률을 계산하고, 같은 기간 지수와 비교합니다. 비교 지수는 미국 QQQ · 한국 KODEX 200입니다.</p>
   <table><colgroup><col class="c-ind"><col></colgroup>
-    <tr><td>교체 시점</td><td>달이 바뀌는 첫 기록</td></tr>
+    <tr><td>교체 시점</td><td>매달 22일<span class="sub">휴장이면 다음 기록일</span></td></tr>
     <tr><td>미반영</td><td>거래비용 · 세금 · 환율</td></tr>
     <tr><td>판단 가능 시점</td><td>최소 1년 이상 누적 후</td></tr>
   </table>
@@ -782,7 +782,7 @@ function renderTrack(){
     `<div class="mrow"><span class="k">차이</span>
       <span class="v" style="color:${col(diff)}">${diff>=0?'+':''}${fmt(diff,2)}%p</span></div>
      <p style="font-size:.72rem;color:var(--ink3);line-height:1.5;margin-top:9px">
-       ${t.start} 기록 시작 · ${t.days}일 경과 · 월 1회 교체 기준<br>
+       ${t.start} 기록 시작 · ${t.days}일 경과 · 매달 ${t.rebal_day||22}일 교체 기준<br>
        ${t.days<250?'<b>표본이 적어 판단 근거로 쓸 수 없습니다.</b> 최소 1년 이상 쌓여야 의미가 생깁니다.':''}
        거래비용·세금 미반영</p>`;
 }

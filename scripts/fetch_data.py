@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """나만의 투자분석 — 실데이터 수집 스크립트.
 
-yfinance로 워치리스트 40종목의 시세·1년 주가·재무·마진·컨센서스와
+yfinance로 워치리스트 71종목의 시세·1년 주가·재무·마진·컨센서스와
 시장지표(^VIX, ^IXIC, ^GSPC 52주 낙폭·국면, CNN Fear & Greed)를 수집해
-data.json으로 저장한다. QQQ 포함 40개 티커 중 지수 ETF는 순위에서 제외한다.
+data.json으로 저장한다. QQQ 포함 72개 티커 중 지수 ETF는 순위에서 제외한다.
 
 매매 판단은 모멘텀 횡단면 순위(모멘텀 + 200일선 이격도)를 기준으로 한다.
 모멘텀 = 최근 1개월을 제외한 12개월 수익률(12-1 모멘텀, 단기 반전 효과 제거).
@@ -548,10 +548,25 @@ def sec_multiple(rows, dates, closes, key, weeks=None, splits=()):
     return sum(vals) / len(vals), now
 
 
+REBAL_DAY = 22          # 매달 이 날짜를 기준으로 교체한다 (휴장이면 다음 기록일)
+
+
+def period_of(d, day=REBAL_DAY):
+    """그 날짜가 속한 보유 구간 라벨. 기준일 전이면 전월 구간이다.
+
+    예: 기준 22일이면 9월 21일은 '2026-08' 구간, 9월 22일부터 '2026-09' 구간.
+    """
+    y, m = int(d[:4]), int(d[5:7])
+    if int(d[8:10]) < day:
+        y, m = (y - 1, 12) if m == 1 else (y, m - 1)
+    return f"{y:04d}-{m:02d}"
+
+
 def track_vs_bench(hist, bench="QQQ", top_n=5):
     """축적 기록으로 전략과 지수의 실제 성과를 비교한다.
 
-    전략: 그날의 모멘텀 상위 N종목 균등보유. 월이 바뀌는 첫 기록에서만 교체한다.
+    전략: 그날의 모멘텀 상위 N종목 균등보유. 매달 22일(휴장이면 다음 기록일)에
+          교체한다.
     지수: 첫날 매수 후 보유.
     거래비용·세금은 반영하지 않는다. 백테스트가 아니라 실제 축적 기록이다.
     """
@@ -559,7 +574,13 @@ def track_vs_bench(hist, bench="QQQ", top_n=5):
     if len(days) < 2:
         return None
     px = lambda d, t: (hist[d].get(t) or {}).get("px")
-    held, month, sv, bv = [], None, 1.0, 1.0
+
+    def top(d):
+        ranked = sorted((r["rank"], t) for t, r in hist[d].items()
+                        if isinstance(r, dict) and r.get("rank") and r.get("px"))
+        return [t for _, t in ranked[:top_n]] if len(ranked) >= top_n else None
+
+    held, period, sv, bv = [], None, 1.0, 1.0
     for prev, cur in zip(days, days[1:]):
         if held:                                   # 보유 중이면 하루 수익률 반영
             rets = [px(cur, t) / px(prev, t) - 1 for t in held
@@ -569,19 +590,11 @@ def track_vs_bench(hist, bench="QQQ", top_n=5):
         b0, b1 = px(prev, bench), px(cur, bench)
         if b0 and b1:
             bv *= b1 / b0
-        if cur[:7] != month:                       # 달이 바뀌면 교체
-            ranked = sorted((r["rank"], t) for t, r in hist[cur].items()
-                            if isinstance(r, dict) and r.get("rank") and r.get("px"))
-            if len(ranked) >= top_n:
-                held = [t for _, t in ranked[:top_n]]
-                month = cur[:7]
-        elif not held:                             # 첫날 편입
-            ranked = sorted((r["rank"], t) for t, r in hist[cur].items()
-                            if isinstance(r, dict) and r.get("rank") and r.get("px"))
-            if len(ranked) >= top_n:
-                held = [t for _, t in ranked[:top_n]]
-                month = cur[:7]
-    return {"start": days[0], "days": len(days),
+        if period_of(cur) != period or not held:   # 교체일이거나 아직 편입 전
+            picked = top(cur)
+            if picked:
+                held, period = picked, period_of(cur)
+    return {"start": days[0], "days": len(days), "rebal_day": REBAL_DAY,
             "strategy_pct": rnd((sv - 1) * 100, 2),
             "bench": bench, "bench_pct": rnd((bv - 1) * 100, 2),
             "holding": held}
