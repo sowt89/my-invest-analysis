@@ -433,7 +433,16 @@ svg text{font-family:inherit}
     <tr><td>나스닥100 편입 이력 없음<span class="sub">뉴욕증권거래소 대형주 또는 소형·최근 상장 투기성 종목</span></td><td class="num">18종목 (45%)</td></tr>
   </table>
   <p style="font-size:.78rem;color:var(--ink3)">워치리스트의 45%는 나스닥100에 한 번도 들어간 적이 없습니다 — 상당수가 최근 주목받은 소형·투기성 종목이라는 뜻입니다. 다만 이건 목록의 '최신성'을 잰 것이지 생존 편향의 크기를 보정한 게 아닙니다. <code>nasdaq100_membership_report.py</code>로 재현.</p>
-  <p style="font-size:.78rem;color:var(--ink3)">버린 방식: 역발상 점수 매수 · 점수 악화 시 매도 · 200일선 이탈 매도 · 신호 대기 적립 · 가중치 최적화 · 테마별 규칙</p>
+  <p style="margin:14px 0 2px"><b>설정을 바꿔도 유지되는가</b> · 모멘텀 기간·가중치·보유 종목 수·교체 주기를 바꾼 <b>180개 조합</b>을 모두 돌렸습니다.</p>
+  <table><colgroup><col style="width:44%"><col><col></colgroup>
+    <tr><th></th><th class="num">미국</th><th class="num">한국</th></tr>
+    <tr><td>현행 설정 연평균</td><td class="num">33.3%<span class="sub">82등/180</span></td><td class="num">41.1%<span class="sub">38등/180</span></td></tr>
+    <tr><td>전체 조합 중앙값</td><td class="num">32.8%</td><td class="num">35.8%</td></tr>
+    <tr><td>지수를 이긴 조합</td><td class="num">180/180</td><td class="num">180/180</td></tr>
+  </table>
+  <p style="font-size:.78rem;color:var(--ink3)">현행 설정은 1등이 아니라 중간 순위인데도 180개 조합이 전부 지수를 이겼습니다 — 우위가 특정 설정이 아니라 모멘텀이라는 방법 자체에서 나온다는 뜻입니다. 과최적화였다면 현행이 최상위이고 조금만 바꿔도 무너져야 합니다. 가중치는 미국은 200일선 쪽, 한국은 모멘텀 쪽이 좋아 시장마다 정반대였고, 그래서 반반을 유지합니다 — <code>validate_momentum_params.py</code>로 재현.</p>
+  <p style="margin:14px 0 2px"><b>테마 집중 한도는 두지 않습니다</b> · 지금 상위 5종목 중 4개가 반도체입니다. "한 테마 최대 2종목" 한도를 검증했더니 미국에서 수익이 18% 줄고 최대낙폭은 2.8%p 개선되는 데 그쳤고, 한국에서는 낙폭이 오히려 나빠졌습니다(-33.6%→-35.3%). 낙폭의 원인이 테마 붕괴가 아니라 시장 전체 하락(2008·2022년)이기 때문입니다 — <code>backtest_sector_cap.py</code>로 재현.</p>
+  <p style="font-size:.78rem;color:var(--ink3)">버린 방식: 역발상 점수 매수 · 점수 악화 시 매도 · 200일선 이탈 매도 · 신호 대기 적립 · 가중치 최적화 · 테마별 규칙 · 테마 집중 한도</p>
 
   <h3>6. 한계</h3>
   <div class="warn"><p><b>최대 낙폭 -50%</b> · 26년 중 두 번 반토막. 견딜 수 있는 금액만.</p></div>
