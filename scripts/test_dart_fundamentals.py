@@ -116,8 +116,9 @@ check("보통주 주식수 (우선주 제외)", last["sh"], 1000.0)
 check("1년 전 매출 TTM", last["revTtmPrev"], 400.0)
 check("제출일 순서", rows == sorted(rows, key=lambda r: r["filed"]), True)
 check("사업보고서 접수일 = 이듬해", any(r["filed"].startswith("2025") for r in rows), True)
-check("호출 수 절감 (재무 8회 + 주식수 4회)", calls, 12)
-check("매출·순이익이 다 있으면 전체 재무제표를 부르지 않는다", fake_get.full_calls, 0)
+check("호출 수 (재무 8회 + 주식수 4회 + 전체 재무제표 16건 x 2)", calls, 44)
+check("주요계정 순이익은 비지배지분 포함이라 전체 재무제표를 부른다 (2곳 x 8보고서)", fake_get.full_calls, 16)
+fake_get.full_calls = 0
 
 print("\n2) 4분기 역산 — 사업보고서(연간)만 있는 4분기")
 first_full = next(r for r in rows if r["end"] == "2023-12-31")
@@ -146,10 +147,11 @@ dup = [{"sj_div": "IS", "account_nm": "연결당기순이익", "account_id": "-"
 check("IS와 CIS에 같은 이름이면 앞선 IS 행", D.pick(dup, *D.ACCOUNTS["ni"])["thstrm_amount"], "10")
 
 print("\n5) 주요계정에 매출이 빠진 회사 — 전체 재무제표로 보강")
+fake_get.full_calls = 0
 rows3 = D.build_all(["C0000003"], 2024)[0]["C0000003"]
 check("보강 호출: 8개 보고서 x 1회 (CFS에서 찾음)", fake_get.full_calls, 8)
 check("보강한 매출 TTM", rows3[-1]["revTtm"], 400.0)
-check("주요계정 값은 유지 (순이익)", rows3[-1]["niTtm"], 60.0)
+check("전체 재무제표에 지배지분 계정이 없으면 당기순이익 사용", rows3[-1]["niTtm"], 60.0)
 check("기간 필드 없이 사업보고서 4분기 역산", next(r for r in rows3 if r["end"] == "2023-12-31")["revTtm"], 400.0)
 
 print("\n6) 매출 계정이 아예 없는 금융회사 — 순이익 기준으로 행 생성")
@@ -184,6 +186,34 @@ check("TTM 400", ttm_at(q, "2025-12-31")[0], 400.0)
 check("정상 접수일은 그대로", D.filed_of("20240515000000", 2024, "11013"), "2024-05-15")
 check("정정본(2년 뒤) 접수일은 법정 기한으로", D.filed_of("20260217000000", 2020, "11011"), "2021-03-31")
 check("반기 기한 45일", D.filed_of("20260101000000", 2024, "11012"), "2024-08-14")
+
+print("\n6-2) 순이익 = 지배기업 소유주지분 — 전체 재무제표에 있으면 그 값, 없으면 주요계정 총액")
+def with_owners(d, owners=12.0):
+    """전체 재무제표에 '지배기업의 소유주에게 귀속되는 당기순이익' 행을 더한다 (총액 15 → 지배 12)."""
+    extra = [{**r, "account_id": "ifrs-full_ProfitLossAttributableToOwnersOfParent",
+              "account_nm": "지배기업의 소유주에게 귀속되는 당기순이익(손실)",
+              "thstrm_amount": str(owners if r["account_nm"] != "당기순이익" else owners * 4),
+              **({"thstrm_add_amount": str(owners * int(float(r["thstrm_add_amount"]) / 15.0))}
+                 if "thstrm_add_amount" in r else {})}
+             for r in d["list"] if r["account_nm"] in ("분기순이익", "당기순이익")]
+    return {"status": "000", "list": d["list"] + extra}
+_orig_get = fake_get
+def get_owners(endpoint, **p):
+    raw = _orig_get(endpoint, **p)
+    if endpoint.startswith("fnlttSinglAcntAll"):
+        d = json.loads(raw)
+        if d.get("list"):
+            if int(p["bsns_year"]) == 2024 and p["reprt_code"] == "11012":
+                return json.dumps({"status": "013", "list": []}).encode()   # 이 보고서만 전체 재무제표 실패
+            return json.dumps(with_owners(d)).encode()
+    return raw
+D.get = get_owners
+rows_o = D.build_all(["A0000001"], 2024)[0]["A0000001"]
+by_end = {r["end"]: r for r in rows_o}
+check("2023 연간(지배지분 4분기 합)", by_end["2023-12-31"]["niTtm"], 48.0)
+check("2024-06 분기만 전체 재무제표 실패 → 그 분기는 총액 15로 대체 (12+15+12+12)", by_end["2024-09-30"]["niTtm"], 51.0)
+check("매출은 주요계정 값 그대로", by_end["2024-09-30"]["revTtm"], 400.0)
+D.get = fake_get
 
 print("\n7) 날짜 파싱")
 check("기간", D.dates_of("2025.04.01 ~ 2025.06.30"), ("2025-04-01", "2025-06-30"))

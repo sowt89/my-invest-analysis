@@ -65,6 +65,7 @@ ACCOUNTS = {
               ["영업이익", "영업이익(손실)"]),
     "ni":    (["ifrs-full_ProfitLossAttributableToOwnersOfParent", "ifrs-full_ProfitLoss"],
               ["지배기업의 소유주에게 귀속되는 당기순이익(손실)", "지배기업 소유주지분 순이익",
+               "지배기업소유주지분", "지배기업의 소유주지분", "지배주주지분 순이익",
                "당기순이익", "당기순이익(손실)", "분기순이익", "분기순이익(손실)",
                "반기순이익", "반기순이익(손실)",
                "연결당기순이익", "연결분기순이익", "연결반기순이익"]),   # 현대차식 표기
@@ -78,6 +79,10 @@ ACCOUNTS = {
     "cl":    (["ifrs-full_CurrentLiabilities"], ["유동부채"]),
 }
 DEBT = (["ifrs-full_LongtermBorrowings", "ifrs-full_BondsIssued"], ["장기차입금", "사채"])
+# PER의 분모는 지배기업 소유주지분 순이익이어야 한다. 주요계정 API는 비지배지분을 포함한
+# 당기순이익만 주므로(HD한국조선해양·삼성물산처럼 자회사 지분이 큰 회사는 PER이 과소평가됨)
+# 전체 재무제표에서 이 계정을 먼저 찾고, 없을 때만 당기순이익으로 대신한다.
+NI_OWNERS = (ACCOUNTS["ni"][0][:1], ACCOUNTS["ni"][1][:5])
 FLOW_KEYS = ("rev", "op", "ni", "cfo", "capex")   # cfo·capex는 주요계정에 없어 비어 있다
 
 
@@ -189,9 +194,12 @@ def full_statement(corp, year, reprt):
 
 
 def lacks(rows, keys=("rev", "ni")):
-    """손익 행에서 keys 중 하나라도 못 찾으면 True (전체 재무제표 보강 대상)."""
+    """주요계정 행에서 매출이 없거나 지배기업 소유주지분 순이익이 없으면 True (전체 재무제표 보강 대상).
+
+    주요계정은 순이익을 비지배지분 포함 총액으로만 주므로 사실상 모든 보고서가 대상이다.
+    """
     is_rows = [r for r in rows if r.get("sj_div") in ("IS", "CIS")]
-    return any(pick(is_rows, *ACCOUNTS[k]) is None for k in keys)
+    return any(pick(is_rows, *(NI_OWNERS if k == "ni" else ACCOUNTS[k])) is None for k in keys)
 
 
 def shares_of(corp, year):
@@ -205,14 +213,15 @@ def shares_of(corp, year):
     return None, None
 
 
-def ingest(rows, filed, flows, inst, period=None):
+def ingest(rows, filed, flows, inst, period=None, keys=("rev", "op", "ni")):
     """한 보고서의 계정 행을 분기값·잔액 사전에 넣는다. 먼저 넣은 값을 유지한다.
 
     period: 기간 필드(thstrm_dt)가 없는 전체 재무제표 행에 쓸 (시작일, 종료일).
+    keys: 넣을 손익 항목. 주요계정(비지배지분 포함 순이익)은 ni를 빼고 먼저 넣는다.
     """
     is_rows = [r for r in rows if r.get("sj_div") in ("IS", "CIS")]
     bs_rows = [r for r in rows if r.get("sj_div") == "BS"]
-    for k in ("rev", "op", "ni"):
+    for k in keys:
         r = pick(is_rows, *ACCOUNTS[k])
         if not r:
             continue
@@ -251,7 +260,7 @@ def build_all(corps, this_year):
     flows = {c: {k: {} for k in FLOW_KEYS} for c in corps}
     inst = {c: {k: {} for k in ("eq", "ca", "cl", "ltd")} for c in corps}
     shares = {c: {} for c in corps}
-    calls, needs = 0, []                        # needs: 매출·순이익이 빠진 (회사, 연도, 보고서)
+    calls, needs, major = 0, [], []             # needs: 전체 재무제표로 보강할 (회사, 연도, 보고서)
     for year in range(FIRST_YEAR, this_year + 1):
         for reprt in REPORTS:
             got = major_accounts(corps, year, reprt)
@@ -259,7 +268,9 @@ def build_all(corps, this_year):
             for c in corps:
                 rows, _ = got.get(c, ([], None))
                 if rows:
-                    ingest(rows, filed_of(rows[0].get("rcept_no"), year, reprt), flows[c], inst[c])
+                    filed = filed_of(rows[0].get("rcept_no"), year, reprt)
+                    ingest(rows, filed, flows[c], inst[c], keys=("rev", "op"))
+                    major.append((c, rows, filed))
                 if lacks(rows):
                     needs.append((c, year, reprt))
         print(f"  {year} 재무 수집 완료", flush=True)
@@ -282,6 +293,9 @@ def build_all(corps, this_year):
             filled += 1
     calls += len(needs) * 2                     # CFS·OFS 최대 2회로 잡는다
     print(f"  전체 재무제표 보강 {filled}/{len(needs)}건", flush=True)
+    # 전체 재무제표를 못 받은 분기만 주요계정의 (비지배지분 포함) 순이익으로 메운다
+    for c, rows, filed in major:
+        ingest(rows, filed, flows[c], inst[c], keys=("ni",))
     # 주식수: 회사 x 연도 (사업보고서). 결산일을 기준일로 쓴다.
     jobs = [(c, y) for c in corps for y in range(FIRST_YEAR, this_year + 1)]
     def one(job):
