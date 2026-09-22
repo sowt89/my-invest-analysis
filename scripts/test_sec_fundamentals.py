@@ -169,5 +169,25 @@ order = SF.richest(merged, ["NetIncomeLoss", "ProfitLoss"])
 check("관측 많은 태그가 앞", order[0], "ProfitLoss")
 check("없는 태그는 뒤로", SF.richest(merged, ["없는태그", "NetIncomeLoss"])[0], "NetIncomeLoss")
 
+print("\n13) 배수 계산(fetch_data.sec_multiple) — 최신 적자면 현재값 없음, 분모 0 근처는 제외")
+import datetime as _dt
+import fetch_data as FD
+_d, _dates, _closes = _dt.date(2020, 1, 3), [], []
+while _d < _dt.date(2029, 6, 1):
+    _dates.append(_d.isoformat()); _closes.append(100.0); _d += _dt.timedelta(days=7)
+
+
+def mrows(ni, rev):
+    return [{"filed": f"20{20 + i // 4}-{(i % 4) * 3 + 1:02d}-15", "sh": 100,
+             "niTtm": ni(i), "revTtm": rev(i)} for i in range(10)]
+
+
+r = mrows(lambda i: 100 if i < 9 else -5, lambda i: 500)
+check("최신 분기 적자 → PER 평균은 있고 현재값은 None", FD.sec_multiple(r, _dates, _closes, "niTtm"), (100.0, None))
+r = mrows(lambda i: 100, lambda i: 0.001 if i == 0 else 500)
+check("매출 0.001 시절의 PSR 1천만 배는 평균에서 제외", FD.sec_multiple(r, _dates, _closes, "revTtm"), (20.0, 20.0))
+r = mrows(lambda i: 100, lambda i: 500)
+check("정상 흑자 → (평균, 현재값)", FD.sec_multiple(r, _dates, _closes, "niTtm"), (100.0, 100.0))
+
 print("\n" + ("실패 " + str(FAIL) if FAIL else "전부 통과"))
 sys.exit(1 if FAIL else 0)
