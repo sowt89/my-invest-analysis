@@ -41,6 +41,14 @@ jobs:
         env:
           DART_API_KEY: ${{ secrets.DART_API_KEY }}
 
+      # 나스닥100 시총 상위 50이 바뀌었는지 점검한다 (워치리스트 편입·제외 규칙).
+      # 자동으로 고치지는 않고 로그에만 남긴다 — 종목 교체는 사람이 확인하고 반영한다.
+      - name: 워치리스트 편입·제외 점검 (보고만)
+        continue-on-error: true
+        run: |
+          pip install strictyaml "git+https://github.com/jmccarrell/n100tickers.git"
+          python scripts/nasdaq100_top50_watchlist.py
+
       - name: Commit
         run: |
           if [ -z "$(git status --porcelain -- data)" ]; then
