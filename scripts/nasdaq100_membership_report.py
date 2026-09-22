@@ -24,8 +24,9 @@ ALTR·BMC·CA·CELG·CERN·BRCM·YHOO·LNKD 등 10개 표본 중 8개가 데이�
 사용: python3 scripts/nasdaq100_membership_report.py
 """
 
-import sys
 import os
+import sys
+from datetime import date
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from fetch_data import WATCHLIST
@@ -39,7 +40,7 @@ except ImportError:
     )
 
 FIRST_YEAR = 2007   # 데이터 커버리지 시작 (원본 출처 자체가 이때부터)
-LAST_YEAR = 2026
+TODAY = date.today()
 
 
 def first_join(ticker):
@@ -47,7 +48,7 @@ def first_join(ticker):
     prev = tickers_as_of(FIRST_YEAR, 1, 1)
     if ticker in prev:
         return "2007년 이전부터"
-    for y in range(FIRST_YEAR, LAST_YEAR + 1):
+    for y in range(FIRST_YEAR, TODAY.year + 1):
         try:
             cur = tickers_as_of(y, 1, 1)
         except NotImplementedError:
@@ -61,7 +62,7 @@ def first_join(ticker):
                     pass
             return f"{y}년"
         prev = cur
-    now = tickers_as_of(LAST_YEAR, 9, 1)
+    now = tickers_as_of(TODAY.year, TODAY.month, TODAY.day)
     return "미편입" if ticker not in now else "편입일 특정 실패"
 
 
@@ -71,8 +72,7 @@ def main():
     recent = [r for r in rows if r[2] not in ("2007년 이전부터", "미편입")
               and "특정 실패" not in r[2]]
     never = [r for r in rows if r[2] == "미편입"]
-    recent5y = [r for r in recent
-                if r[2].startswith(("2021", "2022", "2023", "2024", "2025", "2026"))]
+    recent5y = [r for r in recent if int(r[2][:4]) >= TODAY.year - 5]
 
     print(f"워치리스트 {len(rows)}종목 (지수 ETF 제외) · 나스닥100 편입 시점\n")
 

@@ -152,11 +152,11 @@ def main():
     if bench_cagr:
         print(f"  지수({bench}) 연평균 {bench_cagr:.1f}% · "
               f"이를 이긴 조합 {beat}/{len(results)}개 ({beat / len(results) * 100:.0f}%)")
-    print(f"\n  상위 5개 조합:")
+    print("\n  상위 5개 조합:")
     for k, v in ranked[:5]:
         print(f"    {k[0]:2d}개월 · 가중치 {k[1]:.1f} · 상위 {k[2]:2d} · {k[3]}개월교체"
               f"  연평균 {v[0]:5.1f}%")
-    print(f"  하위 3개 조합:")
+    print("  하위 3개 조합:")
     for k, v in ranked[-3:]:
         print(f"    {k[0]:2d}개월 · 가중치 {k[1]:.1f} · 상위 {k[2]:2d} · {k[3]}개월교체"
               f"  연평균 {v[0]:5.1f}%")

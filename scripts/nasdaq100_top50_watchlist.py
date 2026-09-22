@@ -20,7 +20,7 @@ import sys
 from datetime import date
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from fetch_data import WATCHLIST, make_session
+from fetch_data import WATCHLIST, WATCHLIST_N100, make_session
 
 import yfinance as yf
 
@@ -60,9 +60,10 @@ def main():
     top = [t for t, _ in ranked[:top_n]]
 
     cur = {t: n for t, n, th in WATCHLIST if th != "지수 ETF"}
+    rule = {t: n for t, n, th in WATCHLIST_N100}   # 규칙으로 들어온 종목만 제외 후보
     keep = [t for t in top if t in cur]
     add = [t for t in top if t not in cur]
-    drop = [t for t in cur if t not in top]
+    drop = [t for t in rule if t not in top]
 
     B = 1_000_000_000
     print(f"\n[시총 상위 {top_n} — 새 워치리스트] {len(top)}종목")
@@ -73,10 +74,10 @@ def main():
     print(f"\n[그대로 남는 종목] {len(keep)}개")
     print("  " + " ".join(sorted(keep)))
 
-    print(f"\n[빠지는 종목] {len(drop)}개 — 나스닥100 미편입이거나 시총 {top_n}위 밖")
+    print(f"\n[빠지는 종목] {len(drop)}개 — 규칙 편입분 중 나스닥100 미편입이거나 시총 {top_n}위 밖 (테마 종목은 대상 아님)")
     for t in sorted(drop):
-        reason = "나스닥100 미편입" if t not in members else "시총 50위 밖"
-        print(f"  {t:6s} {cur[t]:24s} {reason}")
+        reason = "나스닥100 미편입" if t not in members else f"시총 {top_n}위 밖"
+        print(f"  {t:6s} {rule[t]:24s} {reason}")
 
     print(f"\n[새로 들어오는 종목] {len(add)}개")
     print("  " + " ".join(sorted(add)))

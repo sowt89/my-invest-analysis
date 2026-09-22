@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """모멘텀 상위 N종목 전략 백테스트 — 앱이 실제로 쓰는 규칙을 그대로 재현한다.
 
-규칙 (fetch_data.py와 동일)
+규칙 (점수식은 fetch_data.py와 동일)
   점수 = 0.5 x (최근 1개월 제외 12개월 수익률) + 0.5 x (200일선 이격도)
   매월 말 상위 N종목을 균등보유하고 다음 달 말에 교체한다.
+  (앱의 실제 추적 기록은 매달 22일 교체다. 월봉 자료로 재현하므로 여기서는 월말을 쓴다.)
 
 비교 대상
   균등보유   : 그달 자격을 갖춘 전 종목 균등보유
@@ -21,7 +22,6 @@ import os
 import random
 import statistics as st
 import sys
-from collections import defaultdict
 
 import yfinance as yf
 

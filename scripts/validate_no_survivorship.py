@@ -27,7 +27,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from backtest_momentum import grow, load, mdd, run
+from backtest_momentum import MARKETS, grow, load, mdd, run
 from fetch_data import make_session
 
 BENCH = "QQQ"
@@ -42,10 +42,7 @@ UNIVERSE = [
     ("IWM", "미국 소형주"), ("EFA", "선진국(미국 제외)"),
     ("EEM", "신흥국"), ("TLT", "장기국채"), ("GLD", "금"), ("IYR", "리츠"),
 ]
-ERAS = [("2000-2007 닷컴버블·회복", "2000", "2008"),
-        ("2008-2013 금융위기·회복", "2008", "2014"),
-        ("2014-2019 강세장", "2014", "2020"),
-        ("2020-2026 코로나 이후", "2020", "2027")]
+ERAS = MARKETS["us"]["eras"]   # backtest_momentum.py와 같은 시대 구분
 
 
 def report(top_n, start):
@@ -62,7 +59,6 @@ def report(top_n, start):
         return
     print(f"평가 구간 {rows[0][0]} ~ {rows[-1][0]} · {len(rows)}개월\n")
 
-    import statistics as st
     names = ["모멘텀 상위 %d" % top_n, "균등보유(15개 전체)", "무작위 %d (대조군)" % top_n]
     series = [[r[1] for r in rows], [r[2] for r in rows], [r[3] for r in rows]]
     q = [r[4] for r in rows if r[4] is not None]
@@ -96,6 +92,6 @@ def report(top_n, start):
 
 
 if __name__ == "__main__":
-    top_n = int(sys.argv[1]) if len(sys.argv) > 1 else 3
+    top_n = int(sys.argv[1]) if len(sys.argv) > 1 else 5
     start = sys.argv[2] if len(sys.argv) > 2 else "2000"
     report(top_n, start)

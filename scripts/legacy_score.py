@@ -8,7 +8,6 @@
       FWD PER 괴리 · 어닝 서프라이즈 + 시장 타이밍 3개(SPY 낙폭 · VIX · F&G)
 """
 
-import math
 
 
 def pt_ret12(v):        # 1) 12개월 수익률 — 과열은 감점, 급락은 역발상 가점

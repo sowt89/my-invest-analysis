@@ -4,6 +4,7 @@
 yfinance로 워치리스트 71종목의 시세·1년 주가·재무·마진·컨센서스와
 시장지표(^VIX, ^IXIC, ^GSPC 52주 낙폭·국면, CNN Fear & Greed)를 수집해
 data.json으로 저장한다. QQQ 포함 72개 티커 중 지수 ETF는 순위에서 제외한다.
+인자 us|kr로 시장을 고른다. 한국은 WATCHLIST_KR·^KS11·data_kr.json을 쓴다(MARKETS 표).
 
 매매 판단은 모멘텀 횡단면 순위(모멘텀 + 200일선 이격도)를 기준으로 한다.
 모멘텀 = 최근 1개월을 제외한 12개월 수익률(12-1 모멘텀, 단기 반전 효과 제거).
@@ -15,7 +16,7 @@ data.json으로 저장한다. QQQ 포함 72개 티커 중 지수 ETF는 순위�
 실적·밸류·재무 3축 점수는 참고 지표다. SEC 원본 재무제표로 2010~2026년을
 검증한 결과 실적·재무 점수의 예측력은 확인되지 않았다
 (scripts/validate_axis_scores.py).
-역발상 10지표 종합 점수는 예측력이 음수로 측정돼 상세 탭 참고값으로만 남긴다.
+역발상 점수는 예측력이 음수로 측정돼 서비스에서 제거했다(재현: backtest_legacy.py).
 """
 
 import json
@@ -24,6 +25,7 @@ import os
 import sys
 import time
 import traceback
+from collections import Counter
 from datetime import datetime, timezone, timedelta
 
 import requests as std_requests
@@ -31,7 +33,7 @@ import yfinance as yf
 from curl_cffi import requests as curl_requests
 
 # ---------------------------------------------------------------- watchlist
-WATCHLIST = [
+WATCHLIST_THEME = [   # 사람이 고른 테마 종목 — 기계적 규칙으로 빼지 않는다
     ("QQQ", "NASDAQ 100", "지수 ETF"),  # TIGER 미국나스닥100 참고용
     ("NVDA", "NVIDIA", "매그니피센트7"),
     ("AAPL", "Apple", "매그니피센트7"),
@@ -73,11 +75,13 @@ WATCHLIST = [
     ("LMT", "Lockheed Martin", "산업재"),
     ("COIN", "Coinbase", "금융"),
     ("BRK-B", "Berkshire Hathaway", "금융"),
+]
 
-    # --- 나스닥100 시총 상위 50 규칙으로 편입 (nasdaq100_top50_watchlist.py)
-    # 사람이 "요즘 뜨는 회사"를 손으로 넣는 여지를 줄이려고 기계적으로 뽑는다.
-    # 위 테마 종목은 그대로 두고 상위 50에서 빠진 것만 더했다.
-    # GOOG는 GOOGL과 같은 회사(주식 클래스만 다름)라 순위 중복을 피해 제외한다.
+# 나스닥100 시총 상위 50 규칙으로 편입 (nasdaq100_top50_watchlist.py가 매주 점검)
+# 사람이 "요즘 뜨는 회사"를 손으로 넣는 여지를 줄이려고 기계적으로 뽑는다.
+# 테마 종목은 그대로 두고 상위 50 중 빠진 것만 더했다. 50위 밖으로 밀리면 여기서만 뺀다.
+# GOOG는 GOOGL과 같은 회사(주식 클래스만 다름)라 순위 중복을 피해 제외한다.
+WATCHLIST_N100 = [
     ("ASML", "ASML", "반도체"),
     ("AMAT", "Applied Materials", "반도체"),
     ("LRCX", "Lam Research", "반도체"),
@@ -110,6 +114,7 @@ WATCHLIST = [
     ("TMUS", "T-Mobile US", "커뮤니케이션"),
     ("LIN", "Linde", "산업재"),
 ]
+WATCHLIST = WATCHLIST_THEME + WATCHLIST_N100
 
 # 한국 시장 워치리스트 (yfinance 코드: .KS 코스피 / .KQ 코스닥)
 WATCHLIST_KR = [
@@ -273,7 +278,15 @@ def retry(fn, tries=3, delay=2.0, default=None):
 
 
 # ---------------------------------------------------------------- scoring rules
-# 9개 지표: 종목별 6개 + 시장 타이밍 3개(전 종목 공통 가산)
+# 3축 참고 점수(실적·밸류·재무). 예측력 미확인이라 백테스트 순위에는 쓰지 않는다.
+
+
+def margin_trend(d):
+    """영업이익률 방향(%p): 최근 분기 vs 1년 전 같은 분기. 자료 부족이면 None."""
+    qr, qo = d.get("qRev") or [], d.get("qOp") or []
+    if len(qr) >= 5 and qr[-1] and qr[-5] and qo[-1] is not None and qo[-5] is not None:
+        return (qo[-1] / qr[-1] - qo[-5] / qr[-5]) * 100
+    return None
 
 def growth_score(d):
     """실적 점수 (-7 ~ +8). 매출 성장·어닝 서프라이즈·마진 방향.
@@ -288,11 +301,7 @@ def growth_score(d):
     pts["surprise"] = 0 if sp is None else (1 if sp >= 10 else -2 if sp <= -10 else -1 if sp < 0 else 0)
     fg_ = d["est"][0].get("g") if d.get("est") else None
     pts["fwdGrowth"] = 0 if fg_ is None else (2 if fg_ >= 20 else 1 if fg_ >= 10 else -1 if fg_ < 0 else 0)
-    # 영업이익률 방향: 최근 분기 vs 1년 전 같은 분기
-    mt = None
-    qr, qo = d.get("qRev") or [], d.get("qOp") or []
-    if len(qr) >= 5 and qr[-1] and qr[-5] and qo[-1] is not None and qo[-5] is not None:
-        mt = (qo[-1] / qr[-1] - qo[-5] / qr[-5]) * 100
+    mt = margin_trend(d)
     pts["marginTrend"] = 0 if mt is None else (1 if mt >= 2 else -1 if mt <= -2 else 0)
     return sum(pts.values()), pts
 
@@ -417,7 +426,7 @@ def fetch_market(session, cfg):
 
 # ---------------------------------------------------------------- per stock
 def load_history():
-    """일별 FWD PER 스냅샷 {"YYYY-MM-DD": {"NVDA": 17.5, ...}}."""
+    """일별 스냅샷 {"YYYY-MM-DD": {"NVDA": {"per":.., "rank":.., "px":.., ...}, ...}}."""
     try:
         with open(HIST_PATH, encoding="utf-8") as f:
             return json.load(f)
@@ -428,10 +437,7 @@ def load_history():
 def score_inputs(d):
     """3축 점수의 원자료. 나중에 기준을 바꿔 재채점·예측력(IC) 측정을 하기 위해 함께 남긴다."""
     psr, apsr = d.get("psr"), d.get("avgPsr")
-    qr, qo = d.get("qRev") or [], d.get("qOp") or []
-    mt = None
-    if len(qr) >= 5 and qr[-1] and qr[-5] and qo[-1] is not None and qo[-5] is not None:
-        mt = rnd((qo[-1] / qr[-1] - qo[-5] / qr[-5]) * 100, 2)
+    mt = rnd(margin_trend(d), 2)
     rev = d.get("revG", [None] * 3)
     raw = {"yoy": rev[1], "cagr": rev[2], "sp": d.get("surprise"),
            "fwdG": d["est"][0].get("g") if d.get("est") else None, "mt": mt,
@@ -461,7 +467,7 @@ def archive_old(rows, prefix="history"):
 
 
 def save_history(hist, stocks):
-    """오늘 첫 실행에만 스냅샷을 추가하고 3년 초과분은 제거."""
+    """오늘 첫 실행(또는 순위·점수가 빠진 스냅샷)에 추가하고 3년 초과분은 제거."""
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     prev_today = hist.get(today)
     complete = lambda k: any(isinstance(r, dict) and r.get(k) is not None
@@ -628,19 +634,16 @@ def fetch_stock(session, ticker, name, theme, pit):
         raise RuntimeError("가격 정보 없음")
     price = float(price)
 
-    prices, price_dates, price_dates_5y = [], [], []
+    prices, price_dates, dates5 = [], [], []
     ret12 = dd = ytd = None
     avg5y_px = None
-    closes5_all = closes_of(h5)
-    if len(closes5_all) > 5:
-        closes5 = closes5_all
+    closes5 = closes_of(h5)   # 주봉 종가 5년 (미확정 봉 제외)
+    if len(closes5) > 5:
         dates5 = [d.strftime("%Y-%m-%d") for d, x in zip(h5.index, h5["Close"]) if x == x]
-        price_dates_5y = dates5
         n1y = min(53, len(closes5))
         prices = [rnd(x, 2) for x in closes5[-n1y:]]
         price_dates = dates5[-n1y:]
-        if len(closes5) > n1y - 1:
-            ret12 = (price / closes5[-n1y] - 1) * 100
+        ret12 = (price / closes5[-n1y] - 1) * 100
         hi52 = max(closes5[-n1y:] + [price])
         dd = (price / hi52 - 1) * 100
         year = datetime.now(timezone.utc).year
@@ -649,7 +652,7 @@ def fetch_stock(session, ticker, name, theme, pit):
             ytd = (price / ytd_base - 1) * 100
         avg5y_px = sum(closes5) / len(closes5)
 
-    wk = closes5_all   # 주봉 종가 (미확정 봉 제외)
+    wk = closes5
     above_ma200 = mom12_1 = ma200_dist = None
     if len(wk) >= 40:
         ma200 = sum(wk[-40:]) / 40            # 주봉 40주 ≈ 200거래일
@@ -689,9 +692,9 @@ def fetch_stock(session, ticker, name, theme, pit):
     last_sh = next((adj_shares(r, splits) for r in reversed(pit_rows) if r.get("sh")), None)
     shares_ok = not (mcap and last_sh) or abs(price * last_sh / mcap - 1) <= 0.3
     if shares_ok:
-        trail_per_avg, trail_per = sec_multiple(pit_rows, price_dates_5y, closes5_all,
+        trail_per_avg, trail_per = sec_multiple(pit_rows, dates5, closes5,
                                                 "niTtm", weeks=157, splits=splits)
-        avg_psr, psr_now = sec_multiple(pit_rows, price_dates_5y, closes5_all,
+        avg_psr, psr_now = sec_multiple(pit_rows, dates5, closes5,
                                         "revTtm", splits=splits)
     else:
         trail_per_avg = trail_per = avg_psr = psr_now = None
@@ -710,6 +713,8 @@ def fetch_stock(session, ticker, name, theme, pit):
     short_ratio = info.get("shortRatio")
 
     pct100 = lambda v: None if v is None else v * 100
+    to_b = lambda vals: [rnd(v / B, 2) if v is not None else None for v in vals]
+    de = info.get("debtToEquity")
     d = {
         "ret12": rnd(ret12, 1), "dd": rnd(dd, 1), "rsi": rnd(rsi, 1),
         "shortR": rnd(short_ratio, 2), "volCh": rnd(vol_ch, 1),
@@ -727,7 +732,7 @@ def fetch_stock(session, ticker, name, theme, pit):
         "fcfM": rnd(pct100(fcf / total_rev) if (fcf and total_rev) else None, 1),
         "curR": rnd(info.get("currentRatio"), 2),
         "quickR": rnd(info.get("quickRatio"), 2),
-        "ltDE": rnd((info.get("debtToEquity") or 0) / 100 or None, 2),  # yfinance debtToEquity = 총부채/자기자본
+        "ltDE": rnd(de / 100 if de else None, 2),  # yfinance debtToEquity = 총부채/자기자본
         "prices": prices, "priceDates": price_dates,
         "mom12_1": rnd(mom12_1, 1), "ma200Dist": rnd(ma200_dist, 1),
     }
@@ -744,9 +749,8 @@ def fetch_stock(session, ticker, name, theme, pit):
         op = pick_row(qi, ["Operating Income", "Total Operating Income As Reported", "EBIT"])
         if rev is not None:
             d["qLabels"] = [f"{c.year % 100}Q{(c.month - 1) // 3 + 1}" for c in cols]
-            d["qRev"] = [rnd(v / B, 2) if v is not None else None for v in series_vals(rev, cols)]
-            d["qOp"] = ([rnd(v / B, 2) if v is not None else None for v in series_vals(op, cols)]
-                        if op is not None else [None] * len(cols))
+            d["qRev"] = to_b(series_vals(rev, cols))
+            d["qOp"] = to_b(series_vals(op, cols)) if op is not None else [None] * len(cols)
 
     yi = retry(lambda: tk.income_stmt)
     cf = retry(lambda: tk.cashflow)
@@ -760,10 +764,9 @@ def fetch_stock(session, ticker, name, theme, pit):
         if rev is not None:
             d["yrs"] = [f"FY{c.year % 100}" for c in cols]
             rev_hist = series_vals(rev, cols)
-            d["yRev"] = [rnd(v / B, 2) if v is not None else None for v in rev_hist]
+            d["yRev"] = to_b(rev_hist)
             for key, row in (("yOcf", ocf), ("yCapex", capex)):
-                d[key] = ([rnd(v / B, 2) if v is not None else None for v in series_vals(row, cols)]
-                          if row is not None else [None] * len(cols))
+                d[key] = to_b(series_vals(row, cols)) if row is not None else [None] * len(cols)
 
     # 매출 성장률: [최근-2 YoY, 최근 YoY, 3Y CAGR]
     d["revG"] = [None, None, None]
@@ -844,7 +847,7 @@ def fetch_stock(session, ticker, name, theme, pit):
     fscore = finance_score(d)[0]
 
     if d["gap"] is not None:
-        cmt = (f"{name}의 FWD PER은 3년 평균 대비 {abs(d['gap']):.1f}% "
+        cmt = (f"{name}의 PER(최근 4분기)은 3년 평균 대비 {abs(d['gap']):.1f}% "
                f"{'낮은' if d['gap'] < 0 else '높은'} 수준입니다.")
     elif fwd_per_negative:
         cmt = f"{name}은(는) 예상 EPS가 음수여서 FWD PER을 산출할 수 없습니다."
@@ -906,7 +909,7 @@ def main():
         time.sleep(0.5)
 
     if len(stocks) < len(watchlist) * 0.6:
-        print(f"오류: 성공 종목이 {len(stocks)}개뿐이라 data.json을 갱신하지 않습니다.")
+        print(f"오류: 성공 종목이 {len(stocks)}개뿐이라 {cfg['out']}을 갱신하지 않습니다.")
         sys.exit(1)
 
     # 시장 국면은 fetch_market의 20% 규칙(swing_regime)이 정한다. 200일선과 시장 폭은
@@ -931,9 +934,8 @@ def main():
         # 백테스트 검증 구간: 상위 5종목 보유 · 월 1회 교체
         x["mom_band"] = "상위 5" if r <= 5 else ("6~15위" if r <= 15 else "16위↓")
 
-    top5 = [x for x in ranked[:5]]
+    top5 = ranked[:5]
     if top5:
-        from collections import Counter
         theme_cnt = Counter(x["theme"] for x in top5)
         top_theme, top_n = theme_cnt.most_common(1)[0]
         market["top5_theme"] = top_theme
@@ -943,7 +945,7 @@ def main():
     payload = {
         "updated_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated_at_kst": (now + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M"),
-        "source": "yfinance + CNN Fear & Greed",
+        "source": "yfinance + CNN Fear & Greed" if cfg["fear_greed"] else "yfinance",
         "market": market,
         "stocks": stocks,
         "failed_tickers": failed,
