@@ -691,6 +691,8 @@ def fetch_stock(session, ticker, name, theme, pit):
     # 어긋나기 때문이다 (리노공업은 야후 매출이 공시 실적의 1/3 수준).
     last_sh = next((adj_shares(r, splits) for r in reversed(pit_rows) if r.get("sh")), None)
     shares_ok = not (mcap and last_sh) or abs(price * last_sh / mcap - 1) <= 0.3
+    if not mcap and last_sh:            # 야후에 시총이 없으면(한국전력·엘앤에프) 보고서 주식수로 계산
+        mcap = price * last_sh
     if shares_ok:
         trail_per_avg, trail_per = sec_multiple(pit_rows, dates5, closes5,
                                                 "niTtm", weeks=157, splits=splits)
