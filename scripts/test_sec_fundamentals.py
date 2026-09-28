@@ -169,6 +169,17 @@ order = SF.richest(merged, ["NetIncomeLoss", "ProfitLoss"])
 check("관측 많은 태그가 앞", order[0], "ProfitLoss")
 check("없는 태그는 뒤로", SF.richest(merged, ["없는태그", "NetIncomeLoss"])[0], "NetIncomeLoss")
 
+print("\n12-1) 매출 태그가 도중에 끊긴 회사(JPM) — 순이익 기준으로 행이 이어진다")
+rev_q = quarters("Revenues", 10)["Revenues"]["units"]["USD"][:4]            # 매출은 첫 4분기까지만
+ni_q = quarters("NetIncomeLoss", 5)["NetIncomeLoss"]["units"]["USD"]          # 순이익은 8분기 전부
+_fl = {"rev": quarterly(collect({"Revenues": {"units": {"USD": rev_q}}}, ["Revenues"], False)),
+       "ni": quarterly(collect({"NetIncomeLoss": {"units": {"USD": ni_q}}}, ["NetIncomeLoss"], False)),
+       "op": {}, "cfo": {}, "capex": {}}
+_rows = SF.assemble(_fl, {"eq": {}, "ca": {}, "cl": {}, "ltd": {}}, {})
+check("순이익이 이어지는 동안 행이 계속 생성", len(_rows), 5)
+check("끊긴 매출은 오래된 4분기를 재사용하지 않음(None)", _rows[-1]["revTtm"], None)
+check("마지막 행의 순이익 TTM (25+30+35+40)", _rows[-1]["niTtm"], 130.0)
+
 print("\n13) 배수 계산(fetch_data.sec_multiple) — 최신 적자면 현재값 없음, 분모 0 근처는 제외")
 import datetime as _dt
 import fetch_data as FD
