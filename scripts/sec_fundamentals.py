@@ -173,8 +173,12 @@ def assemble(flows, inst, shares):
     rows, seen = [], set()
     for f in filings:
         rev, rend = ttm_at(flows["rev"], f)
-        if rev is None:                       # 매출 계정이 없는 금융회사는 순이익 기준
-            rend = ttm_at(flows["ni"], f)[1]
+        ni_end = ttm_at(flows["ni"], f)[1]
+        # 매출 계정이 없거나(금융회사) 도중에 끊긴 회사(JPM은 Revenues 태그가 2015년에
+        # 멈춤)는 순이익 기준으로 행을 만든다. 끊긴 매출은 오래된 4분기를 재사용하지 않는다.
+        if rev is None or (ni_end and rend and ni_end > rend):
+            rend = ni_end
+            rev = ttm_at(flows["rev"], f, rend)[0]
         if rend is None or rend in seen:
             continue
         seen.add(rend)
