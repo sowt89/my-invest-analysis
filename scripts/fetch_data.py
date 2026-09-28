@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """나만의 투자분석 — 실데이터 수집 스크립트.
 
-yfinance로 워치리스트 65종목의 시세·1년 주가·재무·마진·컨센서스와
+yfinance로 워치리스트 82종목의 시세·1년 주가·재무·마진·컨센서스와
 시장지표(^VIX, ^IXIC, ^GSPC 52주 낙폭·국면, CNN Fear & Greed)를 수집해
-data.json으로 저장한다. QQQ 포함 66개 티커 중 지수 ETF는 순위에서 제외한다.
+data.json으로 저장한다. QQQ 포함 83개 티커 중 지수 ETF는 순위에서 제외한다.
 인자 us|kr로 시장을 고른다. 한국은 WATCHLIST_KR·^KS11·data_kr.json을 쓴다(MARKETS 표).
 
 매매 판단은 모멘텀 횡단면 순위(모멘텀 + 200일선 이격도)를 기준으로 한다.
@@ -77,25 +77,42 @@ WATCHLIST_THEME = [   # 사람이 고른 테마 종목 — 기계적 규칙으�
     ("BRK-B", "Berkshire Hathaway", "금융"),
 ]
 
-# 지수 시총 상위 30 규칙으로 편입 (index_top_watchlist.py가 매주 점검)
+# 지수 시총 상위 규칙으로 편입 (index_top_watchlist.py가 매주 점검)
 # 사람이 "요즘 뜨는 회사"를 손으로 넣는 여지를 줄이려고 기계적으로 뽑는다.
-# 테마 종목은 그대로 두고 상위 30 중 빠진 것만 더한다. 30위 밖으로 밀리면 여기서만 뺀다.
+# 테마 종목은 그대로 두고 상위권 중 빠진 것만 더한다. 순위 밖으로 밀리면 여기서만 뺀다.
 # 같은 회사의 다른 주식 클래스(GOOG/GOOGL)는 하나로 세고 순위를 매긴다.
-WATCHLIST_N100 = [   # 나스닥100 시총 상위 30 (2026-09-28 기준)
+WATCHLIST_N100 = [   # 나스닥100 시총 상위 50 (2026-09-28 기준)
     ("ASML", "ASML", "반도체"),
     ("AMAT", "Applied Materials", "반도체"),
     ("LRCX", "Lam Research", "반도체"),
     ("KLAC", "KLA", "반도체"),
     ("TXN", "Texas Instruments", "반도체"),
+    ("ADI", "Analog Devices", "반도체"),
     ("MRVL", "Marvell Technology", "반도체"),
     ("SNDK", "SanDisk", "반도체"),
     ("STX", "Seagate Technology", "반도체"),
+    ("WDC", "Western Digital", "반도체"),
     ("PANW", "Palo Alto Networks", "SW 주식"),
     ("CRWD", "CrowdStrike", "SW 주식"),
+    ("FTNT", "Fortinet", "SW 주식"),
+    ("ADBE", "Adobe", "SW 주식"),
+    ("SHOP", "Shopify", "SW 주식"),
+    ("APP", "AppLovin", "SW 주식"),
+    ("ADP", "Automatic Data Processing", "SW 주식"),
+    ("DDOG", "Datadog", "SW 주식"),
     ("CSCO", "Cisco Systems", "기술"),
+    ("BKNG", "Booking Holdings", "기술"),
+    ("ABNB", "Airbnb", "기술"),
+    ("PDD", "PDD Holdings", "기술"),
     ("AMGN", "Amgen", "헬스케어"),
+    ("GILD", "Gilead Sciences", "헬스케어"),
+    ("VRTX", "Vertex Pharmaceuticals", "헬스케어"),
     ("WMT", "Walmart", "소비재"),
     ("COST", "Costco", "소비재"),
+    ("PEP", "PepsiCo", "소비재"),
+    ("SBUX", "Starbucks", "소비재"),
+    ("MAR", "Marriott International", "소비재"),
+    ("TMUS", "T-Mobile US", "커뮤니케이션"),
     ("LIN", "Linde", "산업재"),
 ]
 WATCHLIST_SPX = [    # S&P500 시총 상위 30 중 위 두 목록에 없는 종목 (2026-09-28 기준)
