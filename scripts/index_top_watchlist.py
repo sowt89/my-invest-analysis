@@ -5,7 +5,7 @@
 들어오면 편입. 사람이 "요즘 뜨는 회사"를 손으로 넣는 여지를 없애 워치리스트에
 사후 지식이 쌓이는 것을 막는 것이 목적이다. 테마 종목은 이 규칙의 대상이 아니다.
 
-  나스닥100 상위 30 → fetch_data.WATCHLIST_N100
+  나스닥100 상위 50 → fetch_data.WATCHLIST_N100
   S&P500  상위 30 → fetch_data.WATCHLIST_SPX  (나스닥 목록과 겹치는 종목은 나스닥 쪽에만 둔다)
 
 주식 클래스가 둘인 회사(GOOG/GOOGL 등)는 하나로 세고 순위를 매긴다.
@@ -18,7 +18,7 @@
 
 구성종목 출처: 나스닥100은 n100tickers(편입·편출 이력), S&P500은 datasets/s-and-p-500-companies(현재 목록).
 설치: pip install strictyaml "git+https://github.com/jmccarrell/n100tickers.git"
-사용: python3 scripts/index_top_watchlist.py [nasdaq100|sp500|all] [상위N]
+사용: python3 scripts/index_top_watchlist.py [nasdaq100|sp500|all] [상위N]   (all이면 나스닥 50 · S&P 30)
 """
 
 import csv
@@ -36,7 +36,7 @@ import yfinance as yf
 
 SP500_CSV = "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/main/data/constituents.csv"
 DUP_CLASS = {"GOOG": "GOOGL", "FOX": "FOXA", "NWS": "NWSA"}   # 같은 회사의 다른 주식 클래스
-RULE = {"nasdaq100": ("나스닥100", WATCHLIST_N100), "sp500": ("S&P500", WATCHLIST_SPX)}
+RULE = {"nasdaq100": ("나스닥100", WATCHLIST_N100, 50), "sp500": ("S&P500", WATCHLIST_SPX, 30)}
 
 
 def members_of(index):
@@ -65,7 +65,7 @@ def market_caps(session, tickers):
 
 
 def report(index, top_n, session):
-    label, rule_list = RULE[index]
+    label, rule_list, _ = RULE[index]
     members = members_of(index)
     members = {t for t in members if DUP_CLASS.get(t) not in members}   # 클래스 중복은 하나만
     print(f"\n{'=' * 60}\n{label} 구성종목 {len(members)}개 ({date.today()}) · 시총 상위 {top_n} 추출")
@@ -92,10 +92,10 @@ def report(index, top_n, session):
 
 def main():
     which = sys.argv[1] if len(sys.argv) > 1 else "all"
-    top_n = int(sys.argv[2]) if len(sys.argv) > 2 else 30
+    top_n = int(sys.argv[2]) if len(sys.argv) > 2 else None
     session = make_session()
     for index in (RULE if which == "all" else [which]):
-        report(index, top_n, session)
+        report(index, top_n or RULE[index][2], session)
     print("\n※ 이 규칙은 과거 백테스트로 검증할 수 없다(문서 참고). 성과 개선이 아니라")
     print("  워치리스트에 사후 판단이 끼어드는 것을 막는 절차적 장치다.")
 
