@@ -453,7 +453,7 @@ svg text{font-family:inherit}
     <tr><th>출처</th><th class="num">갱신</th></tr>
     <tr><td>Yahoo Finance<span class="sub">시세 · 재무 · 실적 · 컨센서스</span></td><td class="num">장중 30분</td></tr>
     <tr><td>CNN Fear &amp; Greed<span class="sub">시장 심리</span></td><td class="num">장중 30분</td></tr>
-    <tr><td>Finnhub<span class="sub">실시간 현재가 · 미국만</span></td><td class="num">장중 60초</td></tr>
+    <tr><td>Finnhub<span class="sub">실시간 현재가 · 미국만</span></td><td class="num">장중 90초</td></tr>
     <tr><td>SEC EDGAR<span class="sub">미국 공시 원본 재무 (PER·PSR 실측)</span></td><td class="num">주 1회</td></tr>
     <tr><td>DART<span class="sub">한국 공시 원본 재무 (PER·PSR 실측)</span></td><td class="num">주 1회</td></tr>
   </table>
@@ -1046,7 +1046,7 @@ function updateStatus(){
     const canLive=MARKET.liveQuote!==false;
     let t=`실데이터 · 업데이트 ${META.updated} KST`;
     if(!canLive)t+=' · 장중 30분 간격 갱신';
-    else if(finnKey())t+=lastQuote?` · 실시간 시세 ${lastQuote.getHours().toString().padStart(2,'0')}:${lastQuote.getMinutes().toString().padStart(2,'0')}`:' · 실시간 시세 연결 중…';
+    else if(finnKey())t+=lastQuote?` · 실시간 시세 ${lastQuote.getHours().toString().padStart(2,'0')}:${lastQuote.getMinutes().toString().padStart(2,'0')}`:liveError?` · 실시간 시세 ${liveError}`:' · 실시간 시세 연결 중…';
     else t+=' · 우측 상단 ⚙에서 무료 Finnhub 키 등록 시 실시간 시세';
     el.textContent=t;
     note.innerHTML=`※ 모멘텀 = 최근 1개월 제외 1년 수익률 + 200일선 이격도 (반반)<br>
@@ -1060,13 +1060,13 @@ function updateStatus(){
 
 /* ============ 실시간 시세 (Finnhub REST, CORS 지원) ============
    무료 키(finnhub.io)를 ⚙ 버튼 또는 ?finnhub=KEY 로 등록하면
-   미국 장중 60초 / 장외 10분 주기로 현재가를 갱신한다.
+   미국 장중 90초 / 장외 10분 주기로 현재가를 갱신한다 (무료 한도 분당 60회 안).
    키는 localStorage에만 저장되고 저장소에는 커밋되지 않는다. */
 const FINN_MAP={'BRK-B':'BRK.B'};
 /* 아래에 키를 넣으면 모든 방문자에게 기본 적용된다 (공개 저장소이므로 키도 공개됨에 유의).
    ⚙ 버튼이나 ?finnhub=KEY 로 등록한 개인 키가 있으면 그쪽이 우선. */
 const DEFAULT_FINN_KEY='d9uk1upr01qs9cmd5ic0d9uk1upr01qs9cmd5icg';
-let liveTimer=null,lastQuote=null,lastFetchMs=0,liveBusy=false;
+let liveTimer=null,lastQuote=null,lastFetchMs=0,liveBusy=false,liveError=null;
 function finnKey(){try{return localStorage.getItem('finnhub_key')||DEFAULT_FINN_KEY}catch(e){return DEFAULT_FINN_KEY}}
 function setFinnKey(){
   const k=prompt('Finnhub API 키를 입력하세요 (finnhub.io 무료 발급 · 비우고 확인하면 해제):',finnKey());
@@ -1085,15 +1085,17 @@ function usMarketOpen(){
 async function refreshQuotes(force){
   const key=finnKey();
   if(!key||liveBusy)return;
-  const gapMs=usMarketOpen()?55000:590000; /* 장중 60초 · 장외 10분 */
+  /* Finnhub 무료 한도: 분당 60회 · 초당 30회. 종목이 83개라 장중 90초 간격으로 돌리고
+     (83회/90초 ≈ 55회/분), 한 번에 20개씩 나눠 보낸다. 장외는 10분 간격. */
+  const gapMs=usMarketOpen()?85000:590000;
   if(!force&&Date.now()-lastFetchMs<gapMs)return;
   liveBusy=true;lastFetchMs=Date.now();
-  let ok=0;
-  await Promise.all(STOCKS.map(async s=>{
+  let ok=0;const status={};
+  const one=async s=>{
     try{
       const sym=FINN_MAP[s.t]||s.t;
       const r=await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(sym)}&token=${encodeURIComponent(key)}`);
-      if(!r.ok)return;
+      if(!r.ok){status[r.status]=(status[r.status]||0)+1;return}
       const q=await r.json();
       if(q&&q.c>0&&s.p>0){
         const ratio=q.c/s.p;
@@ -1101,10 +1103,19 @@ async function refreshQuotes(force){
         if(s.ytd!=null)s.ytd=Math.round(((1+s.ytd/100)*ratio-1)*1000)/10;
         s.p=Math.round(q.c*100)/100;s.dp=(q.dp==null?s.dp:Math.round(q.dp*10)/10);ok++;
       }
-    }catch(e){}
-  }));
+    }catch(e){status.net=(status.net||0)+1}
+  };
+  for(let i=0;i<STOCKS.length;i+=20){
+    await Promise.all(STOCKS.slice(i,i+20).map(one));
+    if(i+20<STOCKS.length)await new Promise(r=>setTimeout(r,1100));
+  }
   liveBusy=false;
-  if(ok){lastQuote=new Date();rerenderLive()}
+  if(ok){liveError=null;lastQuote=new Date();rerenderLive()}
+  else{
+    /* 전부 실패한 이유를 상태줄에 보여준다 — '연결 중'으로 영원히 남지 않게 */
+    liveError=status[401]||status[403]?'키 오류 (⚙에서 확인)':status[429]?'요청 한도 초과 · 잠시 후 재시도':'연결 실패';
+    updateStatus();
+  }
 }
 function rerenderLive(){
   /* 필터 유지한 채 보드·비교 테이블 갱신, 상세 탭은 가격 텍스트만 교체(차트 깜빡임 방지) */
