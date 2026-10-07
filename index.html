@@ -278,7 +278,7 @@ svg text{font-family:inherit}
     <tr><td>🇺🇸 미국</td><td>50종목 + QQQ<span class="sub">실시간 시세 · SEC 원본 재무로 PER·PSR 실측</span></td></tr>
     <tr><td>🇰🇷 한국</td><td>50종목 + KODEX 200<span class="sub">30분 간격 시세 · DART 원본 재무로 PER·PSR 실측</span></td></tr>
   </table>
-  <p style="font-size:.78rem;color:var(--ink3)">순위 규칙과 점수 계산은 두 시장이 동일합니다. 한국은 변동성지수(VKOSPI)와 공포·탐욕 지수가 없어 원/달러 환율로 대체합니다. 백테스트는 두 시장 모두 수행했습니다(5번 항목 · 미국 1996년~, 한국 2001년~).</p>
+  <p style="font-size:.78rem;color:var(--ink3)">순위 규칙과 점수 계산은 두 시장이 동일합니다. 한국은 변동성지수(VKOSPI)와 공포·탐욕 지수가 없어 원/달러 환율로 대체합니다.</p>
   <p style="font-size:.78rem;color:var(--ink3)"><b>관심종목 구성</b> — 두 시장 모두 <b>지수 시가총액 상위 50</b>만 봅니다(미국 나스닥100 · 한국 코스피 200). 지수에서 빠지거나 50위 밖으로 밀리면 제외, 안에 들어오면 편입하며 모멘텀 순위도 이 50종목 안에서 매깁니다. 사람이 "요즘 뜨는 회사"를 손으로 넣어 목록이 한쪽으로 쏠리는 것을 막기 위한 장치입니다. 주 1회 점검 결과를 보고 사람이 반영하며 자동 교체는 하지 않습니다.</p>
 
   <h3>화면 구성</h3>
@@ -296,11 +296,11 @@ svg text{font-family:inherit}
     <tr><td>200일선 이격도</td><td>(현재가 ÷ 200일 평균 − 1) × 100<span class="sub">추세 생존 여부</span></td></tr>
   </table>
   <table><colgroup><col class="c-ind"><col></colgroup>
-    <tr><td>1~5위</td><td>상위 5 <span class="sub">보유 대상 · 백테스트 검증 구간</span></td></tr>
+    <tr><td>1~5위</td><td>상위 5 <span class="sub">보유 대상</span></td></tr>
     <tr><td>6~15위</td><td>6~15위 <span class="sub">상위 5 근접</span></td></tr>
     <tr><td>16위~</td><td>16위↓</td></tr>
   </table>
-  <p style="font-size:.78rem;color:var(--ink3)">지수 ETF는 순위 제외 · 교체는 월 평균 1종목 (30년 백테스트 기준)</p>
+  <p style="font-size:.78rem;color:var(--ink3)">지수 ETF는 순위 제외 · 보유 종목은 매달 22일에만 교체</p>
   <table><colgroup><col class="c-ind"><col></colgroup>
     <tr><td>▲3 / ▼2</td><td>약 한 달 전 대비 순위 상승 / 하락</td></tr>
     <tr><td>NEW</td><td>비교 기록 없음 (누적 시작 후 표시)</td></tr>
@@ -314,7 +314,7 @@ svg text{font-family:inherit}
     <tr><td>미반영</td><td>거래비용 · 세금 · 환율</td></tr>
     <tr><td>판단 가능 시점</td><td>최소 1년 이상 누적 후</td></tr>
   </table>
-  <p style="font-size:.78rem;color:var(--ink3)">백테스트는 이미 살아남은 종목으로 계산해 부풀려져 있습니다. 이 기록은 그 편향이 없는 유일한 성과 자료가 됩니다.</p>
+  <p style="font-size:.78rem;color:var(--ink3)">관심종목 백테스트는 오늘의 승자 목록으로 과거를 돌리는 셈이라 싣지 않습니다. 이 기록이 편향 없는 유일한 성과 자료입니다.</p>
 
   <h3>3. 시장 국면</h3>
   <p>지수가 <b>직전 고점에서 20% 빠지면 하락장</b>, <b>직전 저점에서 20% 오르면 상승장</b>으로 봅니다. 학계에서 쓰는 Lunde-Timmermann(2004)의 20% 기준을, 미래를 쓰지 않고 오늘 시점에서 계산할 수 있게 옮긴 것입니다. 기준 지수는 미국 S&amp;P500 · 한국 KOSPI입니다.</p>
@@ -384,71 +384,25 @@ svg text{font-family:inherit}
   이익·매출이 0에 가까워 배수가 튀는 구간(PER 200배·PSR 100배 초과)도 제외하며, 최신 분기가 적자면 현재 PER을 비워 둡니다.<br>
   FWD PER(예상 실적 기준)은 참고로만 표시하고 점수에는 쓰지 않습니다. 컨센서스의 과거값을 구할 수 없어 3년 평균을 만들 수 없기 때문입니다.</p>
 
-  <h3>5. 검증 근거</h3>
-  <p>관심종목(지수 시총 상위 50)으로 야후가 주는 가장 긴 구간을 돌렸습니다. 월말 교체 · 거래비용·세금 미반영 · <code>backtest_momentum.py</code>로 재현</p>
-  <p style="margin-bottom:2px"><b>미국</b> · 1996~2026년 · 369개월 · 닷컴버블 · 금융위기 포함</p>
-  <table><colgroup><col><col style="width:24%"><col style="width:22%"></colgroup>
-    <tr><th>방식</th><th class="num">연평균</th><th class="num">최대낙폭</th></tr>
-    <tr><td>모멘텀 상위 5종목</td><td class="num">44.0%</td><td class="num">-66%</td></tr>
-    <tr><td>전 종목 균등보유</td><td class="num">26.0%</td><td class="num">-47%</td></tr>
-    <tr><td>무작위 5종목 (대조군)</td><td class="num">25.8%</td><td class="num">-48%</td></tr>
-    <tr><td>QQQ 매수 후 보유<span class="sub">1999년~</span></td><td class="num">10.8%</td><td class="num">-81%</td></tr>
-  </table>
-  <p style="margin:14px 0 2px"><b>한국</b> · 2001~2026년 · 310개월</p>
-  <table><colgroup><col><col style="width:24%"><col style="width:22%"></colgroup>
-    <tr><th>방식</th><th class="num">연평균</th><th class="num">최대낙폭</th></tr>
-    <tr><td>모멘텀 상위 5종목</td><td class="num">36.4%</td><td class="num">-46%</td></tr>
-    <tr><td>전 종목 균등보유</td><td class="num">22.1%</td><td class="num">-42%</td></tr>
-    <tr><td>무작위 5종목 (대조군)</td><td class="num">21.7%</td><td class="num">-42%</td></tr>
-    <tr><td>KODEX 200 매수 후 보유<span class="sub">2010년~</span></td><td class="num">12.2%</td><td class="num">-34%</td></tr>
-  </table>
-  <p style="margin:14px 0 2px">시대별 균등보유 대비</p>
-  <table><colgroup><col><col style="width:24%"><col style="width:24%"></colgroup>
-    <tr><th>시대</th><th class="num">미국</th><th class="num">한국</th></tr>
-    <tr><td>2000-2007 닷컴</td><td class="num">1.47배</td><td class="num">—</td></tr>
-    <tr><td>2008-2013 금융위기</td><td class="num">1.54배</td><td class="num">1.21배</td></tr>
-    <tr><td>2014-2019 강세장</td><td class="num">2.73배</td><td class="num">1.89배</td></tr>
-    <tr><td>2020-2026 코로나 이후</td><td class="num">3.99배</td><td class="num">4.25배</td></tr>
-  </table>
-  <ul>
-    <li>무작위 대조군이 균등보유와 같음 → 집중 효과가 아닌 <b>선택 능력</b></li>
-    <li>월 초과수익(모멘텀 − 균등보유) 평균 미국 +1.4%p · 한국 +1.3%p, t값 4.0 · 3.4 — 우연으로 보기 어려움</li>
-    <li>연도별 승률 미국 21/31년 · 한국 21/26년. 4년에 한 번은 1년 내내 균등보유에 뒤짐</li>
-    <li>우위가 2020년 이후 반도체·AI 랠리에 쏠려 있음 — 평시 우위는 1.2~2.7배</li>
-  </ul>
-  <p style="margin:14px 0 2px"><b>생존 편향</b> · 백테스트는 2026년 10월 시점의 시총 상위 50을 고정해 과거로 돌린 것입니다. 1996년에는 이 50개를 알 수 없었고(델·야후·월드컴은 없고 엔비디아·팔란티어는 있음), 목록을 균등보유만 해도 연 26%가 나오는 이유가 그것입니다. 절대 수익률과 지수 대비 격차는 믿을 수 없고, <b>같은 목록 안에서 균등보유·무작위 대비 우위</b>만 읽어야 합니다. 매 시점의 실제 상위 50으로 돌리는 올바른 백테스트는 상장폐지 종목의 과거 주가를 야후가 제공하지 않아 불가능합니다. 편향 없는 성과 자료는 2번 항목의 전략 vs 지수 기록뿐입니다.</p>
-  <p style="margin:14px 0 2px"><b>생존 편향 없는 재검증</b> · 상장폐지되지 않는 자산군 ETF 15개(섹터·소형주·해외·채권·금·리츠, 1998~2004년 상장)로 같은 규칙을 시험했습니다.</p>
+  <h3>5. 근거</h3>
+  <p><b>학계에서 검증된 규칙</b> · "최근 1개월을 뺀 12개월 수익률"로 고르는 방식은 Jegadeesh·Titman(1993) 이후 여러 나라·시기에서 반복 확인된 현상입니다. 여기에 200일선 이격도를 반반 섞어 추세가 살아 있는지 봅니다.</p>
+  <p><b>관심종목 백테스트는 싣지 않습니다</b> · 지금 목록은 지난 수십 년간 가장 성장한 회사들이라, 고정해서 과거로 돌리면 어떤 규칙이든 좋게 나옵니다. 매 시점의 실제 상위 50으로 돌리는 올바른 백테스트는 상장폐지 종목의 과거 주가가 없어 만들 수 없습니다. 편향 없는 자료는 2번 항목의 전략 vs 지수 기록뿐입니다.</p>
+  <p style="margin:14px 0 2px"><b>생존 편향 없는 유니버스로 확인한 것</b> · 상장폐지되지 않는 자산군 ETF 15개(섹터·소형주·해외·채권·금·리츠, 1998~2004년 상장)로 같은 규칙을 시험했습니다. <code>validate_no_survivorship.py</code>로 재현.</p>
   <table><colgroup><col><col style="width:24%"><col style="width:22%"></colgroup>
     <tr><th>방식 (상위 5/15, 2001~2026)</th><th class="num">최종</th><th class="num">연평균</th></tr>
     <tr><td>모멘텀 상위 5</td><td class="num">13.0배</td><td class="num">10.7%</td></tr>
     <tr><td>균등보유 (15개 전체)</td><td class="num">8.4배</td><td class="num">8.7%</td></tr>
     <tr><td>무작위 5 (대조군)</td><td class="num">8.6배</td><td class="num">8.9%</td></tr>
   </table>
-  <p style="font-size:.78rem;color:var(--ink3)">균등보유 대비 1.56배(연 2%p) 우위 — 모멘텀 효과 자체는 생존 편향의 산물이 아닙니다. 다만 이 우위는 관심종목 결과(미국 61배 · 한국 18배)보다 훨씬 작습니다. 확인한 것은 "우위의 존재"이지 "우위의 크기"가 아닙니다.</p>
-  <p style="margin:14px 0 2px"><b>설정을 바꿔도 유지되는가</b> · 모멘텀 기간·가중치·보유 종목 수·교체 주기를 바꾼 <b>180개 조합</b>을 모두 돌렸습니다.</p>
-  <table><colgroup><col style="width:44%"><col><col></colgroup>
-    <tr><th></th><th class="num">미국</th><th class="num">한국</th></tr>
-    <tr><td>현행 설정 연평균</td><td class="num">44.5%<span class="sub">91등/180</span></td><td class="num">36.1%<span class="sub">18등/180</span></td></tr>
-    <tr><td>전체 조합 중앙값</td><td class="num">44.7%</td><td class="num">30.9%</td></tr>
-    <tr><td>지수를 이긴 조합</td><td class="num">180/180</td><td class="num">180/180</td></tr>
-  </table>
-  <p style="font-size:.78rem;color:var(--ink3)">현행 설정은 미국에서 중간 순위, 한국에서 상위권인데 180개 조합이 전부 지수를 이겼습니다 — 우위가 특정 설정이 아니라 모멘텀이라는 방법 자체에서 나온다는 뜻입니다. 종목이 적을수록 수익과 낙폭이 함께 커지고(미국 상위 2종목 -70%), 교체 주기는 월 1회가 가장 좋았지만 거래비용을 넣으면 차이가 줄어듭니다.</p>
-  <p style="margin:14px 0 2px"><b>테마 집중 한도 (현행: 없음)</b> · 미국은 5종목이 메모리·반도체로 채워지는 시기가 길어 평균 2.4종목이 같은 테마입니다. "한 테마 최대 N" 한도를 검증한 결과입니다.</p>
-  <table><colgroup><col><col style="width:22%"><col style="width:22%"><col style="width:22%"></colgroup>
-    <tr><th>미국 1996~2026</th><th class="num">연평균</th><th class="num">최대낙폭</th><th class="num">최악 3개월</th></tr>
-    <tr><td>없음 (현행)</td><td class="num">44.0%</td><td class="num">-66%</td><td class="num">-50%</td></tr>
-    <tr><td>한 테마 최대 2</td><td class="num">40.6%</td><td class="num">-63%</td><td class="num">-46%</td></tr>
-    <tr><td>한 테마 최대 1</td><td class="num">43.0%</td><td class="num"><b>-36%</b></td><td class="num"><b>-28%</b></td></tr>
-  </table>
-  <p style="font-size:.78rem;color:var(--ink3)">한국(2001~2026)도 최대 1 한도에서 연평균 36.0% → 39.2%, 최대낙폭 -46% → -40%로 나아졌습니다. 한도 1은 테마 분류 방식에 결과가 크게 좌우되므로 도입 여부는 검토 과제입니다.</p>
+  <p style="font-size:.78rem;color:var(--ink3)">균등보유 대비 1.56배(연 2%p) 우위. 무작위 5개가 균등보유와 같다는 점은 집중이 아니라 선택 규칙이 작동했다는 뜻입니다. 이 정도가 현실적으로 기대할 수 있는 우위입니다.</p>
   <p style="font-size:.78rem;color:var(--ink3)">버린 방식: 역발상 점수 매수 · 점수 악화 시 매도 · 200일선 이탈 매도 · 신호 대기 적립 · 가중치 최적화 · 테마별 규칙</p>
 
   <h3>6. 한계</h3>
-  <div class="warn"><p><b>최대 낙폭 -66%</b> · 30년 백테스트 기준(미국 -66% · 한국 -46%). 견딜 수 있는 금액만.</p></div>
+  <div class="warn"><p><b>반토막 이상의 낙폭 가능</b> · 5종목 집중 · 한 업종 쏠림. 견딜 수 있는 금액만.</p></div>
   <div class="warn"><p><b>하락장에선 "덜 떨어진" 종목을 고름</b> · 상대 순위라 전부 하락 중이어도 5개를 채움</p></div>
-  <div class="warn"><p><b>한 업종에 쏠림</b> · 5종목이 전부 메모리·반도체인 시기가 길고, 그 테마가 꺾이면 같이 빠짐 · 테마 한도는 검토 과제</p></div>
-  <div class="warn"><p><b>세금 부담</b> · 매달 교체하면 양도차익이 계속 실현됨 · 백테스트는 세전 기준</p></div>
-  <div class="warn"><p><b>지수보다 낫다고 검증된 것 아님</b> · 검증 범위는 "같은 50종목 안에서의 선택" · 생존 편향 없는 유니버스에서는 우위가 연 2%p</p></div>
+  <div class="warn"><p><b>한 업종에 쏠림</b> · 5종목이 전부 같은 테마인 시기가 있고, 그 테마가 꺾이면 같이 빠짐 · 테마 한도 없음</p></div>
+  <div class="warn"><p><b>세금 부담</b> · 매달 교체하면 양도차익이 계속 실현됨</p></div>
+  <div class="warn"><p><b>지수보다 낫다고 검증된 것 아님</b> · 생존 편향 없는 유니버스에서 확인된 우위는 연 2%p · 지수 비교는 기록이 쌓여야 가능</p></div>
   <div class="warn"><p><b>급락 대응 불가</b> · 월 1회 점검 기준</p></div>
 
   <h3>7. 데이터</h3>
@@ -531,8 +485,6 @@ function rankDelta(s){
 }
 
 /* 판단 = 모멘텀 횡단면 순위 (모멘텀[최근 1개월 제외 1년 수익률] + 200일선 이격도).
-   26년 백테스트에서 4개 시대 중 3개 구간 우위 (닷컴 구간은 열위).
-   scripts/backtest_momentum.py로 재현 가능.
    순위 묶음 표시 — 1~5위 / 6~15위 / 16위↓ (매매 지시 아님) */
 function band(s){return s&&s.mb?s.mb:'—'}
 function bandCls(s){const b=band(s);return b==='상위 5'?'s-strong':b==='6~15위'?'s-buy':'s-hold'}
@@ -876,12 +828,12 @@ function renderDetail(){
 
   <div class="sec-label"><span class="no">01</span><span class="t">판단</span></div>
   <h3 class="sec-title">종합 판단</h3>
-  <p class="sec-sub">모멘텀 + 200일선 이격도 · 26년 백테스트 검증</p>
+  <p class="sec-sub">모멘텀 + 200일선 이격도</p>
   <div class="d-card">
     <div class="score-hero" style="color:${s.mr&&s.mr<=5?'#9fd07f':s.mr&&s.mr<=15?'#c9c9c2':'#8f9096'}">${s.mr?s.mr+'위':'—'}<span style="font-size:1rem;font-weight:700;color:var(--dk-ink3)">${s.mt?' / '+s.mt+'종목':''}</span></div>
     <div class="gauge"><div class="mk" style="left:calc(${s.mr&&s.mt?Math.max(0,Math.min(100,(1-(s.mr-1)/(s.mt-1))*100)).toFixed(1):50}% - 2px)"></div></div>
     <div class="gauge-lb"><span>16위↓</span><span>6~15위</span><span>상위 5</span></div>
-    <div class="comment"><b>투자 코멘트</b><p>${s.mr?`모멘텀 <b>${s.mr}위</b> / ${s.mt}종목 · ${fmt(s.ms,1)}점 · <b>${band(s)}</b><br>${s.mr<=5?'백테스트 검증 구간 · 보유 대상':s.mr<=15?'상위 5 근접':'모멘텀 약세 구간'}`:d.cmt}</p></div>
+    <div class="comment"><b>투자 코멘트</b><p>${s.mr?`모멘텀 <b>${s.mr}위</b> / ${s.mt}종목 · ${fmt(s.ms,1)}점 · <b>${band(s)}</b><br>${s.mr<=5?'보유 대상':s.mr<=15?'상위 5 근접':'모멘텀 약세 구간'}`:d.cmt}</p></div>
   </div>
 
   <div class="d-card"><div class="d-h">가격·수급 지표</div>
