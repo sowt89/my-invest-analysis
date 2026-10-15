@@ -1,14 +1,17 @@
 {
   "schema_version": 1,
   "as_of": "2026-09-21",
-  "timezone": "America/New_York",
-  "window_start": "2026-08-22",
-  "lookback_start": "2026-03-22",
-  "generated_at": "2026-10-15T23:44:04.184395+00:00",
+  "timezone": "Asia/Seoul",
+  "scheduled_at": "2026-09-21T15:17:00+09:00",
+  "filing_cutoff": "2026-09-20",
+  "transaction_timezone": "America/New_York",
+  "window_start": "2026-08-21",
+  "lookback_start": "2026-03-21",
+  "generated_at": "2026-10-15T23:52:52.925691+00:00",
   "universe": {
     "label": "나스닥100 전체",
     "source": "https://github.com/jmccarrell/n100tickers",
-    "as_of": "2026-09-21",
+    "as_of": "2026-09-20",
     "tickers": [
       "AAPL",
       "ABNB",
@@ -117,7 +120,7 @@
   "coverage": {
     "complete": true,
     "errors": [],
-    "bulk_filing_count": 3425,
+    "bulk_filing_count": 3386,
     "xml_count": 153,
     "sources": [
       "https://www.sec.gov/files/datastandardsinnovation/data/insider-transactions-data-sets/2026q2_form345.zip",
