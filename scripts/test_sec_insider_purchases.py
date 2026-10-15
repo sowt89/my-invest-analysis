@@ -5,9 +5,10 @@ import csv
 import io
 import unittest
 import zipfile
-from datetime import date
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
 from sec_insider_purchases import (latest_cutoff, month_shift, parse_document,
-                                   quarter_candidates, summarize)
+                                   quarter_candidates, summarize, report_window)
 
 XML = '''<ownershipDocument><documentType>4</documentType><periodOfReport>2026-09-19</periodOfReport>
 <issuer><issuerCik>0000000001</issuerCik><issuerName>Example</issuerName><issuerTradingSymbol>TEST</issuerTradingSymbol></issuer>
@@ -33,10 +34,21 @@ def report(docs):
 
 class InsiderTests(unittest.TestCase):
     def test_cutoff_and_year_rollover(self):
-        self.assertEqual(latest_cutoff(date(2026, 10, 21)), date(2026, 9, 21))
-        self.assertEqual(latest_cutoff(date(2026, 10, 22)), date(2026, 10, 21))
-        self.assertEqual(latest_cutoff(date(2026, 1, 1)), date(2025, 12, 21))
+        self.assertEqual(latest_cutoff(datetime(2026, 10, 21, 15, 16, tzinfo=ZoneInfo('Asia/Seoul'))), date(2026, 9, 21))
+        self.assertEqual(latest_cutoff(datetime(2026, 10, 21, 15, 17, tzinfo=ZoneInfo('Asia/Seoul'))), date(2026, 10, 21))
+        self.assertEqual(latest_cutoff(datetime(2026, 1, 1, tzinfo=ZoneInfo('Asia/Seoul'))), date(2025, 12, 21))
         self.assertEqual(month_shift(date(2026, 1, 21), -6), date(2025, 7, 21))
+
+    def test_korean_cutoff_utc_and_sec_window(self):
+        self.assertEqual(latest_cutoff(datetime(2026, 10, 21, 6, 17, tzinfo=ZoneInfo('UTC'))), date(2026, 10, 21))
+        cutoff, start, first = report_window(date(2026, 9, 21))
+        self.assertEqual((cutoff, start, first), (date(2026, 9, 20), date(2026, 3, 21), date(2026, 8, 21)))
+        before = document();before['filed'] = '2026-09-20';before['transactions'][0]['date'] = '2026-08-21'
+        after = document(accession='late')
+        companies, _ = summarize([before, after], start, first, cutoff)
+        self.assertEqual(len(companies[0]['transactions']), 1)
+        self.assertEqual(companies[0]['value'], 1000)
+        self.assertEqual(report_window(date(2027, 1, 21)), (date(2027, 1, 20), date(2026, 7, 21), date(2026, 12, 21)))
 
     def test_only_p_acquired_common_stock(self):
         for code in ['A', 'M', 'F', 'S']:

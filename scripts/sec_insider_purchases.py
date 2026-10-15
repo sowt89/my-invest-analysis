@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""21일(미국 동부 날짜)까지 공개된 Form 4 P 보통주 매수 → 월별 스냅샷.
+"""한국시간 21일 15:17 기준 Form 4 P 보통주 매수 → 월별 스냅샷.
 
 거래: SEC 분기 TSV + 아직 공개되지 않은 분기의 EDGAR XML.
 지수 구성: 기존 저장소와 같은 n100tickers의 기준일 이력 (거래 근거와 구분).
-22일 미국장 전 실행. 미래 공시를 소급 포함하지 않는다. 정정/불일치는 검토로 분리.
+한국시간 21일 실행, SEC 공시 날짜는 미국 20일까지 포함. 미래 공시를 소급 포함하지 않는다. 정정/불일치는 검토로 분리.
 python scripts/sec_insider_purchases.py [--as-of YYYY-MM-21] [--cache-dir PATH]
 """
 import argparse
@@ -37,11 +37,17 @@ def month_shift(d, months):
     return date(y, m + 1, min(d.day, calendar.monthrange(y, m + 1)[1]))
 
 
-def latest_cutoff(today=None):
-    today = today or datetime.now(ZoneInfo('America/New_York')).date()
-    # 21일 당일에는 아직 공시가 들어오므로 지난 달의 완료된 스냅샷을 선택.
-    d = today.replace(day=21)
-    return d if today.day > 21 else month_shift(d, -1)
+def latest_cutoff(now=None):
+    now = (now or datetime.now(ZoneInfo('Asia/Seoul'))).astimezone(ZoneInfo('Asia/Seoul'))
+    scheduled = now.replace(day=21, hour=15, minute=17, second=0, microsecond=0)
+    d = scheduled.date()
+    return d if now >= scheduled else month_shift(d, -1)
+
+
+def report_window(as_of):
+    # 한국 21일 오후 수집: 날짜만 제공하는 SEC 자료는 완료된 미국 20일까지.
+    cutoff = as_of - timedelta(days=1)
+    return cutoff, month_shift(as_of, -6), month_shift(as_of, -1)
 
 
 def as_date(s):
@@ -289,13 +295,12 @@ def summarize(documents, start, window_start, cutoff):
     return companies, review
 
 
-def collect(cutoff, client):
+def collect(as_of, client):
+    cutoff, start, window_start = report_window(as_of)
     from nasdaq_100_ticker_history import tickers_as_of
     symbols = {t.upper() for t in tickers_as_of(cutoff.year, cutoff.month, cutoff.day)}
     if not 95 <= len(symbols) <= 110:
         raise ValueError(f'Unexpected Nasdaq100 constituent count: {len(symbols)}')
-    start = month_shift(cutoff, -6) + timedelta(days=1)
-    window_start = month_shift(cutoff, -1) + timedelta(days=1)
     mapping = client.json(SEC + '/files/company_tickers.json')
     by_ticker = {r['ticker'].upper(): str(r['cik_str']).zfill(10) for r in mapping.values()}
     missing = sorted(symbols - by_ticker.keys())
@@ -342,7 +347,9 @@ def collect(cutoff, client):
             if i % 20 == 0 or i == len(pending):
                 print(f'XML {i}/{len(pending)} · failures {len(errors)}', flush=True)
     companies, review = summarize(docs, start, window_start, cutoff)
-    return {'schema_version': 1, 'as_of': cutoff.isoformat(), 'timezone': 'America/New_York',
+    return {'schema_version': 1, 'as_of': as_of.isoformat(), 'timezone': 'Asia/Seoul',
+            'scheduled_at': f'{as_of}T15:17:00+09:00',
+            'filing_cutoff': cutoff.isoformat(), 'transaction_timezone': 'America/New_York',
             'window_start': window_start.isoformat(), 'lookback_start': start.isoformat(),
             'generated_at': datetime.now(ZoneInfo('UTC')).isoformat(),
             'universe': {'label': '나스닥100 전체', 'source': MEMBERS_SOURCE,
@@ -361,12 +368,12 @@ def main():
     args = p.parse_args()
     cutoff = args.as_of or latest_cutoff()
     if cutoff.day != 21 or cutoff > latest_cutoff():
-        p.error('기준일은 완료된 미국 동부 날짜의 21일이어야 합니다.')
+        p.error('기준일은 한국시간 21일 15:17이 지난 날짜여야 합니다.')
     report = collect(cutoff, SECClient(args.cache_dir))
     out = Path(args.output_dir)
     (out / 'insider-history').mkdir(parents=True, exist_ok=True)
     text = json.dumps(report, ensure_ascii=False, indent=2) + '\n'
-    snapshot = out / 'insider-history' / f'{cutoff}.json'
+    snapshot = out / 'insider-history' / f'{cutoff}-kst.json'
     # Never overwrite a complete historical snapshot with a partial retry.
     if snapshot.exists() and json.loads(snapshot.read_text())['coverage']['complete']:
         report = json.loads(snapshot.read_text())

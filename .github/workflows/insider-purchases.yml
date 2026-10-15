@@ -2,12 +2,12 @@ name: Monthly SEC insider purchases
 
 on:
   schedule:
-    # 매월 22일 15:17 KST. 미국 동부 21일이 끝난 뒤, 22일 미국장 전에 수집.
-    - cron: '17 6 22 * *'
+    # 매월 한국시간 21일 15:17. SEC 공시 날짜는 완료된 미국 20일까지.
+    - cron: '17 6 21 * *'
   workflow_dispatch:
     inputs:
       as_of:
-        description: '기준일 YYYY-MM-21 (비우면 최근 완료된 21일)'
+        description: '기준일 YYYY-MM-21 (비우면 최근 한국시간 21일 15:17 기준)'
         required: false
   push:
     branches: [main]
