@@ -158,6 +158,27 @@ table{width:100%;border-collapse:collapse}
 #tip{position:fixed;z-index:99;pointer-events:none;background:#0b0b0cee;color:#f2f1ed;border:1px solid #333;border-radius:9px;padding:7px 10px;font-size:.74rem;line-height:1.5;display:none;max-width:220px}
 .hidden{display:none!important}
 svg text{font-family:inherit}
+/* SEC insider purchases */
+#insider-section{scroll-margin-top:76px}
+.ins-period,.ins-row,.ins-totals{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.ins-period{font-size:.85rem}.ins-period span{font-size:.72rem;color:var(--ink2)}
+.ins-meta{font-size:.75rem;color:var(--ink2);line-height:1.7;margin:7px 0;overflow-wrap:anywhere}
+.ins-totals{justify-content:flex-start;gap:22px;margin:14px 0;font-size:.78rem;color:var(--ink2)}
+.ins-totals b{font-size:1.3rem;color:var(--orange);margin-right:4px}
+.ins-company{border-top:1px solid var(--line);padding:14px 0}
+.ins-company:first-child{margin-top:12px}
+.ins-company summary,.ins-review summary,.ins-method summary{cursor:pointer}
+.ins-company>summary{list-style:none}.ins-company>summary::-webkit-details-marker{display:none}
+.ins-row{font-size:.95rem}.ins-name{font-size:.74rem;color:var(--ink2);margin-top:4px}
+.ins-tag{font-size:.65rem;padding:3px 5px;border-radius:5px;background:var(--orange-soft);color:var(--orange);font-weight:700}
+.ins-expand{font-size:.7rem;color:var(--orange)}
+.ins-table th,.ins-table td{font-size:.7rem;text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+.ins-table th{color:var(--ink2);white-space:nowrap}.ins-table small{display:block;color:var(--ink2);line-height:1.6;margin-top:3px}
+.ins-table a{color:var(--orange)}.ins-table{min-width:390px}
+.ins-table .ins-notes{color:var(--ink2);line-height:1.7;overflow-wrap:anywhere}.ins-notes p{margin:8px 0}
+.ins-warning{font-size:.75rem;line-height:1.7;background:var(--orange-soft);padding:10px;border-radius:8px;overflow-wrap:anywhere}
+.ins-empty{padding:12px 0}.ins-review,.ins-method{font-size:.75rem;border-top:1px solid var(--line);padding:12px 0 0;margin-top:10px}
+.ins-button{margin-top:8px;background:none;border:1px solid var(--dk-line);border-radius:8px;padding:8px;color:var(--orange);font:inherit;font-size:.75rem;cursor:pointer}
 </style>
 </head>
 <body>
@@ -182,6 +203,11 @@ svg text{font-family:inherit}
   <div class="card" style="border:2px solid var(--orange);margin-top:16px">
     <div class="card-b" style="padding:14px 14px 12px"><div id="mom-list"></div></div>
   </div>
+
+  <section class="card" id="insider-section" aria-label="내부자 매수">
+    <div class="card-h">22일 매수 전 · 내부자 매수</div>
+    <div class="card-b" id="insider-body"><p class="ins-meta">SEC 내부자 매수 자료를 불러오는 중입니다.</p></div>
+  </section>
 
   <div class="card">
     <div class="card-h">현재 시장 국면</div>
@@ -405,6 +431,10 @@ svg text{font-family:inherit}
   <div class="warn"><p><b>지수보다 낫다고 검증된 것 아님</b> · 생존 편향 없는 유니버스에서 확인된 우위는 연 2%p · 지수 비교는 기록이 쌓여야 가능</p></div>
   <div class="warn"><p><b>급락 대응 불가</b> · 월 1회 점검 기준</p></div>
 
+  <h3>내부자 매수 · 22일 매수 전 확인</h3>
+  <p>미국 화면의 내부자 매수 목록은 <b>나스닥100 전체</b>에서 SEC Form 4의 P 코드 보통주 매수를 찾습니다. 전월 22일~당월 21일의 거래 중 미국 동부 날짜 21일까지 공개된 공시를 사용합니다. 한국시간 22일 오후 수집 후 갱신하며, 갱신이 늦으면 이전 기준일임을 표시합니다.</p>
+  <p>최근 6개월의 여러 달 반복·단기 반복·여러 내부자 매수를 구분합니다. 정정공시와 불일치 자료는 확인 필요로 분리하고, 원문 링크와 각주를 제공합니다. P에는 사적 매수도 포함됩니다. 이 목록은 기존 모멘텀 상위 5종목과 전략 수익률 계산에 영향을 주지 않습니다.</p>
+
   <h3>7. 데이터</h3>
   <table><colgroup><col><col style="width:34%"></colgroup>
     <tr><th>출처</th><th class="num">갱신</th></tr>
@@ -427,6 +457,7 @@ svg text{font-family:inherit}
   <button id="nb-compare" onclick="go('compare')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="20" x2="6" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="18" y1="20" x2="18" y2="14"/></svg>밸류 비교</button>
 </div></nav>
 
+<script src="insiders.js"></script>
 <script>
 /* ================= DATA =================
    기본값은 내장 샘플. boot()가 data.json을 읽으면 실데이터로 교체된다. */
@@ -625,6 +656,7 @@ function multiLine(el,labels,seriesArr,colors,names,unit){
    화면에서 FWD PER로 되계산하면 예상 EPS가 약분돼 주가 등락률이 되어버린다. */
 function gapOf(d){return d.gap!==undefined?d.gap:null}
 function renderBoard(){
+  renderInsiders();
   /* 지수 ETF(QQQ)는 참고용이라 관심종목 수에서 뺀다 */
   const own=STOCKS.filter(s=>s.th!=='지수 ETF');
   document.querySelector('#tab-board .kicker').textContent=
@@ -835,6 +867,8 @@ function renderDetail(){
     <div class="gauge-lb"><span>16위↓</span><span>6~15위</span><span>상위 5</span></div>
     <div class="comment"><b>투자 코멘트</b><p>${s.mr?`모멘텀 <b>${s.mr}위</b> / ${s.mt}종목 · ${fmt(s.ms,1)}점 · <b>${band(s)}</b><br>${s.mr<=5?'보유 대상':s.mr<=15?'상위 5 근접':'모멘텀 약세 구간'}`:d.cmt}</p></div>
   </div>
+
+  ${insiderDetail(s.t)}
 
   <div class="d-card"><div class="d-h">가격·수급 지표</div>
     ${kr('12개월 수익률',pct(d.ret12),undefined)}
@@ -1147,6 +1181,7 @@ async function loadMarket(){
     if(k)localStorage.setItem('finnhub_key',k.trim());
   }catch(e){}
   await loadMarket();   /* startLive 포함 */
+  loadInsiders();
 })();
 </script>
 </body>

@@ -1,0 +1,75 @@
+name: Monthly SEC insider purchases
+
+on:
+  schedule:
+    # 매월 22일 15:17 KST. 미국 동부 21일이 끝난 뒤, 22일 미국장 전에 수집.
+    - cron: '17 6 22 * *'
+  workflow_dispatch:
+    inputs:
+      as_of:
+        description: '기준일 YYYY-MM-21 (비우면 최근 완료된 21일)'
+        required: false
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/sec_insider_purchases.py'
+      - '.github/workflows/insider-purchases.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: insider-purchases
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install strictyaml 'git+https://github.com/jmccarrell/n100tickers.git'
+      - name: Test cutoff and SEC interpretation
+        run: python scripts/test_sec_insider_purchases.py
+      - uses: actions/cache@v4
+        with:
+          path: .cache/sec-insiders
+          key: sec-insiders-${{ github.run_id }}
+          restore-keys: sec-insiders-
+      - name: Collect SEC report
+        id: collect
+        continue-on-error: true
+        env:
+          AS_OF: ${{ inputs.as_of }}
+        run: |
+          if [ -n "$AS_OF" ]; then
+            python scripts/sec_insider_purchases.py --as-of "$AS_OF"
+          else
+            python scripts/sec_insider_purchases.py
+          fi
+      - name: Publish monthly snapshot
+        run: |
+          FILES="data/insider-purchases.json data/insider-history"
+          if [ ! -f data/insider-purchases.json ]; then exit 0; fi
+          git add $FILES
+          if git diff --cached --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'chore: update monthly SEC insider purchases'
+          for i in 1 2 3; do
+            git push && exit 0
+            git fetch origin "$GITHUB_REF_NAME"
+            git reset --mixed "origin/$GITHUB_REF_NAME"
+            git add $FILES
+            git diff --cached --quiet && exit 0
+            git commit -m 'chore: update monthly SEC insider purchases'
+          done
+          exit 1
+      - name: Flag incomplete collection
+        if: steps.collect.outcome == 'failure'
+        run: |
+          echo 'SEC 수집 미완료. 공개된 보고서의 coverage 또는 수집 로그를 확인하세요.'
+          exit 1
