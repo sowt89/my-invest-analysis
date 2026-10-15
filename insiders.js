@@ -18,7 +18,7 @@ function insiderDetail(ticker){
     c?.active?`${insMoney(c.value)} · ${c.current_day_count}개 매수일 · ${c.buyer_count}명 · ${insEsc(c.pattern)}`:'해당 기간에 확인된 P 코드 매수가 없습니다.';
   if(INSIDERS&&!INSIDERS.coverage.complete)label+=' (일부 공시 확인 미완료)';
   if(INSIDERS?.review.some(r=>r.ticker===ticker))label+=' · 별도 확인이 필요한 공시가 있습니다.';
-  return `<div class="d-card"><div class="d-h">내부자 매수 · SEC Form 4</div><p style="font-size:.84rem;line-height:1.7">${label}</p>${INSIDERS?`<p class="ins-meta">${insEsc(INSIDERS.window_start)}~${insEsc(INSIDERS.filing_cutoff||INSIDERS.as_of)} · 거래·공시일은 미국 날짜</p>`:''}<button type="button" class="ins-button" onclick="go('board');document.getElementById('insider-section').scrollIntoView({block:'start'})">월별 내부자 매수 목록 보기</button></div>`;
+  return `<div class="d-card"><div class="d-h">내부자 매수 · SEC Form 4</div><p style="font-size:.84rem;line-height:1.7">${label}</p>${INSIDERS?`<p class="ins-meta">${insEsc(INSIDERS.window_start)}~${insEsc(INSIDERS.filing_cutoff||INSIDERS.as_of)} · 거래·공시일은 미국 날짜</p>`:''}<button type="button" class="ins-button" onclick="go('insiders')">월별 내부자 매수 목록 보기</button></div>`;
 }
 function insTransactions(rows){
   return `<div class="scroll-x"><table class="ins-table"><thead><tr><th>거래 / 공시일</th><th>매수자 · 직책</th><th>수량 × 단가</th><th>금액 / 근거</th></tr></thead><tbody>${rows.map(r=>`<tr>
@@ -31,6 +31,7 @@ function renderInsiders(){
   const section=document.getElementById('insider-section');
   if(!section)return;
   section.hidden=MKT!=='us';
+  document.getElementById('insider-market-note').classList.toggle('hidden',MKT==='us');
   if(MKT!=='us')return;
   const body=document.getElementById('insider-body');
   if(!INSIDERS){

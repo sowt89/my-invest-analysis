@@ -183,7 +183,7 @@ GitHub Pages
 - 사용자 요청: 22일 매수 규칙에 맞춰 21일 기준 내부자 매수 기업 목록을 사이트에 추가.
 - `scripts/sec_insider_purchases.py`: 한국시간 21일 15:17 기준, SEC 미국 날짜 전월 21일~당월 20일 거래 및 최근 6개월 이력. SEC TSV 선별 후 원문 XML 확인. 공개일 컷오프·정정 분리·공동 신고 중복 제거·공시 실패 범위 기록.
 - 나스닥100 전체 구성은 기존 n100tickers의 기준일 목록. 현재 관심종목 50개만 조사하는 것이 아님. 지수 구성 출처와 SEC 거래 근거를 화면에서 구분.
-- `insiders.js` + `index.html`: 미국 매수 종목 화면에 목록, 종목 상세에 요약. 한국 화면에서는 숨김. 모멘텀·리밸런싱·전략 수익률은 변경하지 않음.
+- `insiders.js` + `index.html`: 하단 ‘내부자 매수’ 전용 탭에 목록, 종목 상세에 요약과 탭 이동. 한국 시장 선택 시 미국 전용 안내와 시장 전환 버튼 표시. 모멘텀·리밸런싱·전략 수익률은 변경하지 않음.
 - `.github/workflows/insider-purchases.yml`: 매월 21일 06:17 UTC(15:17 KST), 수동 실행, 수집 코드 main 반영 시 첫 수집. 생성 데이터는 워크플로만 커밋.
 - `data/insider-purchases.json` 및 `data/insider-history/` 생성. 한국 기준 스냅샷은 `YYYY-MM-21-kst.json`, 이전 미국 기준 파일은 보존. 완료된 과거 스냅샷은 보존, 부분 결과는 재수집 허용.
 - 테스트: `python scripts/test_sec_insider_purchases.py` (네트워크 불필요). 기존 SEC·DART 테스트도 유지.
