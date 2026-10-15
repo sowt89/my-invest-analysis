@@ -177,3 +177,13 @@ GitHub Pages
 2. `CLAUDE.md`의 내용을 `AGENTS.md`로 복사해 Codex가 같은 지침을 읽게 한다.
 3. 위 6번의 확인 순서로 테스트와 수집기를 한 번 돌려 환경을 확인한다.
 4. GitHub Actions와 Pages는 저장소에 묶여 있으므로 AI 도구가 바뀌어도 자동 갱신은 그대로 동작한다. Claude 쪽에 걸어 둔 예약 작업은 없다.
+
+## 10. 내부자 매수 추가 (2026-10-16)
+
+- 사용자 요청: 22일 매수 규칙에 맞춰 21일 기준 내부자 매수 기업 목록을 사이트에 추가.
+- `scripts/sec_insider_purchases.py`: 최근 완료된 미국 동부 21일, 전월 22일~당월 21일 거래 및 최근 6개월 이력. SEC TSV 선별 후 원문 XML 확인. 공개일 컷오프·정정 분리·공동 신고 중복 제거·공시 실패 범위 기록.
+- 나스닥100 전체 구성은 기존 n100tickers의 기준일 목록. 현재 관심종목 50개만 조사하는 것이 아님. 지수 구성 출처와 SEC 거래 근거를 화면에서 구분.
+- `insiders.js` + `index.html`: 미국 매수 종목 화면에 목록, 종목 상세에 요약. 한국 화면에서는 숨김. 모멘텀·리밸런싱·전략 수익률은 변경하지 않음.
+- `.github/workflows/insider-purchases.yml`: 매월 22일 06:17 UTC(15:17 KST), 수동 실행, 수집 코드 main 반영 시 첫 수집. 생성 데이터는 워크플로만 커밋.
+- `data/insider-purchases.json` 및 `data/insider-history/` 생성. 완료된 과거 스냅샷은 보존, 부분 결과는 재수집 허용.
+- 테스트: `python scripts/test_sec_insider_purchases.py` (네트워크 불필요). 기존 SEC·DART 테스트도 유지.
