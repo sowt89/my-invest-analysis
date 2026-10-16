@@ -26,6 +26,7 @@ import time
 import traceback
 from collections import Counter
 from datetime import datetime, timezone, timedelta
+from zoneinfo import ZoneInfo
 
 import requests as std_requests
 import yfinance as yf
@@ -602,6 +603,42 @@ def track_vs_bench(hist, bench="QQQ", top_n=5):
             "holding": held}
 
 
+def close_return(frame, start, end):
+    """동일 기록 기간의 분할 조정 종가 수익률. 휴장일은 직전 종가를 쓴다."""
+    if frame is None or frame.empty or 'Close' not in frame:
+        return None
+    prices = {}
+    for stamp, value in frame['Close'].items():
+        if value is not None and math.isfinite(float(value)) and float(value) > 0:
+            prices[stamp.strftime('%Y-%m-%d')] = float(value)
+    first = sorted(d for d in prices if d <= start)
+    last = sorted(d for d in prices if d <= end)
+    if not first or not last:
+        return None
+    d0, d1 = first[-1], last[-1]
+    # 시작점이 없거나 오래된 가격만 있으면 0%나 짧아진 기간으로 대체하지 않는다.
+    if d0 >= d1 or any((datetime.fromisoformat(target) - datetime.fromisoformat(actual)).days > 7
+                       for target, actual in [(start, d0), (end, d1)]):
+        return None
+    return {'pct': rnd((prices[d1] / prices[d0] - 1) * 100, 2),
+            'start': d0, 'end': d1, 'start_price': rnd(prices[d0], 4),
+            'end_price': rnd(prices[d1], 4), 'price_basis': 'split_adjusted_close'}
+
+
+def fetch_qld_track(session, start, end):
+    """QLD 실제 종가로 별도 비교. 기존 전략·QQQ 기록과 종목 순위는 유지."""
+    now = datetime.now(ZoneInfo('America/New_York'))
+    # 장중의 미완성 일봉을 종가로 표시하지 않는다.
+    last_closed = now.date() if now.hour >= 16 else now.date() - timedelta(days=1)
+    end = min(end, last_closed.isoformat())
+    first = datetime.fromisoformat(start) - timedelta(days=7)
+    stop = datetime.fromisoformat(end) + timedelta(days=1)
+    frame = retry(lambda: yf.Ticker('QLD', session=session).history(
+        start=first.strftime('%Y-%m-%d'), end=stop.strftime('%Y-%m-%d'),
+        interval='1d', auto_adjust=False))
+    return close_return(frame, start, end)
+
+
 def fetch_stock(session, ticker, name, theme, pit):
     tk = yf.Ticker(ticker, session=session)
     info = retry(lambda: tk.info, default={}) or {}
@@ -956,6 +993,10 @@ def main():
     print(f"지표 히스토리: {len(hist)}일 누적 ({os.path.basename(HIST_PATH)})")
     track = track_vs_bench(hist, cfg["bench"])
     if track:
+        if mkt == 'us':
+            track['qld'] = fetch_qld_track(session, track['start'], max(hist))
+            if track['qld'] is None:
+                print('QLD 비교 자료 미확인 — 화면에 미확인으로 표시')
         market["track"] = track
         print(f"추적 {track['days']}일: 전략 {track['strategy_pct']:+.2f}% / "
               f"{track['bench']} {track['bench_pct']:+.2f}%")

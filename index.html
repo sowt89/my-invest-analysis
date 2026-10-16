@@ -347,7 +347,7 @@ svg text{font-family:inherit}
   </table>
 
   <h3>2. 전략 vs 지수 기록</h3>
-  <p>백테스트가 아니라 <b>오늘부터 쌓는 실제 기록</b>입니다. 매일 상위 5종목의 주가를 저장해 균등보유 수익률을 계산하고, 같은 기간 지수와 비교합니다. 비교 지수는 미국 QQQ · 한국 KODEX 200입니다.</p>
+  <p>백테스트가 아니라 <b>오늘부터 쌓는 실제 기록</b>입니다. 매일 상위 5종목의 주가를 저장해 균등보유 수익률을 계산하고, 같은 기간 지수와 비교합니다. 비교 대상은 미국 QQQ·QLD, 한국 KODEX 200입니다. QLD는 같은 기록 기간의 실제 일별 종가로 계산하며 QQQ 수익률의 단순 2배를 사용하지 않습니다. QLD의 분할 조정 종가 수익률에는 분배금 재투자를 포함하지 않으며, 전략·QQQ의 수집 시점 가격과 측정 시각이 다릅니다.</p>
   <table><colgroup><col class="c-ind"><col></colgroup>
     <tr><td>교체 시점</td><td>매달 22일<span class="sub">휴장이면 다음 기록일</span></td></tr>
     <tr><td>미반영</td><td>거래비용 · 세금 · 환율</td></tr>
@@ -771,19 +771,23 @@ function renderTrack(){
   card.style.display='';
   /* 벤치마크는 티커로 저장되므로 화면에는 이름으로 (한국 종목코드는 이름 구실을 못 한다) */
   const bn=(STOCKS.find(x=>x.t===t.bench)||{}).n||t.bench;
-  document.getElementById('track-title').textContent=`전략 vs ${bn} · 실제 기록`;
-  const diff=t.strategy_pct-t.bench_pct;
+  document.getElementById('track-title').textContent=MKT==='us'?'모멘텀 상위 5 · QQQ · QLD':`전략 vs ${bn} · 실제 기록`;
+  const diff=t.strategy_pct-t.bench_pct, qld=t.qld;
+  const hasQld=MKT==='us'&&qld&&Number.isFinite(qld.pct);
   const col=v=>v>=0?'#4c8f3a':'#c4472e';
   const row=(k,v)=>`<div class="mrow"><span class="k">${k}</span>
     <span class="v" style="color:${col(v)}">${v>=0?'+':''}${fmt(v,2)}%</span></div>`;
   document.getElementById('track-box').innerHTML=
-    row('모멘텀 상위 5',t.strategy_pct)+row(bn,t.bench_pct)+
-    `<div class="mrow"><span class="k">차이</span>
+    row('모멘텀 상위 5',t.strategy_pct)+row(MKT==='us'?'QQQ · 나스닥100':bn,t.bench_pct)+
+    (MKT==='us'?(hasQld?row('QLD',qld.pct):'<div class="mrow"><span class="k">QLD</span><span class="v">자료 미확인</span></div>'):'')+
+    `<div class="mrow"><span class="k">${MKT==='us'?'전략 − QQQ':'차이'}</span>
       <span class="v" style="color:${col(diff)}">${diff>=0?'+':''}${fmt(diff,2)}%p</span></div>
+     ${hasQld?`<div class="mrow"><span class="k">전략 − QLD</span><span class="v" style="color:${col(t.strategy_pct-qld.pct)}">${t.strategy_pct-qld.pct>=0?'+':''}${fmt(t.strategy_pct-qld.pct,2)}%p</span></div>`:''}
      <p style="font-size:.72rem;color:var(--ink3);line-height:1.5;margin-top:9px">
        ${t.start} 기록 시작 · ${t.days}일 경과 · 매달 ${t.rebal_day||22}일 교체 기준<br>
        ${t.days<250?'<b>표본이 적어 판단 근거로 쓸 수 없습니다.</b> 최소 1년 이상 쌓여야 의미가 생깁니다.':''}
-       거래비용·세금 미반영</p>`;
+       거래비용·세금 미반영
+       ${MKT==='us'?`<br>QLD: 실제 일별 종가 수익률 · 분배금 재투자 미포함.${hasQld?`<br>QLD 종가 기준 ${qld.start}~${qld.end}`:''}<br>전략·QQQ는 수집 시점 가격으로 측정 시각이 다릅니다.`:''}</p>`;
 }
 
 /* ================= TAB 2 종목 진단 RENDER ================= */

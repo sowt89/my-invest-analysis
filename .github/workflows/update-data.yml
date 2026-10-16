@@ -10,6 +10,12 @@ on:
     # 장외·주말 2시간 간격 — 실질 데이터 변경이 없으면 커밋은 생략됨
     - cron: "30 */2 * * *"
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/fetch_data.py'
+      - 'scripts/test_track_benchmarks.py'
+      - '.github/workflows/update-data.yml'
 
 permissions:
   contents: write
@@ -31,6 +37,9 @@ jobs:
 
       - name: Install dependencies
         run: pip install yfinance requests curl_cffi
+
+      - name: Test benchmark calculations
+        run: python scripts/test_track_benchmarks.py
 
       - name: Fetch data (US)
         run: python scripts/fetch_data.py us
