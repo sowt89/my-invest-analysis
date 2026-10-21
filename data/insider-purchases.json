@@ -1,17 +1,17 @@
 {
   "schema_version": 1,
-  "as_of": "2026-09-21",
+  "as_of": "2026-10-21",
   "timezone": "Asia/Seoul",
-  "scheduled_at": "2026-09-21T15:17:00+09:00",
-  "filing_cutoff": "2026-09-20",
+  "scheduled_at": "2026-10-21T15:17:00+09:00",
+  "filing_cutoff": "2026-10-20",
   "transaction_timezone": "America/New_York",
-  "window_start": "2026-08-21",
-  "lookback_start": "2026-03-21",
-  "generated_at": "2026-10-15T23:52:52.925691+00:00",
+  "window_start": "2026-09-21",
+  "lookback_start": "2026-04-21",
+  "generated_at": "2026-10-21T11:49:33.400201+00:00",
   "universe": {
     "label": "나스닥100 전체",
     "source": "https://github.com/jmccarrell/n100tickers",
-    "as_of": "2026-09-20",
+    "as_of": "2026-10-20",
     "tickers": [
       "AAPL",
       "ABNB",
@@ -74,6 +74,7 @@
       "META",
       "MNST",
       "MPWR",
+      "MRNA",
       "MRVL",
       "MSFT",
       "MSTR",
@@ -109,7 +110,6 @@
       "TTWO",
       "TXN",
       "VRTX",
-      "WBD",
       "WDAY",
       "WDC",
       "WMT",
@@ -120,8 +120,8 @@
   "coverage": {
     "complete": true,
     "errors": [],
-    "bulk_filing_count": 3386,
-    "xml_count": 153,
+    "bulk_filing_count": 3178,
+    "xml_count": 345,
     "sources": [
       "https://www.sec.gov/files/datastandardsinnovation/data/insider-transactions-data-sets/2026q2_form345.zip",
       "https://www.sec.gov/files/datastandardsinnovation/data/insider-transactions-data-sets/2026q3_form345.zip"
@@ -130,13 +130,13 @@
   },
   "companies": [
     {
-      "ticker": "HONA",
-      "name": "Honeywell Aerospace Inc.",
+      "ticker": "PEP",
+      "name": "PEPSICO INC",
       "active": true,
-      "value": 998400.0,
-      "six_month_value": 998400.0,
+      "value": 23686388.88,
+      "six_month_value": 23686388.88,
       "dates": [
-        "2026-09-01"
+        "2026-10-14"
       ],
       "month_count": 1,
       "day_count": 1,
@@ -144,8 +144,8 @@
       "buyer_count": 1,
       "buyers": [
         {
-          "cik": "0001188578",
-          "name": "ARNOLD CRAIG",
+          "cik": "0001061272",
+          "name": "POHLAD ROBERT C",
           "role": "이사"
         }
       ],
@@ -153,79 +153,109 @@
       "pattern": "단일 매수일",
       "transactions": [
         {
-          "date": "2026-09-01",
-          "security": "Common Stock",
-          "shares": 6400.0,
-          "price": 156.0,
-          "value": 998400.0,
-          "holding": "D",
-          "ownership": "",
-          "post_shares": "6400",
-          "notes": [],
-          "flags": [],
-          "ticker": "HONA",
-          "name": "Honeywell Aerospace Inc.",
-          "owners": [
-            {
-              "cik": "0001188578",
-              "name": "ARNOLD CRAIG",
-              "role": "이사"
-            }
-          ],
-          "filed": "2026-09-03",
-          "accession": "0001628280-26-060444",
-          "url": "https://www.sec.gov/Archives/edgar/data/2089271/000162828026060444/wk-form4_1788466285.xml"
-        }
-      ]
-    },
-    {
-      "ticker": "KDP",
-      "name": "Keurig Dr Pepper Inc.",
-      "active": true,
-      "value": 250247.46,
-      "six_month_value": 250247.46,
-      "dates": [
-        "2026-08-25"
-      ],
-      "month_count": 1,
-      "day_count": 1,
-      "current_day_count": 1,
-      "buyer_count": 1,
-      "buyers": [
-        {
-          "cik": "0001741576",
-          "name": "Alt Aaron E",
-          "role": "이사"
-        }
-      ],
-      "same_buyer_repeat": false,
-      "pattern": "단일 매수일",
-      "transactions": [
-        {
-          "date": "2026-08-25",
-          "security": "Common Stock",
-          "shares": 7862.0,
-          "price": 31.83,
-          "value": 250247.46,
-          "holding": "D",
-          "ownership": "",
-          "post_shares": "7862",
+          "date": "2026-10-14",
+          "security": "PepsiCo, Inc. Common Stock",
+          "shares": 84507.0,
+          "price": 128.28,
+          "value": 10840557.96,
+          "holding": "I",
+          "ownership": "Held By Revocable Trust",
+          "post_shares": "332870",
           "notes": [
-            "The price represents the weighted average purchase price of the shares that were purchased in multiple transactions at prices ranging from $31.83 to $31.84. The reporting person undertakes to provide to the Company, any security holder of the Company or the SEC, upon request, full information regarding the number of shares purchased at each separate price."
+            "Represents shares of PepsiCo Common Stock acquired from irrevocable trusts established by the reporting person through the exercise of the reporting person's power to substitute assets of equivalent value for property held by such trusts. In exchange for the shares, a revocable trust, of which the reporting person is sole trustee and beneficiary, transferred to the irrevocable trusts cash having an equivalent fair market value that was determined by the average of the high and low prices of PepsiCo Common Stock on October 14, 2026.",
+            "Includes 168,632 shares previously reported as directly owned by the reporting person, which shares were transferred to the reporting person's revocable trust of which the reporting person is sole trustee and beneficiary."
           ],
           "flags": [],
-          "ticker": "KDP",
-          "name": "Keurig Dr Pepper Inc.",
+          "ticker": "PEP",
+          "name": "PEPSICO INC",
           "owners": [
             {
-              "cik": "0001741576",
-              "name": "Alt Aaron E",
+              "cik": "0001061272",
+              "name": "POHLAD ROBERT C",
               "role": "이사"
             }
           ],
-          "filed": "2026-08-27",
-          "accession": "0001741576-26-000008",
-          "url": "https://www.sec.gov/Archives/edgar/data/1418135/000174157626000008/wk-form4_1787868046.xml"
+          "filed": "2026-10-16",
+          "accession": "0001061272-26-000004",
+          "url": "https://www.sec.gov/Archives/edgar/data/1061272/000106127226000004/wk-form4_1792180971.xml"
+        },
+        {
+          "date": "2026-10-14",
+          "security": "PepsiCo, Inc. Common Stock",
+          "shares": 45075.0,
+          "price": 128.28,
+          "value": 5782221.0,
+          "holding": "I",
+          "ownership": "Held By Revocable Trust",
+          "post_shares": "377945",
+          "notes": [
+            "Represents shares of PepsiCo Common Stock acquired from irrevocable trusts established by the reporting person through the exercise of the reporting person's power to substitute assets of equivalent value for property held by such trusts. In exchange for the shares, a revocable trust, of which the reporting person is sole trustee and beneficiary, transferred to the irrevocable trusts cash having an equivalent fair market value that was determined by the average of the high and low prices of PepsiCo Common Stock on October 14, 2026."
+          ],
+          "flags": [],
+          "ticker": "PEP",
+          "name": "PEPSICO INC",
+          "owners": [
+            {
+              "cik": "0001061272",
+              "name": "POHLAD ROBERT C",
+              "role": "이사"
+            }
+          ],
+          "filed": "2026-10-16",
+          "accession": "0001061272-26-000004",
+          "url": "https://www.sec.gov/Archives/edgar/data/1061272/000106127226000004/wk-form4_1792180971.xml"
+        },
+        {
+          "date": "2026-10-14",
+          "security": "PepsiCo, Inc. Common Stock",
+          "shares": 45075.0,
+          "price": 128.28,
+          "value": 5782221.0,
+          "holding": "I",
+          "ownership": "Held By Revocable Trust",
+          "post_shares": "423020",
+          "notes": [
+            "Represents shares of PepsiCo Common Stock acquired from irrevocable trusts established by the reporting person through the exercise of the reporting person's power to substitute assets of equivalent value for property held by such trusts. In exchange for the shares, a revocable trust, of which the reporting person is sole trustee and beneficiary, transferred to the irrevocable trusts cash having an equivalent fair market value that was determined by the average of the high and low prices of PepsiCo Common Stock on October 14, 2026."
+          ],
+          "flags": [],
+          "ticker": "PEP",
+          "name": "PEPSICO INC",
+          "owners": [
+            {
+              "cik": "0001061272",
+              "name": "POHLAD ROBERT C",
+              "role": "이사"
+            }
+          ],
+          "filed": "2026-10-16",
+          "accession": "0001061272-26-000004",
+          "url": "https://www.sec.gov/Archives/edgar/data/1061272/000106127226000004/wk-form4_1792180971.xml"
+        },
+        {
+          "date": "2026-10-14",
+          "security": "PepsiCo, Inc. Common Stock",
+          "shares": 9989.0,
+          "price": 128.28,
+          "value": 1281388.92,
+          "holding": "I",
+          "ownership": "Held By Revocable Trust",
+          "post_shares": "433009",
+          "notes": [
+            "Represents shares of PepsiCo Common Stock acquired from irrevocable trusts established by the reporting person through the exercise of the reporting person's power to substitute assets of equivalent value for property held by such trusts. In exchange for the shares, a revocable trust, of which the reporting person is sole trustee and beneficiary, transferred to the irrevocable trusts cash having an equivalent fair market value that was determined by the average of the high and low prices of PepsiCo Common Stock on October 14, 2026."
+          ],
+          "flags": [],
+          "ticker": "PEP",
+          "name": "PEPSICO INC",
+          "owners": [
+            {
+              "cik": "0001061272",
+              "name": "POHLAD ROBERT C",
+              "role": "이사"
+            }
+          ],
+          "filed": "2026-10-16",
+          "accession": "0001061272-26-000004",
+          "url": "https://www.sec.gov/Archives/edgar/data/1061272/000106127226000004/wk-form4_1792180971.xml"
         }
       ]
     },
@@ -492,52 +522,6 @@
       ]
     },
     {
-      "ticker": "DASH",
-      "name": "DoorDash, Inc.",
-      "active": false,
-      "value": 0,
-      "six_month_value": 2930.6,
-      "dates": [
-        "2026-03-27"
-      ],
-      "month_count": 1,
-      "day_count": 1,
-      "current_day_count": 0,
-      "buyer_count": 0,
-      "buyers": [],
-      "same_buyer_repeat": false,
-      "pattern": "최근 매수 없음",
-      "transactions": [
-        {
-          "date": "2026-03-27",
-          "security": "Class A Common Stock",
-          "shares": 20.0,
-          "price": 146.53,
-          "value": 2930.6,
-          "holding": "D",
-          "ownership": "",
-          "post_shares": "1942",
-          "notes": [
-            "Shares purchased by broker in its sole discretion in a broker managed account held in the name of the Reporting Person.",
-            "Certain of these securities are represented by Restricted Stock Units."
-          ],
-          "flags": [],
-          "ticker": "DASH",
-          "name": "DoorDash, Inc.",
-          "owners": [
-            {
-              "cik": "0002104833",
-              "name": "Kovac Milan",
-              "role": "이사"
-            }
-          ],
-          "filed": "2026-06-08",
-          "accession": "0002104833-26-000006",
-          "url": "https://www.sec.gov/Archives/edgar/data/1792789/000210483326000006/form4-06082026_040601.xml"
-        }
-      ]
-    },
-    {
       "ticker": "GEHC",
       "name": "GE HealthCare Technologies Inc.",
       "active": false,
@@ -760,6 +744,49 @@
       ]
     },
     {
+      "ticker": "HONA",
+      "name": "Honeywell Aerospace Inc.",
+      "active": false,
+      "value": 0,
+      "six_month_value": 998400.0,
+      "dates": [
+        "2026-09-01"
+      ],
+      "month_count": 1,
+      "day_count": 1,
+      "current_day_count": 0,
+      "buyer_count": 0,
+      "buyers": [],
+      "same_buyer_repeat": false,
+      "pattern": "최근 매수 없음",
+      "transactions": [
+        {
+          "date": "2026-09-01",
+          "security": "Common Stock",
+          "shares": 6400.0,
+          "price": 156.0,
+          "value": 998400.0,
+          "holding": "D",
+          "ownership": "",
+          "post_shares": "6400",
+          "notes": [],
+          "flags": [],
+          "ticker": "HONA",
+          "name": "Honeywell Aerospace Inc.",
+          "owners": [
+            {
+              "cik": "0001188578",
+              "name": "ARNOLD CRAIG",
+              "role": "이사"
+            }
+          ],
+          "filed": "2026-09-03",
+          "accession": "0001628280-26-060444",
+          "url": "https://www.sec.gov/Archives/edgar/data/2089271/000162828026060444/wk-form4_1788466285.xml"
+        }
+      ]
+    },
+    {
       "ticker": "INTC",
       "name": "INTEL CORP",
       "active": false,
@@ -871,6 +898,51 @@
       ]
     },
     {
+      "ticker": "KDP",
+      "name": "Keurig Dr Pepper Inc.",
+      "active": false,
+      "value": 0,
+      "six_month_value": 250247.46,
+      "dates": [
+        "2026-08-25"
+      ],
+      "month_count": 1,
+      "day_count": 1,
+      "current_day_count": 0,
+      "buyer_count": 0,
+      "buyers": [],
+      "same_buyer_repeat": false,
+      "pattern": "최근 매수 없음",
+      "transactions": [
+        {
+          "date": "2026-08-25",
+          "security": "Common Stock",
+          "shares": 7862.0,
+          "price": 31.83,
+          "value": 250247.46,
+          "holding": "D",
+          "ownership": "",
+          "post_shares": "7862",
+          "notes": [
+            "The price represents the weighted average purchase price of the shares that were purchased in multiple transactions at prices ranging from $31.83 to $31.84. The reporting person undertakes to provide to the Company, any security holder of the Company or the SEC, upon request, full information regarding the number of shares purchased at each separate price."
+          ],
+          "flags": [],
+          "ticker": "KDP",
+          "name": "Keurig Dr Pepper Inc.",
+          "owners": [
+            {
+              "cik": "0001741576",
+              "name": "Alt Aaron E",
+              "role": "이사"
+            }
+          ],
+          "filed": "2026-08-27",
+          "accession": "0001741576-26-000008",
+          "url": "https://www.sec.gov/Archives/edgar/data/1418135/000174157626000008/wk-form4_1787868046.xml"
+        }
+      ]
+    },
+    {
       "ticker": "LIN",
       "name": "LINDE PLC",
       "active": false,
@@ -953,76 +1025,6 @@
           "filed": "2026-06-15",
           "accession": "0001628280-26-043342",
           "url": "https://www.sec.gov/Archives/edgar/data/1099590/000162828026043342/wk-form4_1781562375.xml"
-        }
-      ]
-    },
-    {
-      "ticker": "PANW",
-      "name": "Palo Alto Networks Inc",
-      "active": false,
-      "value": 0,
-      "six_month_value": 9999976.89,
-      "dates": [
-        "2026-03-27"
-      ],
-      "month_count": 1,
-      "day_count": 1,
-      "current_day_count": 0,
-      "buyer_count": 0,
-      "buyers": [],
-      "same_buyer_repeat": false,
-      "pattern": "최근 매수 없음",
-      "transactions": [
-        {
-          "date": "2026-03-27",
-          "security": "Common Stock",
-          "shares": 67985.0,
-          "price": 146.874,
-          "value": 9985228.89,
-          "holding": "D",
-          "ownership": "",
-          "post_shares": "343294",
-          "notes": [
-            "This purchase price represents the weighted average purchase price of the shares purchased ranging from $146.46 to $147.455 per share. Upon request by the Commission staff, the Issuer, or a security holder of the Issuer, the Reporting Person will provide full information regarding the number of shares purchased at each separate price within the range set forth in this Form 4.",
-            "Includes shares acquired by the Reporting Person pursuant to the Issuer's Employee Stock Purchase Plan."
-          ],
-          "flags": [],
-          "ticker": "PANW",
-          "name": "Palo Alto Networks Inc",
-          "owners": [
-            {
-              "cik": "0001468233",
-              "name": "Arora Nikesh",
-              "role": "이사 · Chief Executive Officer"
-            }
-          ],
-          "filed": "2026-03-27",
-          "accession": "0001468233-26-000005",
-          "url": "https://www.sec.gov/Archives/edgar/data/1468233/000146823326000005/ownership.xml"
-        },
-        {
-          "date": "2026-03-27",
-          "security": "Common Stock",
-          "shares": 100.0,
-          "price": 147.48,
-          "value": 14748.0,
-          "holding": "D",
-          "ownership": "",
-          "post_shares": "343394",
-          "notes": [],
-          "flags": [],
-          "ticker": "PANW",
-          "name": "Palo Alto Networks Inc",
-          "owners": [
-            {
-              "cik": "0001468233",
-              "name": "Arora Nikesh",
-              "role": "이사 · Chief Executive Officer"
-            }
-          ],
-          "filed": "2026-03-27",
-          "accession": "0001468233-26-000005",
-          "url": "https://www.sec.gov/Archives/edgar/data/1468233/000146823326000005/ownership.xml"
         }
       ]
     },
@@ -1187,6 +1189,90 @@
       "filed": "2026-06-26",
       "accession": "0000796343-26-000118",
       "url": "https://www.sec.gov/Archives/edgar/data/1538604/000079634326000118/wk-form4_1782505207.xml"
+    },
+    {
+      "date": "2026-10-15",
+      "security": "Class A Shares",
+      "shares": 148.0,
+      "price": 169.99,
+      "value": 25158.52,
+      "holding": "D",
+      "ownership": "",
+      "post_shares": "6033",
+      "notes": [
+        "The purchases reported on this Form 4 were made pursuant to a Rule 10b5-1 trading plan adopted by the Reporting Person on 15 June 2026."
+      ],
+      "flags": [
+        "보통주 여부 확인 필요"
+      ],
+      "ticker": "NBIS",
+      "name": "Nebius Group N.V.",
+      "owners": [
+        {
+          "cik": "0002091395",
+          "name": "Grimme Arne",
+          "role": "이사"
+        }
+      ],
+      "filed": "2026-10-16",
+      "accession": "0001513845-26-000130",
+      "url": "https://www.sec.gov/Archives/edgar/data/2091395/000151384526000130/form4.xml"
+    },
+    {
+      "date": "2026-10-16",
+      "security": "Class A Shares",
+      "shares": 148.0,
+      "price": 169.99,
+      "value": 25158.52,
+      "holding": "D",
+      "ownership": "",
+      "post_shares": "6181",
+      "notes": [
+        "The purchases reported on this Form 4 were made pursuant to a Rule 10b5-1 trading plan adopted by the Reporting Person on 15 June 2026."
+      ],
+      "flags": [
+        "보통주 여부 확인 필요"
+      ],
+      "ticker": "NBIS",
+      "name": "Nebius Group N.V.",
+      "owners": [
+        {
+          "cik": "0002091395",
+          "name": "Grimme Arne",
+          "role": "이사"
+        }
+      ],
+      "filed": "2026-10-16",
+      "accession": "0001513845-26-000130",
+      "url": "https://www.sec.gov/Archives/edgar/data/2091395/000151384526000130/form4.xml"
+    },
+    {
+      "date": "2026-10-19",
+      "security": "Class A Shares",
+      "shares": 148.0,
+      "price": 169.99,
+      "value": 25158.52,
+      "holding": "D",
+      "ownership": "",
+      "post_shares": "6329",
+      "notes": [
+        "The purchase reported on this Form 4 was made pursuant to a Rule 10b5-1 trading plan adopted by the Reporting Person on 15 June 2026."
+      ],
+      "flags": [
+        "보통주 여부 확인 필요"
+      ],
+      "ticker": "NBIS",
+      "name": "Nebius Group N.V.",
+      "owners": [
+        {
+          "cik": "0002091395",
+          "name": "Grimme Arne",
+          "role": "이사"
+        }
+      ],
+      "filed": "2026-10-20",
+      "accession": "0001513845-26-000134",
+      "url": "https://www.sec.gov/Archives/edgar/data/2091395/000151384526000134/form4.xml"
     }
   ]
 }
