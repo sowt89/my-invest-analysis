@@ -454,6 +454,7 @@ svg text{font-family:inherit}
     <tr><td>Yahoo Finance<span class="sub">시세 · 재무 · 실적 · 컨센서스</span></td><td class="num">장중 30분</td></tr>
     <tr><td>CNN Fear &amp; Greed<span class="sub">시장 심리</span></td><td class="num">장중 30분</td></tr>
     <tr><td>Finnhub<span class="sub">실시간 현재가 · 미국만</span></td><td class="num">장중 90초</td></tr>
+    <tr><td>나무 PLUG<span class="sub">한국 현재가·누적 거래량 · KRX</span></td><td class="num">장중 30분 예약</td></tr>
     <tr><td>SEC EDGAR<span class="sub">미국 공시 원본 재무 (PER·PSR 실측)</span></td><td class="num">주 1회</td></tr>
     <tr><td>DART<span class="sub">한국 공시 원본 재무 (PER·PSR 실측)</span></td><td class="num">주 1회</td></tr>
   </table>
@@ -684,7 +685,7 @@ function renderBoard(){
           <b style="background:var(--orange);color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.75rem;flex-shrink:0">${s.mr}</b>
           <span><b style="font-size:1rem;color:var(--ink)">${symMain(s)}</b>
           <small style="display:block;color:var(--ink3);font-size:.72rem">${symSub(s)}</small></span></span>
-        <span class="v" style="text-align:right"><span style="font-size:.95rem">${won(s.p)}</span>
+        <span class="v" style="text-align:right"><span style="font-size:.95rem">${won(s.p)}${s.qs==='stale'?' · 이전값':''}</span>
         <small style="display:block;color:var(--ink2);font-weight:600;font-size:.72rem">모멘텀 ${fmt(s.ms,1)} ${rankDelta(s)}</small></span></div>`).join('')
       + `<p style="font-size:.7rem;color:var(--ink3);line-height:1.5;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)">
          모멘텀 + 200일선 이격도 순위</p>`
@@ -692,6 +693,8 @@ function renderBoard(){
 
   /* 경고 배너 — 섹터 쏠림 · 데이터 정지 */
   const al=[];
+  if(META.namuh&&META.namuh.status!=='ok')
+    al.push(`나무/분석 갱신 실패 ${META.namuh.failed_tickers.length}종목 · 이전 가격·지표 유지 · 오늘 성과 기록 추가 보류`);
   if(MARKET.topThemeN>=3&&MARKET.topTheme)
     al.push(`상위 5종목 중 <b>${MARKET.topThemeN}개가 ${MARKET.topTheme}</b> · 섹터 쏠림에 유의하세요`);
   if(META.updatedUtc){
@@ -871,10 +874,11 @@ function renderDetail(){
   const fyOcf=fyIdx>=0?d.yOcf[fyIdx]:null,fyCapex=fyIdx>=0?d.yCapex[fyIdx]:null,fyRev=fyIdx>=0?d.yRev[fyIdx]:null;
   const kr=(k,v,pt)=>`<div class="krow"><span class="k">${k}</span><span class="v">${v}${pt!==undefined?`<span class="pt ${pt>0?'up':pt<0?'dn':'zr'}" style="color:${pt>0?'#9fd07f':pt<0?'#e58f6a':'#6a6b70'}">${pt===0?'0':sign(pt)}</span>`:''}</span></div>`;
   root.innerHTML=`
+  ${quoteLabel(s)?`<p style="font-size:.78rem;color:var(--ink3);line-height:1.6">${quoteLabel(s)}${s.q?.volume!=null?' · 누적 거래량 '+Number(s.q.volume).toLocaleString('ko-KR')+'주':''}</p>`:''}
   <div class="picker"><select id="tick-sel" aria-label="종목 선택" onchange="curTicker=this.value;renderDetail()">${opts}</select></div>
   <div class="price-line"><span class="nm">${s.n} · ${s.th}</span></div>
   <div class="price-line"><span class="sig ${bandCls(s)}"><span class="dot"></span>${band(s)}${s.mr?` <b>${s.mr}위</b>`:''}</span>
-    <span class="big-price">${won(s.p)}</span><span class="ytd" id="ytd-lbl" style="color:${s.ytd>=0?'#9fd07f':'#e58f6a'}">${pct(s.ytd)} YTD</span>${s.dp!=null?`<span class="ytd" id="day-chg" style="color:${s.dp>=0?'#9fd07f':'#e58f6a'}">${pct(s.dp)} 오늘</span>`:'<span class="ytd" id="day-chg"></span>'}${s.ed!=null&&s.ed<=14?`<span class="gap-tag over" title="${d.earningsDate||''}">실적 발표 D-${s.ed}${s.ed<=3?' · 변동성 주의':''}</span>`:''}</div>
+    <span class="big-price">${won(s.p)}</span><span class="ytd" id="ytd-lbl" style="color:${s.ytd>=0?'#9fd07f':'#e58f6a'}">${pct(s.ytd)} YTD</span>${s.dp!=null?`<span class="ytd" id="day-chg" style="color:${s.dp>=0?'#9fd07f':'#e58f6a'}">${pct(s.dp)} ${MKT==='kr'?'조회일 등락':'오늘'}</span>`:'<span class="ytd" id="day-chg"></span>'}${s.ed!=null&&s.ed<=14?`<span class="gap-tag over" title="${d.earningsDate||''}">실적 발표 D-${s.ed}${s.ed<=3?' · 변동성 주의':''}</span>`:''}</div>
 
   <div class="sec-label"><span class="no">01</span><span class="t">판단</span></div>
   <h3 class="sec-title">종합 판단</h3>
@@ -1038,13 +1042,13 @@ function go(t){
 function applyLiveData(D){
   if(!D||!Array.isArray(D.stocks)||!D.stocks.length||!D.market)throw new Error('bad data.json');
   DETAILS={};
-  STOCKS=D.stocks.map(s=>({t:s.ticker,n:s.name,th:s.theme,p:s.price,mc:s.market_cap_b,ytd:s.ytd,ed:s.earnings_in,ms:s.mom_score,mr:s.mom_rank,mb:s.mom_band,mt:s.mom_total,gs:s.grow_score,vs:s.val_score,fs:s.fin_score,ts:s.total_score,pr:s.prev_rank}));
+  STOCKS=D.stocks.map(s=>({t:s.ticker,n:s.name,th:s.theme,p:s.price,mc:s.market_cap_b,ytd:s.ytd,ed:s.earnings_in,ms:s.mom_score,mr:s.mom_rank,mb:s.mom_band,mt:s.mom_total,gs:s.grow_score,vs:s.val_score,fs:s.fin_score,ts:s.total_score,pr:s.prev_rank,q:s.quote,qs:s.quote_status,dp:s.quote?.day_change_pct}));
   D.stocks.forEach(s=>DETAILS[s.ticker]=s.detail);
   THEMES=[...new Set(STOCKS.map(s=>s.th))];
   const m=D.market;
   MARKET={spy52:m.spy_dd_52w,vix:m.vix,fg:m.fear_greed,fgLabel:m.fg_label,
     nasdaq:m.nasdaq,sp500:m.sp500,kospi:m.kospi,kosdaq:m.kosdaq,usdkrw:m.usdkrw,mkt:m.market||'us',liveQuote:m.live_quote,trendAbove:m.spy_ma200_above,regime:m.regime,regimeSince:m.regime_since,regimeDd:m.regime_dd,track:m.track,breadth:m.breadth_pct,golden:m.spy_golden,panic:m.panic,topTheme:m.top5_theme,topThemeN:m.top5_theme_count};
-  META={updated:D.updated_at_kst,updatedUtc:D.updated_at,live:true};
+  META={updated:D.updated_at_kst,updatedUtc:D.updated_at,live:true,namuh:D.namuh};
   if(!STOCKS.some(x=>x.t===curTicker))curTicker=STOCKS[0].t;
 }
 function updateStatus(){
@@ -1053,17 +1057,32 @@ function updateStatus(){
     /* 실시간 시세는 미국만 지원한다 (한국은 ⚙ 버튼도 숨김) */
     const canLive=MARKET.liveQuote!==false;
     let t=`실데이터 · 업데이트 ${META.updated} KST`;
-    if(!canLive)t+=' · 장중 30분 간격 갱신';
+    if(META.namuh){
+      const n=META.namuh;
+      t=`나무 KRX 시세 · ${n.fresh_count}/${n.expected_count}종목 갱신`;
+      t+=n.fetched_at?` · 조회 ${quoteTime(n.fetched_at)}`:' · 조회 실패, 이전 데이터 유지';
+      t+=' · 장중 30분 간격 예약';
+    }else if(!canLive)t+=' · 장중 30분 간격 갱신';
     else if(finnKey())t+=lastQuote?` · 실시간 시세 ${lastQuote.getHours().toString().padStart(2,'0')}:${lastQuote.getMinutes().toString().padStart(2,'0')}`:liveError?` · 실시간 시세 ${liveError}`:' · 실시간 시세 연결 중…';
     else t+=' · 우측 상단 ⚙에서 무료 Finnhub 키 등록 시 실시간 시세';
     el.textContent=t;
     note.innerHTML=`※ 모멘텀 = 최근 1개월 제외 1년 수익률 + 200일선 이격도 (반반)<br>
       ※ 구간 = 모멘텀 순위 묶음 (매매 지시 아님) · 지수 ETF 제외<br>
-      ※ yfinance ${META.updated} KST 갱신${canLive&&finnKey()?' · Finnhub 실시간 시세':''}`;
+      ※ ${META.namuh?'한국 현재가: 나무 KRX · 과거 주가/시장지수: Yahoo · 재무: DART · 일부 배수는 근사값':`yfinance ${META.updated} KST 갱신${canLive&&finnKey()?' · Finnhub 실시간 시세':''}`}`;
   }else{
     el.textContent='⚠ 실데이터 로드 실패 — 내장 샘플 데이터 표시 중';
     note.textContent='※ 샘플 데이터 · 실데이터 로드 실패';
   }
+}
+
+function quoteTime(value){
+  const date=new Date(value);
+  return Number.isFinite(date.getTime())?date.toLocaleString('ko-KR',{timeZone:'Asia/Seoul',hour12:false})+' KST':'시각 미확인';
+}
+function quoteLabel(s){
+  if(!s.q||MKT!=='kr')return '';
+  const source=s.q.source==='NAMUH PLUG'?'나무 KRX':'Yahoo';
+  return `${source} · 조회 ${s.q.fetched_at?quoteTime(s.q.fetched_at):'시각 미확인'}${s.qs==='stale'?' · 갱신 실패, 이전 데이터':''}`;
 }
 
 /* ============ 실시간 시세 (Finnhub REST, CORS 지원) ============
@@ -1141,7 +1160,7 @@ function rerenderLive(){
 function startLive(){
   if(liveTimer){clearInterval(liveTimer);liveTimer=null}
   updateStatus();
-  /* 실시간 시세는 미국 종목만 (한국은 실시간 시세 API가 없다) */
+  /* 브라우저 직접 조회는 미국만. 한국 나무 시세는 GitHub에서 수집한다. */
   const live = MARKET.liveQuote !== false;
   document.getElementById('live-cfg').style.display = live?'':'none';
   if(!live||!finnKey())return;

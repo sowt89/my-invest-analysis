@@ -31,6 +31,7 @@ from zoneinfo import ZoneInfo
 import requests as std_requests
 import yfinance as yf
 from curl_cffi import requests as curl_requests
+from namuh_quotes import NamuhClient, NamuhError
 
 # ---------------------------------------------------------------- watchlist
 # 두 시장 모두 "지수 시가총액 상위 50"을 기계적으로 뽑는다 (index_top_watchlist.py가 매주 점검).
@@ -514,7 +515,7 @@ def adj_shares(row, splits):
 MULTIPLE_CAP = {"niTtm": 200, "revTtm": 100}   # 이 위는 배수가 의미를 잃는 구간
 
 
-def sec_multiple(rows, dates, closes, key, weeks=None, splits=()):
+def sec_multiple(rows, dates, closes, key, weeks=None, splits=(), current_price=None):
     """각 시점의 배수(주가 x 당시 발행주식수 / 당시 TTM 지표)를 실측 계산한다.
 
     반환: (평균, 최신값). 산출 불가면 (None, None).
@@ -547,7 +548,7 @@ def sec_multiple(rows, dates, closes, key, weeks=None, splits=()):
     latest = [r for r in rows if r.get("sh")][-1]
     if (latest.get(key) or 0) <= 0:
         return avg, None
-    now = closes[-1] * adj_shares(latest, splits) / latest[key]
+    now = (current_price if current_price is not None else closes[-1]) * adj_shares(latest, splits) / latest[key]
     return avg, (now if now <= cap else None)
 
 
@@ -639,7 +640,7 @@ def fetch_qld_track(session, start, end):
     return close_return(frame, start, end)
 
 
-def fetch_stock(session, ticker, name, theme, pit):
+def fetch_stock(session, ticker, name, theme, pit, quote=None):
     tk = yf.Ticker(ticker, session=session)
     info = retry(lambda: tk.info, default={}) or {}
 
@@ -651,6 +652,14 @@ def fetch_stock(session, ticker, name, theme, pit):
     price = info.get("currentPrice") or info.get("regularMarketPrice")
     if price is None and hd_closes:
         price = hd_closes[-1]
+    if quote is not None:
+        # Yahoo 배수·시총의 가격 기준도 나무 조회가에 맞춘다.
+        if price and float(price) > 0:
+            ratio = quote["price"] / float(price)
+            for field in ("marketCap", "forwardPE", "priceToSalesTrailing12Months"):
+                if info.get(field) is not None:
+                    info[field] *= ratio
+        price = quote["price"]
     if price is None:
         raise RuntimeError("가격 정보 없음")
     price = float(price)
@@ -716,9 +725,11 @@ def fetch_stock(session, ticker, name, theme, pit):
         mcap = price * last_sh
     if shares_ok:
         trail_per_avg, trail_per = sec_multiple(pit_rows, dates5, closes5,
-                                                "niTtm", weeks=157, splits=splits)
+                                                "niTtm", weeks=157, splits=splits,
+                                                current_price=price if quote else None)
         avg_psr, psr_now = sec_multiple(pit_rows, dates5, closes5,
-                                        "revTtm", splits=splits)
+                                        "revTtm", splits=splits,
+                                        current_price=price if quote else None)
     else:
         trail_per_avg = trail_per = avg_psr = psr_now = None
     gap = ((trail_per / trail_per_avg - 1) * 100) if (trail_per and trail_per_avg) else None
@@ -887,6 +898,9 @@ def fetch_stock(session, ticker, name, theme, pit):
         "mom_score": (rnd(0.5 * mom12_1 + 0.5 * ma200_dist, 1)
                       if (mom12_1 is not None and ma200_dist is not None) else None),
         "price": rnd(price, 2),
+        "quote": quote or {"source": "Yahoo Finance", "fetched_at":
+                            datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")},
+        "quote_status": "ok",
         "market_cap_b": rnd(mcap / B, 1) if mcap else None,
         "ytd": rnd(ytd, 1),
         "detail": {**d, "cmt": cmt},
@@ -906,6 +920,27 @@ def main():
     PIT_PATH = os.path.join(_ROOT, "data", cfg["pit"])
     print(f"시장: {mkt.upper()} · {len(watchlist)}종목 → {cfg['out']}")
 
+    # 한국은 나무 시세 우선. 실패하면 이전 종목 전체를 보존해 가격/지표가 섞이지 않게 한다.
+    use_namuh = mkt == "kr" and bool(os.environ.get("NAMUH_APP_KEY") or
+                                   os.environ.get("NAMUH_APP_SECRET"))
+    previous, previous_at = {}, None
+    if use_namuh:
+        try:
+            with open(OUT_PATH, encoding="utf-8") as f:
+                old = json.load(f)
+            previous = {s["ticker"]: s for s in old["stocks"]}
+            previous_at = old.get("updated_at")
+        except (OSError, ValueError, KeyError):
+            pass
+    namuh, namuh_error = None, None
+    if use_namuh:
+        try:
+            namuh = NamuhClient.from_env()
+            namuh._token()
+        except NamuhError as e:
+            namuh_error = str(e)
+            print(f"나무 연결 실패: {namuh_error}")
+
     session = make_session()
     print("시장지표 수집…")
     market = fetch_market(session, cfg)
@@ -921,7 +956,12 @@ def main():
     stocks, failed = [], []
     for i, (ticker, name, theme) in enumerate(watchlist):
         try:
-            s = fetch_stock(session, ticker, name, theme, pit)
+            quote = None
+            if use_namuh:
+                if namuh_error:
+                    raise NamuhError(namuh_error)
+                quote = namuh.quote(ticker, is_etf=theme == "지수 ETF")
+            s = fetch_stock(session, ticker, name, theme, pit, quote=quote)
             stocks.append(s)
             print(f"  [{i+1:2d}/{len(watchlist)}] {ticker:9s} {s['price']:>11,.2f}  "
                   f"3축 {s['grow_score']:+d}/{s['val_score']:+d}/{s['fin_score']:+d}")
@@ -929,6 +969,11 @@ def main():
             failed.append(ticker)
             print(f"  [{i+1:2d}/{len(watchlist)}] {ticker:9s} 실패: {e}")
             traceback.print_exc(limit=1)
+            if use_namuh and ticker in previous:
+                saved = previous[ticker]
+                saved.setdefault("quote", {"source": "Yahoo Finance", "fetched_at": previous_at})
+                saved["quote_status"] = "stale"
+                stocks.append(saved)
         time.sleep(0.5)
 
     if len(stocks) < len(watchlist) * 0.6:
@@ -968,11 +1013,21 @@ def main():
     payload = {
         "updated_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "updated_at_kst": (now + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M"),
-        "source": "yfinance + CNN Fear & Greed" if cfg["fear_greed"] else "yfinance",
+        "source": ("NAMUH PLUG + yfinance + DART" if use_namuh else
+                   "yfinance + CNN Fear & Greed" if cfg["fear_greed"] else "yfinance"),
         "market": market,
         "stocks": stocks,
         "failed_tickers": failed,
     }
+    if use_namuh:
+        fresh = [s for s in stocks if s.get("quote_status") == "ok"]
+        payload["namuh"] = {
+            "status": "ok" if not failed else "partial" if fresh else "failed",
+            "fresh_count": len(fresh), "expected_count": len(watchlist),
+            "failed_tickers": failed, "market": "KRX",
+            "fetched_at": min((s["quote"]["fetched_at"] for s in fresh), default=None),
+            "attempted_at": payload["updated_at"],
+        }
     # 약 한 달 전 순위와 비교 (없으면 가장 오래된 기록)
     past_key = None
     today_key = now.strftime("%Y-%m-%d")
@@ -989,7 +1044,10 @@ def main():
             prev = rec.get("rank") if isinstance(rec, dict) else None
             s["prev_rank"] = prev
 
-    hist = save_history(hist, stocks)
+    if not (use_namuh and failed):
+        hist = save_history(hist, stocks)
+    else:
+        print("나무/분석 일부 실패: 이전 종목을 유지하고 오늘 성과 기록은 추가하지 않습니다.")
     print(f"지표 히스토리: {len(hist)}일 누적 ({os.path.basename(HIST_PATH)})")
     track = track_vs_bench(hist, cfg["bench"])
     if track:
