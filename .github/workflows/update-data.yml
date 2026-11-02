@@ -5,7 +5,7 @@ on:
     # 미국 장중(약 13:30~21:00 UTC, 서머타임 기준) 30분 간격 갱신
     - cron: "0,30 13-21 * * 1-5"
     # 한국 장중(09:00~15:30 KST = 00:00~06:30 UTC, 서머타임 없음) 30분 간격 갱신
-    # 한국은 실시간 시세 API가 없어 이 갱신이 유일한 반영 경로다
+    # 나무 KRX 시세를 조회해 분석을 함께 갱신한다 (예약 실행은 지연될 수 있음)
     - cron: "0,30 0-6 * * 1-5"
     # 장외·주말 2시간 간격 — 실질 데이터 변경이 없으면 커밋은 생략됨
     - cron: "30 */2 * * *"
@@ -15,6 +15,8 @@ on:
     paths:
       - 'scripts/fetch_data.py'
       - 'scripts/test_track_benchmarks.py'
+      - 'scripts/namuh_quotes.py'
+      - 'scripts/test_namuh_quotes.py'
       - '.github/workflows/update-data.yml'
 
 permissions:
@@ -36,7 +38,19 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install yfinance requests curl_cffi
+        run: pip install yfinance requests curl_cffi cryptography
+
+      - name: Test Namuh quotes
+        run: python scripts/test_namuh_quotes.py
+
+      # 공개 저장소의 Actions 캐시는 외부에서도 읽을 수 있어 암호문만 보관한다.
+      # 앱 키/시크릿을 알아야 복호화할 수 있고, 캐시를 결과물로 커밋하지 않는다.
+      - name: Restore encrypted Namuh token
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/namuh/token.enc
+          key: namuh-token-v1-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: namuh-token-v1-
 
       - name: Test benchmark calculations
         run: python scripts/test_track_benchmarks.py
@@ -45,7 +59,23 @@ jobs:
         run: python scripts/fetch_data.py us
 
       - name: Fetch data (KR)
-        run: python scripts/fetch_data.py kr
+        env:
+          NAMUH_APP_KEY: ${{ secrets.NAMUH_APP_KEY }}
+          NAMUH_APP_SECRET: ${{ secrets.NAMUH_APP_SECRET }}
+          NAMUH_TOKEN_CACHE: ${{ runner.temp }}/namuh/token.enc
+        run: |
+          if [ -z "$NAMUH_APP_KEY" ] || [ -z "$NAMUH_APP_SECRET" ]; then
+            echo "::error::NAMUH_APP_KEY / NAMUH_APP_SECRET 등록을 확인하세요."
+            exit 1
+          fi
+          python scripts/fetch_data.py kr
+
+      - name: Save encrypted Namuh token
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/namuh/token.enc
+          key: namuh-token-v1-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Commit and push data.json
         run: |
